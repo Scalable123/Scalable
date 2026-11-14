@@ -1,4 +1,5 @@
 using Scalable.Api.GraphQL;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-if (builder.Environment.IsDevelopment())
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+{
+    Directory.CreateDirectory(dataProtectionKeysPath);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+}
+else if (builder.Environment.IsDevelopment())
 {
     var keyDirectory = System.IO.Path.Combine(builder.Environment.ContentRootPath, ".keys");
     Directory.CreateDirectory(keyDirectory);
@@ -17,9 +25,21 @@ if (builder.Environment.IsDevelopment())
         .PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
 }
 
+var databaseConnection = builder.Configuration.GetConnectionString("Default")
+    ?? "Data Source=scalable.db";
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Default")
-        ?? "Data Source=scalable.db"));
+{
+    if (databaseConnection.StartsWith("Host=", StringComparison.OrdinalIgnoreCase) ||
+        databaseConnection.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseNpgsql(databaseConnection);
+    }
+    else
+    {
+        options.UseSqlite(databaseConnection);
+    }
+});
 
 builder.Services
     .AddIdentityCore<AppUser>(options =>
@@ -37,14 +57,30 @@ builder.Services
     .AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
 
+if (builder.Configuration.GetValue<bool>("App:CrossSiteCookies"))
+{
+    builder.Services.Configure<CookieAuthenticationOptions>(
+        IdentityConstants.ApplicationScheme,
+        options =>
+        {
+            options.Cookie.SameSite = SameSiteMode.None;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        });
+}
+
+var configuredCorsOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
+
 builder.Services.AddAuthorization();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.SetIsOriginAllowed(origin =>
-        Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-        uri.Scheme == Uri.UriSchemeHttp &&
-        (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
-         uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
-         uri.Host.Equals("::1", StringComparison.OrdinalIgnoreCase)))
+        configuredCorsOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
+        (Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+         uri.Scheme == Uri.UriSchemeHttp &&
+         (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+          uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+          uri.Host.Equals("::1", StringComparison.OrdinalIgnoreCase))))
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials()));

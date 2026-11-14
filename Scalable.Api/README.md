@@ -29,6 +29,10 @@ The current `boards` field is intentionally empty until EF Core persistence and
 authenticated ownership are implemented. Do not add secrets to this project or
 commit connection strings. Use environment variables or local user secrets.
 
+The database provider is selected from `ConnectionStrings:Default`: a SQLite
+connection string is used locally, while a PostgreSQL connection string (for
+example, a Supabase or Neon URI) uses Npgsql in deployment.
+
 ## Planned layers
 
 - `GraphQL/`: queries, mutations, input types, and authorization boundaries.
