@@ -30,11 +30,11 @@ A future upload service should use authenticated media IDs and object storage wi
 
 ## Login page
 
-`frontend/login.html` preserves the remote branch's Supabase sign-in and email-recovery integration. Sign-in sends credentials to Supabase Auth; passwords are not copied into the local demo profile. Recovery uses the entered email and a project-relative `update-password.html` callback. `update-password.js` retains the remote session-checked password-update flow. Actual emails/account sessions are not exercised by the browser tests.
+`frontend/login.html` sends credentials to the .NET GraphQL identity service; passwords are not copied into the local profile. Recovery requests a neutral GraphQL response and uses a single-use ASP.NET Identity token at `update-password.html`. The development email adapter logs the reset URL until a production mail provider is configured.
 
-The SDK is loaded lazily so signup, recovery preview, and theme/navigation controls do not depend on SDK availability. The client uses a pinned browser-compatible jsDelivr ES module for the same Supabase package version declared by the remote branch. Login/recovery failures report an unavailable state rather than preventing all page controls from loading. Supabase session persistence remains configured by the remote client; no tokens or project keys are embedded into the signup preview.
+The account pages depend only on the GraphQL client for identity operations. Login/recovery failures report an unavailable state rather than preventing all page controls from loading. GraphQL cookies are included on requests; reset tokens are accepted only by the server's Identity token provider.
 
-The demo-account shortcut remains available. Its tab-scoped `scalable.demoSession` flag is not authentication. The legacy `recover.html` page remains a standalone frontend preview; it does not send mail. Real password recovery from login uses the Supabase hook instead. Local board/profile data is still browser-origin storage and is not automatically secured or partitioned by a Supabase session.
+Guest Studio access remains available, but it is not authentication. `recover.html` calls the GraphQL reset-request mutation and returns an enumeration-safe message. Local board/profile data is still browser-origin storage and is not automatically secured or partitioned by a server session.
 
 ## Create-account page
 
@@ -90,4 +90,4 @@ The navigation/theme browser suite also checks signup navigation under `/Scalabl
 
 ### Remote-branch integration validation
 
-The signup change was rebased over a remote Supabase integration. Browser suites intercept `supabaseClient.js` with `tests/helpers/mock-supabase.cjs` to check the preserved sign-in/recovery/session/sign-out hooks without sending credentials or recovery mail to the live project. The signup path performs no auth-client calls. The pinned SDK URL was checked for successful HTTPS delivery with a JavaScript content type; live project authentication is not claimed as verified.
+The account integration is verified through the GraphQL API and does not contact a third-party auth service. Browser checks should stub the GraphQL endpoint when testing static Pages hosting; live registration, email delivery, and reset-token delivery require the backend.

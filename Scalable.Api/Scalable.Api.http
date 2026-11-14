@@ -1,0 +1,6 @@
+@Scalable.Api_HostAddress = http://localhost:5262
+
+GET {{Scalable.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

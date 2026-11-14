@@ -176,7 +176,7 @@ The Studio, login, recovery, and account pages use the same static star-and-word
 
 Login's **Create an account** link opens `signup.html`, with display name, email, password, and confirmation validation. A successful submission shows a frontend-only confirmation and clears the form; it does not register an account or store/send the entered details. Continue to the account preview or return to login through ordinary links. Shared branding, System/Light/Dark preferences, and responsive layouts match the other pages. See the [signup handoff](VIDEO-ACCOUNT.md#create-account-page).
 
-The branch also contains Supabase sign-in, recovery, session lookup, and sign-out hooks brought in by remote commits. These are preserved alongside the independent signup preview. Auth SDK loading is lazy and browser-compatible; the signup form does not call Supabase or register a user. Auth browser checks use a mocked client and do not contact the live project.
+Login, registration, session lookup, sign-out, and password recovery call the .NET GraphQL API. Password reset links carry an ASP.NET Identity token to `update-password.html`; no browser auth SDK is loaded. The frontend remains usable as a guest for Studio sample content, while account pages use the server session for identity.
 
 ## Navigation cleanup
 

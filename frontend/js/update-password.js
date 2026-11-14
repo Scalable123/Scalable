@@ -1,10 +1,12 @@
-import { supabase } from "./config/supabaseClient.js";
+import { graphqlRequest } from "./config/graphqlClient.js";
 
 const form = document.querySelector("#update-password-form");
 const status = document.querySelector("#update-password-status");
-const { data } = await supabase.auth.getSession();
+const params = new URLSearchParams(window.location.search);
+const email = params.get("email") || "";
+const token = params.get("token") || "";
 
-if (!data.session) {
+if (!email || !token) {
   form.hidden = true;
   status.textContent =
     "This recovery link is invalid or has expired. Request a new one from the login page.";
@@ -19,13 +21,23 @@ form?.addEventListener("submit", async (event) => {
     return;
   }
   status.textContent = "Updating password…";
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) {
+  let result;
+  try {
+    result = await graphqlRequest(
+      `mutation ResetPassword($input: PasswordResetInput!) {
+        resetPassword(input: $input) { succeeded message }
+      }`,
+      { input: { email, token, password } },
+    );
+  } catch {
     status.textContent =
       "We could not update your password. Request a new recovery link and try again.";
     return;
   }
-  await supabase.auth.signOut();
+  if (!result.resetPassword.succeeded) {
+    status.textContent = result.resetPassword.message;
+    return;
+  }
   form.reset();
-  status.textContent = "Password updated. You can now sign in.";
+  status.textContent = result.resetPassword.message;
 });

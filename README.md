@@ -20,13 +20,13 @@ Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/
 
 **Start from Pinterest:** Use **Import Pinterest board** to preview connecting an account, select full sample boards or individual pins, and import them into the current canvas or a new mood board. Pin sources and saved choices are preserved locally. This is a demo library; Pinterest sign-in and real board retrieval need the backend. See the [Pinterest integration handoff](docs/PINTEREST-INTEGRATION.md).
 
-**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) preview local profiles, shared preferences, and service connections. Supabase sign-in, session lookup, sign-out, and password recovery are integrated on this branch. Signup remains a frontend validation preview and does not register users or send/store its form details. See the [video/account handoff](docs/VIDEO-ACCOUNT.md).
+**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) use the .NET GraphQL identity service for permanent accounts, sessions, and password recovery. See the [authentication worklog](docs/AUTH-INTEGRATION.md) and [video/account handoff](docs/VIDEO-ACCOUNT.md).
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
 ## GitHub Pages
 
-The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; Supabase Auth remains an external service, and the planned .NET backend is not hosted by Pages.
+The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; the .NET GraphQL backend must be deployed separately.
 
 ## Product vision
 
