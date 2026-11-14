@@ -1,5 +1,8 @@
-const endpoint =
-  window.GRAPHQL_ENDPOINT || "http://localhost:5078/graphql";
+const localHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
+const defaultEndpoint = localHosts.has(window.location.hostname)
+  ? "http://localhost:5078/graphql"
+  : "https://scalable-5rgd.onrender.com/graphql";
+const endpoint = window.GRAPHQL_ENDPOINT || defaultEndpoint;
 
 export async function graphqlRequest(query, variables = {}) {
   const response = await fetch(endpoint, {

@@ -35,6 +35,10 @@ The authentication backend is ready for local integration at
 can override it with `window.GRAPHQL_ENDPOINT` without changing the GraphQL
 contract.
 
+The deployed frontend now defaults to
+`https://scalable-5rgd.onrender.com/graphql` when it is not running on a local
+host. Local development continues to use `http://localhost:5078/graphql`.
+
 The deployment boundary is deliberately server-side:
 
 - The API owns the Identity database, password hashing, account creation,
