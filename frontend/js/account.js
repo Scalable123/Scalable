@@ -3,15 +3,13 @@ import {
   onAppearanceChange,
   updateAppearance,
   resetAppearance,
+  setupThemeControls,
 } from "./appearance.js";
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
 const sessionKey = "scalable.demoSession";
 const profileKey = "scalable.profile.v1";
 onAppearanceChange((preferences) => {
-  const dark = document.documentElement.dataset.theme === "dark";
-  $("#page-theme-toggle").textContent = dark ? "Light mode" : "Dark mode";
-  $("#page-theme-toggle").setAttribute("aria-pressed", String(dark));
   if ($("#appearance-form")) {
     for (const field of [
       "theme",
@@ -26,12 +24,10 @@ onAppearanceChange((preferences) => {
     $("#appearance-form").elements.accent.value = preferences.accent;
   }
 });
-$("#page-theme-toggle").addEventListener("click", () => {
-  const saved = updateAppearance({
-    theme: document.documentElement.dataset.theme === "dark" ? "light" : "dark",
-  });
+setupThemeControls((saved) => {
   if (!saved) {
-    const status = $("#login-status") || $("#profile-status");
+    const status =
+      $("#login-status") || $("#profile-status") || $("#recovery-status");
     status.textContent =
       "Theme applied for this visit. Browser storage is unavailable.";
   }
@@ -52,7 +48,11 @@ if (document.body.dataset.page === "login") {
     event.target.reset();
     startDemo();
   });
-  $("#demo-account").addEventListener("click", startDemo);
+  $("#demo-account").addEventListener("click", (event) => {
+    event.preventDefault();
+    startDemo();
+  });
+  $("#show-password").hidden = false;
   $("#show-password").addEventListener("click", () => {
     const show = $("#login-password").type === "password";
     $("#login-password").type = show ? "text" : "password";
@@ -63,9 +63,13 @@ if (document.body.dataset.page === "login") {
       show ? "Hide sample password" : "Show sample password",
     );
   });
-  $("#forgot-password").addEventListener("click", () => {
-    $("#login-status").textContent =
-      "Password recovery is a preview. No email was sent; a backend identity service is required.";
+} else if (document.body.dataset.page === "recovery") {
+  $("#recovery-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!$("#recovery-email").value.trim()) return;
+    event.target.reset();
+    $("#recovery-result").hidden = false;
+    $("#recovery-result").focus();
   });
 } else {
   const defaults = { name: "Your creative space", email: "you@example.com" };

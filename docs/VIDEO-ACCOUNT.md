@@ -30,9 +30,9 @@ A future upload service should use authenticated media IDs and object storage wi
 
 ## Login page
 
-`frontend/login.html` has email/password validation, password show/hide, a recovery-message preview, a preview sign-in action, and a demo-account shortcut. It is **not authentication**. Use sample details only. The form does not send, log, persist, or copy entered email/password values into the profile. Submitting valid sample details resets the form and opens the account preview.
+`frontend/login.html` has email/password validation, password show/hide, a link to the recovery preview page, a preview sign-in action, and a demo-account shortcut. It is **not authentication**. Use sample details only. The form does not send, log, persist, or copy entered email/password values into the profile. Submitting valid sample details resets the form and opens the account preview. The demo shortcut and recovery link are ordinary anchors; sign-in has an account-page fallback action so navigation still works without JavaScript. Inputs have no form names, preventing credentials from entering fallback GET requests.
 
-A tab-scoped `scalable.demoSession` flag controls preview labeling only. It is not a token, access check, or security boundary. The account page is deliberately accessible without it. Password recovery sends no email; there is no account creation, password change, or verified identity yet.
+A tab-scoped `scalable.demoSession` flag controls preview labeling only. It is not a token, access check, or security boundary. The account page is deliberately accessible without it. The recovery page (`recover.html`) provides sample-email validation and an explicit preview confirmation; it sends no email; there is no account creation, password change, or verified identity yet.
 
 ## Account page
 
@@ -69,3 +69,5 @@ Run `node tests/studio.browser.cjs` for the existing Studio/audio/Pinterest regr
 The new suite checks URL rejection/normalization, duplicate moments, explicit embed load/unload, local video decoding/playback and reattachment after reload, removal, refinement preservation, mobile layouts, login validation, lack of credential persistence/transmission, local profile persistence, shared preferences, service deep links, preview sign-out, and blocked storage. The YouTube iframe route is intercepted by the test; live YouTube playback, identity APIs, provider APIs, SQL, and cloud uploads are not verified or implemented.
 
 Previews: [login](design-previews/studio-login.png) · [account](design-previews/studio-account.png) · [connections](design-previews/studio-account-connections.png) · [video import](design-previews/studio-video-import.png) · [video reference](design-previews/studio-video-reference.png).
+
+All pages now share a System/Light/Dark theme selector and a static logo with the Studio star. System follows the device by default. `theme-init.js` initializes appearance before paint; `appearance.js` handles explicit overrides, device updates, cross-tab synchronization, and cached-page restoration. The navigation/theme suite also verifies legacy MediaQueryList behavior and real links with JavaScript disabled.

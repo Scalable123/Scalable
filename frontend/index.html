@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f5f3ed" />
     <title>Scalable — A place for your next idea</title>
+    <script src="js/theme-init.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <script type="module" src="js/app.js"></script>
   </head>
@@ -18,9 +19,19 @@
       <div class="appearance-actions">
         <a class="toolbar-button account-link" href="account.html">Account</a>
         <a class="toolbar-button login-link" href="login.html">Log in</a>
-        <button id="theme-toggle" class="toolbar-button" aria-pressed="false">
-          Dark mode
-        </button>
+        <label class="theme-picker" for="theme-toggle"
+          ><span>Theme</span
+          ><select
+            id="theme-toggle"
+            data-theme-control
+            aria-label="Color theme"
+            disabled
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select></label
+        >
         <button id="customize" class="toolbar-button" aria-haspopup="dialog">
           Customize <span aria-hidden="true">↗</span>
         </button>
@@ -28,11 +39,21 @@
     </div>
     <div class="app-shell">
       <aside class="sidebar">
-        <a class="brand" href="./" aria-label="Scalable home"
-          ><span class="brand-mark">s<span>✳</span></span> scalable<span
-            class="brand-period"
-            >.</span
-          ></a
+        <a class="brand" href="index.html" aria-label="Scalable home"
+          ><span class="brand-mark" aria-hidden="true"
+            >s<svg
+              class="brand-star"
+              viewBox="0 0 100 100"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M50 2v96M2 50h96M16 16l68 68M16 84l68-68"
+                stroke="currentColor"
+                stroke-width="8"
+              /></svg
+          ></span>
+          scalable<span class="brand-period">.</span></a
         >
         <p class="side-caption">A LITTLE SPACE TO THINK BIG.</p>
         <button class="new-board" id="new-board">
