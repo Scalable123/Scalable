@@ -22,6 +22,10 @@ Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
+## GitHub Pages
+
+The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. This hosts the frontend preview; real authentication and the .NET backend are not deployed by Pages.
+
 ## Product vision
 
 Scalable helps people move from a feeling to a clear visual and sonic world. It should work for personal inspiration, brand concepts, interiors, photography, events, and other creative projects.
