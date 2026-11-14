@@ -38,7 +38,7 @@ The implemented account service is ASP.NET Core GraphQL with ASP.NET Identity in
 - `update-password.html` reads email/token from the URL, checks matching passwords, and sends `resetPassword`. Identity validates the token. The page lacks shared appearance/navigation and leaves query tokens in the address bar; existing browser suites do not cover completion.
 - Guest navigation opens Studio without authenticating. Both login and registration use session cookies (`isPersistent: false`); persistent database accounts are separate from persistent browser sessions. Email verification is unfinished.
 
-For Node's root-hosted frontend, set `App__PublicBaseUrl=http://localhost:3000` in the .NET environment so reset links match `/update-password.html`. The checked-in `/frontend` suffix is suitable only for a server actually serving that directory path. Hosted GraphQL defaults to the configured Render URL, while Pinterest still defaults to localhost unless `window.GRAPHQL_ENDPOINT` is explicitly set. See the backend guide before cross-origin deployment.
+For Node's root-hosted frontend, set `App__PublicBaseUrl=http://localhost:3000` in the .NET environment so reset links match `/update-password.html`. The checked-in `/frontend` suffix is suitable only for a server actually serving that directory path. Hosted GraphQL defaults to the configured Render URL. See the backend guide before cross-origin deployment.
 
 ## Account page
 
@@ -46,7 +46,7 @@ For Node's root-hosted frontend, set `App__PublicBaseUrl=http://localhost:3000` 
 
 - **Profile:** Authorized GraphQL `me` supplies the in-memory name/email when available. Editing still writes `scalable.profile.v1` locally and does not change the Identity account or verify an email. The Studio reads that local profile at startup. Saved-board counts are browser-local.
 - **Customize:** Shared theme/accent/spacing/edges/typography/layout/canvas/reading preferences remain local browser settings.
-- **Connections:** Pinterest reads actual cookie-authenticated status when the approved backend is configured; its Manage link opens the import flow. Other music/YouTube cards remain Not connected previews. Pinterest imports are excluded from AI research. See [Pinterest setup](PINTEREST-INTEGRATION.md).
+- **Connections:** Music and YouTube cards remain Not connected previews; their links open the corresponding Studio importer.
 - **Security:** Password-settings controls remain message-only. The end-session action calls GraphQL `logout`, clears the tab-scoped demo flag, and returns to login without deleting local boards/profile/preferences. It handles thrown errors but does not inspect the returned boolean. Some labels still describe the earlier preview.
 
 The Studio/account routes remain directly reachable. Local board/profile/preferences are not partitioned by Identity user and are not secured by a successful `me` query. Browser storage failures fall back to the current visit with appropriate persistence messages; provider credentials remain server-side.

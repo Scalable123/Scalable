@@ -5,7 +5,4 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Remove="Scalable.Api.Tests/**/*.cs" />
-  </ItemGroup>
 </Project>

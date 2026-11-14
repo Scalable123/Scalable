@@ -6,7 +6,6 @@ import {
   retainLocalVideos,
   releaseLocalVideo,
 } from "./video-library.js";
-import { setupPinterestImporter } from "./pinterest-import.js";
 import {
   setupAudioImporter,
   renderAudioReference,
@@ -52,20 +51,17 @@ function showDialog(title, content) {
   if (!$("#dialog").open) $("#dialog").showModal();
 }
 function renderImage(item) {
-  const card = element("figure", `board-card image-card ${item.position}`);
+  const card = element(
+    "figure",
+    `board-card image-card ${item.imported ? "imported" : item.position}`,
+  );
   const img = element("img");
-  if (item.provider === "pinterest") img.referrerPolicy = "no-referrer";
+  if (item.imported) img.referrerPolicy = "no-referrer";
   img.src = item.url;
   img.alt = item.description;
   if (item.imagePosition) img.style.objectPosition = item.imagePosition;
   const caption = element("figcaption");
-  const source = element(
-    "a",
-    "",
-    item.provider === "pinterest" && item.isSample
-      ? "Sample photo source ↗"
-      : item.provider === "pinterest" ? "View on Pinterest ↗" : "View image source ↗",
-  );
+  const source = element("a", "", "View image source ↗");
   source.href = item.sourceUrl;
   source.target = "_blank";
   source.rel = "noopener noreferrer";
@@ -83,7 +79,7 @@ function renderImage(item) {
     caption.append(credit);
   } else {
     caption.append(source);
-    if (item.provider === "pinterest" && !item.isSample && item.creatorSourceUrl) {
+    if (item.imported && !item.isSample && item.creatorSourceUrl) {
       try {
         const url = new URL(item.creatorSourceUrl);
         if (url.protocol === "https:" && !url.username && !url.password && !url.port) {
@@ -117,17 +113,11 @@ function renderImage(item) {
     );
   });
   card.append(img, caption, pin);
-  if (item.provider === "pinterest") {
-    const badge = element(
-      "span",
-      "imported-pin-badge",
-      `${item.isSample ? "DEMO PIN" : "PINTEREST"} · ${item.sourceBoard?.title || "Imported board"}`,
-    );
-    badge.title = `${item.isSample ? "Sample pin" : "Pinterest pin"} from ${item.sourceBoard?.title || "an imported board"}`;
-    const remove = element("button", "remove-imported-pin", "×");
-    remove.setAttribute("aria-label", `Remove imported pin ${item.title}`);
+  if (item.imported) {
+    const remove = element("button", "remove-imported-image", "×");
+    remove.setAttribute("aria-label", `Remove imported image ${item.title}`);
     remove.addEventListener("click", () => referenceHandlers.onRemove(item.id));
-    card.append(badge, remove);
+    card.append(remove);
   }
   return card;
 }
@@ -275,20 +265,11 @@ function renderBoard() {
   sourceStatus.hidden = !sourceStatus.textContent;
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
-  const pinterestPins = board.items.filter(
-    (item) => item.provider === "pinterest",
-  );
   grid.classList.toggle(
-    "has-pinterest",
-    pinterestPins.length > 0 || board.items.filter((item) => item.type === "image").length > 3,
+    "has-imported-images",
+    board.items.some((item) => item.type === "image" && item.imported) ||
+      board.items.filter((item) => item.type === "image").length > 3,
   );
-  $("#pinterest-import-summary").hidden = pinterestPins.length === 0;
-  const sourceBoardCount = new Set(
-    pinterestPins.flatMap((item) => (item.sourceBoards || [item.sourceBoard]).map(source => source?.id)).filter(Boolean),
-  ).size;
-  $("#pinterest-import-summary").textContent =
-    `${pinterestPins.length} imported ${pinterestPins.every(item => item.isSample) ? "sample " : ""}pin${pinterestPins.length === 1 ? "" : "s"} · ${sourceBoardCount} source board${sourceBoardCount === 1 ? "" : "s"} · save this mood board to keep the references`;
-  $("#import-pinterest").disabled = false;
   $("#import-audio").disabled = false;
   $("#import-video").disabled = false;
   grid.classList.toggle(
@@ -406,8 +387,8 @@ const referenceHandlers = {
     $(
       removed?.type === "video"
         ? "#import-video"
-        : removed?.provider === "pinterest"
-          ? "#import-pinterest"
+        : removed?.type === "image"
+          ? "#prompt"
           : "#import-audio",
     ).focus();
   },
@@ -492,65 +473,6 @@ function resetResearchUI() {
   $("#generate").firstElementChild.textContent = "Explore this feeling";
   grid.setAttribute("aria-busy", "false");
 }
-setupPinterestImporter({
-  element,
-  getBoardId: () => board?.id,
-  onImport({ items, destination, title, boards }) {
-    if (!board)
-      throw new Error(
-        "Wait for the current board to finish loading, then try again.",
-      );
-    let added = 0;
-    if (destination === "new") {
-      boardVersion += 1;
-      resetResearchUI();
-      document
-        .querySelectorAll("audio,video")
-        .forEach((audio) => audio.pause());
-      retainLocalAudio([]);
-      retainLocalVideos([]);
-      removeReference();
-      board = {
-        id: crypto.randomUUID(),
-        title,
-        description: items.every(item => item.isSample) ? `Inspired by ${boards.map((board) => board.title).join(", ")}. Sample Pinterest import.` : "References imported from your Pinterest boards. Excluded from AI research.",
-        // Provider board titles/descriptions and imported images are never research input.
-        prompt: items.every(item => item.isSample) ? `Develop a creative direction inspired by ${boards.map((board) => board.title).join(", ")}.` : "",
-        createdAt: new Date().toISOString(),
-        mode: "demo",
-        researchOptions: { includeSongs: true, includeSounds: true },
-        items,
-      };
-      $("#prompt").value = board.prompt;
-      updateCharacters();
-      $("#include-songs").checked = true;
-      $("#include-sounds").checked = true;
-      added = items.length;
-    } else {
-      const existing = new Set(
-        board.items.map((item) => item.sourceKey).filter(Boolean),
-      );
-      const fresh = items.filter((item) => {
-        if (existing.has(item.sourceKey)) {
-          const current = board.items.find(saved => saved.sourceKey === item.sourceKey);
-          if (current && item.sourceBoards) {
-            const associations = new Map((current.sourceBoards || [current.sourceBoard]).filter(Boolean).map(source => [source.id, source]));
-            item.sourceBoards.forEach(source => associations.set(source.id, source));
-            current.sourceBoards = [...associations.values()];
-          }
-          return false;
-        }
-        existing.add(item.sourceKey);
-        return true;
-      });
-      board.items.push(...fresh);
-      added = fresh.length;
-    }
-    selectFilter("all");
-    if (items.length) $("#save-label").textContent = "Save board";
-    return { added, skipped: items.length - added };
-  },
-});
 setupCustomization();
 document
   .querySelectorAll("[data-filter]")
@@ -686,7 +608,7 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     for (const item of preserved) {
       if (!next.items.some((candidate) => candidate.id === item.id))
         next.items.push(
-          item.provider === "wikimedia" ? { ...item, position: "pinterest" } : item,
+          item.provider === "wikimedia" ? { ...item, position: "reference" } : item,
         );
     }
     // A repeated result retains its pin without adding a duplicate.
@@ -722,7 +644,7 @@ $("#save-board").addEventListener("click", async () => {
     $("#save-label").textContent = "Saved locally";
     await updateSavedCount();
     notify(
-      "Board saved locally, including imported pin references. Uploaded images are not saved; local audio/video files need reattaching in a new visit.",
+      "Board saved locally, including imported media references. Uploaded images are not saved; local audio/video files need reattaching in a new visit.",
     );
   } catch {
     notify("Could not save. Browser storage may be disabled or full.");
@@ -916,7 +838,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore uses the prompt and optional submitted reference image for AI direction and can replace sample image slots with credited Wikimedia references; the palette remains local. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. Cloud board saving and music-service connections remain planned.",
+      "Customize appearance, collect image references, and import music links or local audio/video. Explore uses the prompt and optional submitted reference image for AI direction and can replace sample image slots with credited Wikimedia references; the palette remains local. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. Cloud board saving and music-service connections remain planned.",
     ),
   ),
 );
@@ -964,7 +886,6 @@ if (initialVersion === boardVersion) {
 // Account connection cards can deep-link to the appropriate local import preview.
 const importTarget = new URL(location.href).searchParams.get("import");
 const importButtons = {
-  pinterest: "#import-pinterest",
   audio: "#import-audio",
   video: "#import-video",
 };
