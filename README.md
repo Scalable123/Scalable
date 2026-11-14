@@ -24,6 +24,8 @@ Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
+The [complete frontend documentation](documentation/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests.
+
 ## GitHub Pages
 
 The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; the .NET GraphQL backend must be deployed separately.
