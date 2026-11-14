@@ -1,6 +1,6 @@
 // Development-only browser checks. Requires Playwright and Chromium, not app dependencies.
 const { chromium } = require("playwright");
-const mockSupabase = require("./helpers/mock-supabase.cjs");
+const mockGraphql = require("./helpers/mock-graphql.cjs");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 const fs = require("node:fs/promises");
@@ -47,7 +47,7 @@ const path = require("node:path");
       viewport: { width: 1440, height: 1100 },
       colorScheme: "light",
     });
-    await mockSupabase(context);
+    await mockGraphql(context);
     const page = await context.newPage();
     const errors = [];
     const requests = [];
@@ -248,7 +248,7 @@ const path = require("node:path");
     await page.locator("#recovery-email").fill("demo@example.test");
     await page.locator("#recovery-form [type=submit]").click();
     await page
-      .getByText("Password recovery is a preview.", { exact: false })
+      .getByText("If an account exists for that email", { exact: false })
       .waitFor();
     await page
       .getByRole("link", { name: "Return to login", exact: false })
@@ -350,7 +350,7 @@ const path = require("node:path");
         throw new DOMException("Blocked", "SecurityError");
       };
     });
-    await mockSupabase(blocked);
+    await mockGraphql(blocked);
     const blockedPage = await blocked.newPage();
     blockedPage.on("pageerror", (e) => errors.push(e.message));
     await blockedPage.goto(`${url}/account.html`);

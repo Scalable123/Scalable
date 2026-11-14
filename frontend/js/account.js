@@ -5,18 +5,7 @@ import {
   resetAppearance,
   setupThemeControls,
 } from "./appearance.js";
-// Keep standalone preview pages usable even when the auth SDK is unavailable.
-let supabasePromise;
-async function getSupabase() {
-  if (!supabasePromise)
-    supabasePromise = import("./config/supabaseClient.js")
-      .then((module) => module.supabase)
-      .catch((error) => {
-        supabasePromise = null;
-        throw error;
-      });
-  return supabasePromise;
-}
+import { graphqlRequest } from "./config/graphqlClient.js";
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
 const sessionKey = "scalable.demoSession";
@@ -53,7 +42,7 @@ function startDemo() {
   } catch {
     /* The account remains a preview when storage is blocked. */
   }
-  location.assign("account.html");
+  location.assign("index.html");
 }
 function setupPasswordToggle(inputSelector, buttonSelector, label) {
   const input = $(inputSelector);
@@ -75,18 +64,21 @@ if (document.body.dataset.page === "login") {
     const status = $("#login-status");
     if (!email || !password) return;
     status.textContent = "Signing in…";
-    let error;
+    let result;
     try {
-      const supabase = await getSupabase();
-      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+      result = await graphqlRequest(
+        `mutation Login($input: LoginInput!) {
+          login(input: $input) { succeeded message user { id username email displayName } }
+        }`,
+        { input: { identifier: email, password } },
+      );
     } catch {
       status.textContent =
-        "Sign-in is temporarily unavailable. Please try again later, or explore the demo account.";
+        "Sign-in is temporarily unavailable. Please try again later, or continue without an account.";
       return;
     }
-    if (error) {
-      status.textContent =
-        "We could not sign you in. Check your email and password and try again.";
+    if (!result.login.succeeded) {
+      status.textContent = result.login.message;
       return;
     }
     event.target.reset();
@@ -108,22 +100,20 @@ if (document.body.dataset.page === "login") {
       return;
     }
     status.textContent = "Sending recovery instructions…";
-    const redirectTo = new URL("update-password.html", window.location.href)
-      .href;
-    let error;
+    let result;
     try {
-      const supabase = await getSupabase();
-      ({ error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      }));
+      result = await graphqlRequest(
+        `mutation RequestPasswordReset($input: PasswordResetRequestInput!) {
+          requestPasswordReset(input: $input) { succeeded message }
+        }`,
+        { input: { email } },
+      );
     } catch {
       status.textContent =
         "Recovery is temporarily unavailable. Please try again later.";
       return;
     }
-    status.textContent = error
-      ? "We could not send recovery instructions. Please try again later."
-      : "If an account exists for that email, recovery instructions are on the way.";
+    status.textContent = result.requestPasswordReset.message;
   });
 } else if (document.body.dataset.page === "signup") {
   const form = $("#signup-form");
@@ -157,14 +147,38 @@ if (document.body.dataset.page === "login") {
         : "",
     );
   });
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     validateConfirmation();
     if (!$("#signup-name").value.trim()) {
       $("#signup-name").setCustomValidity("Add a display name.");
     }
     if (!form.reportValidity()) return;
-    // Validation preview only: credentials and profile details never leave this form.
+    const status = $("#signup-status");
+    status.textContent = "Creating your account…";
+    let result;
+    try {
+      result = await graphqlRequest(
+        `mutation Register($input: RegisterInput!) {
+          register(input: $input) { succeeded message user { id username email displayName } }
+        }`,
+        {
+          input: {
+            username: $("#signup-username").value.trim(),
+            email: $("#signup-email").value.trim(),
+            displayName: $("#signup-name").value.trim(),
+            password: password.value,
+          },
+        },
+      );
+    } catch {
+      status.textContent = "Registration is temporarily unavailable. Please try again.";
+      return;
+    }
+    if (!result.register.succeeded) {
+      status.textContent = result.register.message;
+      return;
+    }
     form.reset();
     password.type = "password";
     confirmation.type = "password";
@@ -183,8 +197,8 @@ if (document.body.dataset.page === "login") {
     );
     validateConfirmation();
     form.hidden = true;
-    $("#signup-result").hidden = false;
-    $("#signup-result").focus();
+    status.textContent = "Account created. You are now signed in.";
+    location.assign("account.html");
   });
   $("#signup-again").addEventListener("click", () => {
     $("#signup-result").hidden = true;
@@ -193,12 +207,27 @@ if (document.body.dataset.page === "login") {
   });
   $("#signup-submit").disabled = false;
 } else if (document.body.dataset.page === "recovery") {
-  $("#recovery-form").addEventListener("submit", (event) => {
+  $("#recovery-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!$("#recovery-email").value.trim()) return;
-    event.target.reset();
-    $("#recovery-result").hidden = false;
-    $("#recovery-result").focus();
+    const email = $("#recovery-email").value.trim();
+    if (!email) return;
+    const status = $("#recovery-status");
+    status.textContent = "Sending recovery instructions…";
+    try {
+      const { requestPasswordReset } = await graphqlRequest(
+        `mutation RequestPasswordReset($input: PasswordResetRequestInput!) {
+          requestPasswordReset(input: $input) { succeeded message }
+        }`,
+        { input: { email } },
+      );
+      event.target.reset();
+      $("#recovery-result").hidden = false;
+      $("#recovery-result").focus();
+      status.textContent = requestPasswordReset.message;
+    } catch {
+      status.textContent =
+        "Recovery is temporarily unavailable. Please try again later.";
+    }
   });
 } else {
   const defaults = { name: "Your creative space", email: "you@example.com" };
@@ -234,12 +263,12 @@ if (document.body.dataset.page === "login") {
   } catch {
     $("#account-board-count").textContent = "—";
   }
-  getSupabase()
-    .then((supabase) => supabase.auth.getSession())
-    .then(({ data }) => {
-      if (data.session) {
+  graphqlRequest(`query { me { id username email displayName } }`)
+    .then(({ me }) => {
+      if (me) {
         $("#account-session").textContent = "Authenticated session";
-        if (data.session.user.email) profile.email = data.session.user.email;
+        profile.email = me.email;
+        profile.name = me.displayName || me.username;
         showProfile();
       }
     })
@@ -340,8 +369,7 @@ if (document.body.dataset.page === "login") {
   });
   $("#demo-signout").addEventListener("click", async () => {
     try {
-      const supabase = await getSupabase();
-      await supabase.auth.signOut();
+      await graphqlRequest(`mutation { logout }`);
     } catch {
       $("#security-status").textContent =
         "Could not sign out of the authenticated session. Check your connection and try again.";

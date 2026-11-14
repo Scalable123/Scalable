@@ -68,10 +68,10 @@
         <h2 id="login-title">Welcome back<span>.</span></h2>
         <p class="dialog-copy">Your next creative direction is waiting.</p>
         <div class="preview-explainer">
-          <strong>Secure Supabase sign-in</strong>
+            <strong>Secure account sign-in</strong>
           <p>
-            Your password is sent directly to Supabase Auth over HTTPS and is
-            never saved in this app.
+            Your password is sent to the Scalable GraphQL API and verified by
+            ASP.NET Identity. It is never stored in this app.
           </p>
         </div>
         <form
@@ -80,14 +80,14 @@
           action="account.html"
           method="get"
         >
-          <label for="login-email">Email address</label
+          <label for="login-email">Username or email</label
           ><input
             id="login-email"
-            type="email"
+            type="text"
             required
             maxlength="254"
-            placeholder="you@example.com"
-            autocomplete="off"
+            placeholder="you@example.com or your username"
+            autocomplete="username"
           /><label for="login-password"
             >Password <span>(8+ characters)</span></label
           >
@@ -126,12 +126,12 @@
         <a
           id="demo-account"
           class="toolbar-button demo-account-button"
-          href="account.html"
-          >Explore the demo account</a
+          href="index.html"
+          >Continue without an account</a
         >
         <p class="field-help login-help">
-          Password recovery uses a single-use Supabase email link. The demo
-          account remains available without signing in.
+          Password recovery is being added to the account service. You can
+          continue exploring the Studio without an account.
         </p>
         <p
           id="login-status"

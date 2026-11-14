@@ -1,2 +1,8 @@
 .env
 node_modules/
+**/bin/
+**/obj/
+*.db
+*.db-shm
+*.db-wal
+Scalable.Api/.keys/

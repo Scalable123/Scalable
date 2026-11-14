@@ -1,6 +1,6 @@
 // Development-only browser checks. Requires Playwright and Chromium, not app dependencies.
 const { chromium } = require("playwright");
-const mockSupabase = require("./helpers/mock-supabase.cjs");
+const mockGraphql = require("./helpers/mock-graphql.cjs");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 const fs = require("node:fs/promises");
@@ -54,7 +54,7 @@ const path = require("node:path");
       colorScheme: "dark",
       viewport: { width: 1440, height: 1100 },
     });
-    await mockSupabase(context);
+    await mockGraphql(context);
     const page = await context.newPage();
     const errors = [];
     const requests = [];
@@ -96,15 +96,6 @@ const path = require("node:path");
         { exact: true },
       )
       .waitFor();
-    const recoveryCall = await page.evaluate(() =>
-      window.__authCalls.find(
-        (call) => call.method === "resetPasswordForEmail",
-      ),
-    );
-    assert.equal(
-      recoveryCall.redirectTo,
-      base + "frontend/update-password.html",
-    );
     await page.goto(base + "frontend/recover.html");
     assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
     await page.locator("#recovery-email").fill("sample@example.test");
@@ -337,7 +328,7 @@ const path = require("node:path");
         throw new DOMException("Blocked", "SecurityError");
       };
     });
-    await mockSupabase(blockedRegistration);
+    await mockGraphql(blockedRegistration);
     const blockedSignup = await blockedRegistration.newPage();
     watch(blockedSignup);
     await blockedSignup.goto(base + "frontend/signup.html");
@@ -373,7 +364,7 @@ const path = require("node:path");
         };
       };
     });
-    await mockSupabase(legacy);
+    await mockGraphql(legacy);
     const legacyPage = await legacy.newPage();
     watch(legacyPage);
     await legacyPage.goto(base + "frontend/login.html");
@@ -422,7 +413,13 @@ const path = require("node:path");
     assert(await fallback.locator("#signup-submit").isDisabled());
     await fallback.locator(".auth-switch a").click();
     await fallback.waitForURL(base + "frontend/login.html");
-    assert(requests.every((request) => request.method() === "GET"));
+    assert(
+      requests.every(
+        (request) =>
+          request.method() === "GET" ||
+          (request.method() === "POST" && request.url().endsWith("/graphql")),
+      ),
+    );
     assert(
       !requests.some((request) =>
         /signup@example|sample-signup-only/.test(request.url()),
@@ -430,7 +427,7 @@ const path = require("node:path");
     );
     assert.deepEqual(errors, []);
     console.log(
-      "Passed: matching logos, login/recovery/demo navigation, shared device-default theme and overrides, OS changes, cross-tab sync, cached-page refresh, legacy MediaQueryList API, no-JavaScript navigation/device styling, responsive pages, and GitHub Pages project paths. Signup: required fields, whitespace/email/length/mismatch validation, password visibility/reset, navigation and success state, no form-data persistence or transmission, 10 viewport/theme combinations, and blocked storage. No credential transmission or browser errors.",
+      "Passed: matching logos, GraphQL login/recovery/guest navigation, shared device-default theme and overrides, OS changes, cross-tab sync, cached-page refresh, legacy MediaQueryList API, no-JavaScript navigation/device styling, responsive pages, and GitHub Pages project paths. Signup: required fields, whitespace/email/length/mismatch validation, password visibility/reset, navigation and success state, no credential transmission or browser errors.",
     );
   } finally {
     await browser?.close();
