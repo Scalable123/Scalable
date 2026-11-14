@@ -6,6 +6,48 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL(".", import.meta.url));
 const frontendRoot = join(root, "frontend");
 const port = Number(process.env.PORT || 3000);
+let spotifyToken = null;
+
+async function spotifyAccessToken() {
+  if (spotifyToken && spotifyToken.expiresAt > Date.now() + 30_000) return spotifyToken.value;
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) throw new Error("Spotify is not configured on the server.");
+  const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  const payload = await response.json();
+  if (!response.ok || typeof payload.access_token !== "string") throw new Error("Spotify authorization failed.");
+  spotifyToken = { value: payload.access_token, expiresAt: Date.now() + Number(payload.expires_in || 3600) * 1000 };
+  return spotifyToken.value;
+}
+
+async function spotifySearch(query) {
+  const token = await spotifyAccessToken();
+  const url = new URL("https://api.spotify.com/v1/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("type", "track");
+  url.searchParams.set("limit", "8");
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error?.message || "Spotify search failed.");
+  return payload.tracks.items.map((track) => ({
+    id: track.id,
+    title: track.name,
+    artist: track.artists.map((artist) => artist.name).join(", "),
+    album: track.album.name,
+    imageUrl: track.album.images[track.album.images.length - 1]?.url || null,
+    discoveryUrl: track.external_urls.spotify,
+    previewUrl: null,
+    provider: "spotify",
+    resourceType: "song",
+  }));
+}
 
 async function loadEnv() {
   try {
@@ -90,6 +132,14 @@ async function createDirection(input) {
 const mime = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml" };
 async function serve(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
+  if (url.pathname === "/api/music/spotify/search") {
+    if (request.method === "OPTIONS") return json(response, 204, {}, request);
+    if (request.method !== "GET") return json(response, 405, { error: "Method not allowed." }, request);
+    const query = url.searchParams.get("q")?.trim();
+    if (!query || query.length > 100) return json(response, 400, { error: "Search text must be between 1 and 100 characters." }, request);
+    try { return json(response, 200, { items: await spotifySearch(query) }, request); }
+    catch (error) { return json(response, 503, { error: error.message || "Spotify is unavailable." }, request); }
+  }
   if (url.pathname === "/api/ai/creative-direction") {
     const configuredOrigin = process.env.FRONTEND_ORIGIN?.trim();
     const requestOrigin = request.headers.origin;

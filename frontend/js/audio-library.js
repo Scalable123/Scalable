@@ -249,6 +249,7 @@ export function setupAudioImporter({ onImport, getBoardId, element }) {
   const tabs = [...dialog.querySelectorAll("[data-import-tab]")];
   let sampleTracks = [];
   let activeProvider = null;
+  let spotifyTracks = [];
   function chooseTab(name, focus = false) {
     tabs.forEach((tab) => {
       const selected = tab.dataset.importTab === name;
@@ -299,6 +300,52 @@ export function setupAudioImporter({ onImport, getBoardId, element }) {
       if (count) event.target.reset();
     } catch (error) {
       status(error.message);
+    }
+  });
+  $("#spotify-search-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const query = $("#spotify-search").value.trim();
+    const statusNode = $("#spotify-search-status");
+    const results = $("#spotify-search-results");
+    if (!query) return;
+    statusNode.textContent = "Searching Spotify…";
+    results.replaceChildren();
+    try {
+      const response = await fetch(`/api/music/spotify/search?q=${encodeURIComponent(query)}`, { credentials: "same-origin" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Spotify search is unavailable.");
+      spotifyTracks = payload.items.map((track) => reference({
+        type: "song",
+        title: track.title,
+        artist: track.artist,
+        url: track.discoveryUrl,
+        sourceKind: "spotify-api",
+        isSample: false,
+      }));
+      spotifyTracks.forEach((item, index) => {
+        const label = element("label", "demo-track");
+        const checkbox = element("input");
+        checkbox.type = "checkbox";
+        checkbox.value = String(index);
+        const copy = element("span");
+        copy.append(element("strong", "", item.title), element("small", "", `${item.artist} · Spotify`));
+        label.append(checkbox, copy);
+        results.append(label);
+      });
+      statusNode.textContent = spotifyTracks.length ? "Choose songs to add to your board." : "No Spotify tracks matched that search.";
+      if (spotifyTracks.length) {
+        const add = element("button", "done-button", "Add selected songs ↗");
+        add.type = "button";
+        add.addEventListener("click", () => {
+          const selected = [...results.querySelectorAll("input:checked")].map((input) => spotifyTracks[Number(input.value)]);
+          if (!selected.length) { statusNode.textContent = "Choose at least one song."; return; }
+          const count = onImport(selected);
+          statusNode.textContent = count ? `${count} Spotify song${count === 1 ? "" : "s"} added. Save your board to keep it.` : "Those songs are already on this board.";
+        });
+        results.append(add);
+      }
+    } catch (error) {
+      statusNode.textContent = error.message;
     }
   });
   $("#audio-file-form").addEventListener("submit", async (event) => {

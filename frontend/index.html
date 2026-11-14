@@ -143,7 +143,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                   ×
                 </button>
               </div>
-              <div class="pinterest-dock">
+              <div class="pinterest-dock" hidden>
                 <span class="pinterest-mark" aria-hidden="true">P</span>
                 <div>
                   <strong>Start from Pinterest.</strong>
@@ -873,6 +873,15 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
           access, and provider permissions will be handled by the backend.
           Availability depends on each provider’s API access.
         </p>
+        <form id="spotify-search-form" class="import-form">
+          <label for="spotify-search">Search Spotify's catalog</label>
+          <div class="form-pair">
+            <input id="spotify-search" maxlength="100" placeholder="Artist, song, or mood" required />
+            <button class="done-button" type="submit">Search Spotify ↗</button>
+          </div>
+          <p id="spotify-search-status" class="field-help" role="status" aria-live="polite"></p>
+          <div id="spotify-search-results" class="provider-tracks"></div>
+        </form>
         <div id="provider-list" class="provider-list"></div>
         <section
           id="provider-preview"
