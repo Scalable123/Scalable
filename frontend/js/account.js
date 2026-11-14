@@ -5,6 +5,7 @@ import {
   resetAppearance,
   setupThemeControls,
 } from "./appearance.js";
+import { graphqlRequest } from "./config/graphqlClient.js";
 // Keep standalone preview pages usable even when the auth SDK is unavailable.
 let supabasePromise;
 async function getSupabase() {
@@ -77,16 +78,19 @@ if (document.body.dataset.page === "login") {
     status.textContent = "Signing in…";
     let error;
     try {
-      const supabase = await getSupabase();
-      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+      result = await graphqlRequest(
+        `mutation Login($input: LoginInput!) {
+          login(input: $input) { succeeded message user { id username email displayName } }
+        }`,
+        { input: { identifier: email, password } },
+      );
     } catch {
       status.textContent =
         "Sign-in is temporarily unavailable. Please try again later, or explore the demo account.";
       return;
     }
-    if (error) {
-      status.textContent =
-        "We could not sign you in. Check your email and password and try again.";
+    if (!result.login.succeeded) {
+      status.textContent = result.login.message;
       return;
     }
     event.target.reset();
@@ -110,12 +114,10 @@ if (document.body.dataset.page === "login") {
     status.textContent = "Sending recovery instructions…";
     const redirectTo = new URL("update-password.html", window.location.href)
       .href;
-    let error;
+    let result;
     try {
       const supabase = await getSupabase();
-      ({ error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      }));
+      ({ error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo }));
     } catch {
       status.textContent =
         "Recovery is temporarily unavailable. Please try again later.";
@@ -157,14 +159,38 @@ if (document.body.dataset.page === "login") {
         : "",
     );
   });
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     validateConfirmation();
     if (!$("#signup-name").value.trim()) {
       $("#signup-name").setCustomValidity("Add a display name.");
     }
     if (!form.reportValidity()) return;
-    // Validation preview only: credentials and profile details never leave this form.
+    const status = $("#signup-status");
+    status.textContent = "Creating your account…";
+    let result;
+    try {
+      result = await graphqlRequest(
+        `mutation Register($input: RegisterInput!) {
+          register(input: $input) { succeeded message user { id username email displayName } }
+        }`,
+        {
+          input: {
+            username: $("#signup-username").value.trim(),
+            email: $("#signup-email").value.trim(),
+            displayName: $("#signup-name").value.trim(),
+            password: password.value,
+          },
+        },
+      );
+    } catch {
+      status.textContent = "Registration is temporarily unavailable. Please try again.";
+      return;
+    }
+    if (!result.register.succeeded) {
+      status.textContent = result.register.message;
+      return;
+    }
     form.reset();
     password.type = "password";
     confirmation.type = "password";
@@ -183,8 +209,8 @@ if (document.body.dataset.page === "login") {
     );
     validateConfirmation();
     form.hidden = true;
-    $("#signup-result").hidden = false;
-    $("#signup-result").focus();
+    status.textContent = "Account created. You are now signed in.";
+    location.assign("account.html");
   });
   $("#signup-again").addEventListener("click", () => {
     $("#signup-result").hidden = true;
@@ -234,12 +260,12 @@ if (document.body.dataset.page === "login") {
   } catch {
     $("#account-board-count").textContent = "—";
   }
-  getSupabase()
-    .then((supabase) => supabase.auth.getSession())
-    .then(({ data }) => {
-      if (data.session) {
+  graphqlRequest(`query { me { id username email displayName } }`)
+    .then(({ me }) => {
+      if (me) {
         $("#account-session").textContent = "Authenticated session";
-        if (data.session.user.email) profile.email = data.session.user.email;
+        profile.email = me.email;
+        profile.name = me.displayName || me.username;
         showProfile();
       }
     })
@@ -340,8 +366,7 @@ if (document.body.dataset.page === "login") {
   });
   $("#demo-signout").addEventListener("click", async () => {
     try {
-      const supabase = await getSupabase();
-      await supabase.auth.signOut();
+      await graphqlRequest(`mutation { logout }`);
     } catch {
       $("#security-status").textContent =
         "Could not sign out of the authenticated session. Check your connection and try again.";
