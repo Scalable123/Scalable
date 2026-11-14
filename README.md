@@ -2,7 +2,19 @@
 
 Turn a prompt, a reference picture, or both into a researched creative direction: images, color palettes, textures, typography ideas, and music that belong together.
 
-**Status:** Product planning. This repository does not contain an application yet. The architecture and milestones below are proposed starting points.
+**Status:** Frontend design exploration. Three interactive HTML/CSS/JavaScript prototypes share a single workspace. The planned backend is C# / ASP.NET Core with a SQL database and server-side AI/media APIs; it is not implemented yet.
+
+## Try the frontend
+
+```sh
+python3 -m http.server 8080 --directory frontend
+```
+
+Open `http://localhost:8080` and use the top switcher to compare **The Studio**, **Nocturne**, and **The Gallery**. Explore sample directions, upload a local reference preview, pin images, copy colors, and save/reopen boards in this browser. Results are curated demo content, not live AI research. Music cards are visual concepts without playback.
+
+Preview screenshots: [The Studio](docs/design-previews/studio.png) · [Nocturne](docs/design-previews/nocturne.png) · [The Gallery](docs/design-previews/gallery.png).
+
+See [frontend design and integration notes](docs/FRONTEND.md) for the design comparison, limitations, file structure, and proposed .NET API contract.
 
 ## Product vision
 
@@ -65,18 +77,19 @@ Music discovery initially means recommendations and outbound links. In-app playb
 
 ## Proposed technical approach
 
-Start with a TypeScript application and a small number of managed services. Confirm provider capabilities and pricing with a working research spike before committing to integrations.
+Use HTML, CSS, and JavaScript for the frontend and C# / ASP.NET Core for the backend, connecting to a SQL database and external AI/media APIs. Confirm provider capabilities and pricing with a working research spike before committing to integrations.
 
 | Area | Proposed starting point | Purpose |
 | --- | --- | --- |
-| Web application | Next.js, TypeScript, Tailwind CSS | Prompt entry, uploads, board editor, and server endpoints |
+| Frontend | HTML, CSS, JavaScript modules | Prompt entry, uploads, and board editor |
+| Backend | C# / ASP.NET Core | Authenticated endpoints, research orchestration, and external APIs |
 | AI interpretation | Multimodal model behind a provider adapter | Understand prompts/images and produce validated structured briefs |
 | Research | Search and image-provider adapters | Retrieve references with traceable metadata |
 | Palette extraction | Image processing and color clustering | Derive actual colors before AI naming and curation |
 | Music discovery | Music catalog/search adapter | Verify tracks and links; add audio-feature matching where supported |
-| Data and accounts | PostgreSQL, authentication, and object storage; Supabase is a candidate | Store boards, users, uploads, and research records |
+| Data and accounts | SQL database via EF Core; database engine and identity provider to be selected | Store boards, users, uploads, and research records; object storage for media |
 | Background work | Durable job runner, selected during the spike | Run bounded research jobs with progress, retries, and cancellation |
-| Validation | Vitest and Playwright | Exercise research logic, integrations, and the main user journey |
+| Validation | Browser automation for the frontend; .NET tests for the backend | Exercise research logic, integrations, and the main user journey |
 
 Provider credentials stay on the server. Use model outputs as structured proposals and validate them before storing or rendering them. Treat retrieved pages and uploaded content as data, never as instructions for tools.
 

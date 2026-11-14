@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f3ed" />
+    <title>Scalable — A place for your next idea</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="js/app.js"></script>
+  </head>
+  <body data-design="studio">
+    <a class="skip-link" href="#main">Skip to workspace</a>
+    <div class="concept-bar">
+      <span class="concept-label"
+        ><i></i> DESIGN EXPLORATIONS <span class="version">/ 01</span></span
+      >
+      <div class="designs" role="group" aria-label="Choose a design direction">
+        <button data-design-choice="studio" aria-pressed="true">
+          <span>01</span> The Studio
+        </button>
+        <button data-design-choice="nocturne" aria-pressed="false">
+          <span>02</span> Nocturne
+        </button>
+        <button data-design-choice="gallery" aria-pressed="false">
+          <span>03</span> The Gallery
+        </button>
+      </div>
+      <span class="prototype-label">Interactive prototype ↗</span>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="./" aria-label="Scalable home"
+          ><span class="brand-mark">s<span>✳</span></span> scalable<span
+            class="brand-period"
+            >.</span
+          ></a
+        >
+        <p class="side-caption">A LITTLE SPACE TO THINK BIG.</p>
+        <button class="new-board" id="new-board">
+          <span>＋</span> New mood board
+        </button>
+        <nav aria-label="Workspace">
+          <span class="nav-heading">YOUR WORKSPACE</span>
+          <button class="nav-item active" id="explore">
+            <span aria-hidden="true">◈</span> Explore a direction
+            <span class="nav-arrow">↗</span>
+          </button>
+          <button class="nav-item" id="saved-boards">
+            <span aria-hidden="true">▧</span> Saved boards
+            <span id="saved-count" class="count">0</span>
+          </button>
+        </nav>
+        <div class="side-note">
+          <span class="note-star">✳</span>
+          <p>Good ideas start<br />with a feeling.</p>
+          <span>Follow yours somewhere new.</span>
+        </div>
+        <div class="sidebar-bottom">
+          <button id="about">ⓘ <span>About this prototype</span></button>
+          <div class="profile">
+            <span class="avatar">Y</span>
+            <div>Your creative space<small>Local demo workspace</small></div>
+          </div>
+        </div>
+      </aside>
+      <main id="main">
+        <header class="workspace-header">
+          <div class="breadcrumb">Workspace <span>/</span> New exploration</div>
+          <div class="demo-badge"><i></i> Sample content · no live AI</div>
+        </header>
+        <section class="intro">
+          <div>
+            <p class="eyebrow">A PLACE FOR YOUR NEXT IDEA</p>
+            <h1>Start with a feeling.<br /><em>See where it takes you.</em></h1>
+            <p class="intro-copy">
+              Connect the images, colors, and sounds in your head.<br
+                class="desktop-break"
+              />
+              Give your next creative direction a world of its own.
+            </p>
+          </div>
+          <div class="intro-art" aria-hidden="true">
+            <span class="orbit"></span><span class="asterisk">✳</span
+            ><span class="art-caption">A spark. A direction. A world.</span>
+          </div>
+        </section>
+        <div class="workspace">
+          <section class="prompt-panel" aria-labelledby="prompt-heading">
+            <div class="section-label">
+              <span>01 / THE STARTING POINT</span><span>↘</span>
+            </div>
+            <h2 id="prompt-heading">What’s on your mind?</h2>
+            <p class="muted panel-copy">
+              A place, a feeling, a half-formed idea.<br />There’s no wrong
+              place to start.
+            </p>
+            <form id="prompt-form">
+              <label for="prompt">Your creative brief</label>
+              <textarea
+                id="prompt"
+                name="prompt"
+                required
+                maxlength="2000"
+                placeholder="A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little nostalgic, a little wild…"
+              >
+A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little nostalgic, a little wild.</textarea
+              >
+              <div class="prompt-meta">
+                <span>Make it as specific as you like.</span
+                ><span id="character-count">0/2000</span>
+              </div>
+              <label class="upload" id="upload-label" for="reference"
+                ><span class="upload-icon">↥</span
+                ><strong>Add a reference image</strong
+                ><span>JPG, PNG or WebP · up to 10 MB</span
+                ><input
+                  type="file"
+                  id="reference"
+                  accept="image/jpeg,image/png,image/webp"
+              /></label>
+              <div id="reference-preview" hidden>
+                <img id="reference-image" alt="Your uploaded reference" /><span
+                  id="reference-name"
+                ></span
+                ><button
+                  type="button"
+                  id="remove-reference"
+                  aria-label="Remove reference image"
+                >
+                  ×
+                </button>
+              </div>
+              <p class="input-error" id="input-error" role="alert"></p>
+              <span class="field-caption">OR BORROW A LITTLE INSPIRATION</span>
+              <div class="prompt-chips">
+                <button type="button" data-prompt="Coastal calm">
+                  Coastal calm ↗</button
+                ><button type="button" data-prompt="After hours">
+                  After hours ↗</button
+                ><button type="button" data-prompt="Earth & form">
+                  Earth & form ↗
+                </button>
+              </div>
+              <button class="generate" type="submit" id="generate">
+                <span>Explore this feeling</span><span>↗</span>
+              </button>
+              <p class="privacy-note">
+                Your reference stays in this browser.<br />Demo boards use a
+                curated sample collection.
+              </p>
+            </form>
+          </section>
+          <section class="board-panel" aria-labelledby="board-title">
+            <div class="board-heading">
+              <div>
+                <p class="section-label">02 / A WORLD TAKING SHAPE</p>
+                <h2 id="board-title">Somewhere slower<span>.</span></h2>
+                <p class="board-description" id="board-description">
+                  Coastal stillness. Organic textures. Room to breathe.
+                </p>
+              </div>
+              <button id="save-board" class="save-button">
+                ↗ <span>Save board</span>
+              </button>
+            </div>
+            <div class="board-toolbar">
+              <div
+                class="filters"
+                role="group"
+                aria-label="Filter board content"
+              >
+                <button data-filter="all" aria-pressed="true">
+                  Everything <span>7</span></button
+                ><button data-filter="image" aria-pressed="false">Images</button
+                ><button data-filter="palette" aria-pressed="false">
+                  Palette</button
+                ><button data-filter="music" aria-pressed="false">
+                  Sounds
+                </button>
+              </div>
+              <span class="board-index">SC—001</span>
+            </div>
+            <div id="board-grid" class="board-grid" aria-busy="false"></div>
+            <div class="board-footer">
+              <span><i></i> Curated demo collection</span
+              ><span>Follow the feeling, not the formula. ↗</span>
+            </div>
+          </section>
+        </div>
+        <footer class="page-footer">
+          <span>SCALABLE / AN OPEN CANVAS FOR YOUR IMAGINATION</span
+          ><span id="design-description">01 — Warm, tactile, editorial.</span>
+        </footer>
+      </main>
+    </div>
+    <dialog id="dialog">
+      <div class="dialog-header">
+        <h2 id="dialog-title"></h2>
+        <button id="close-dialog" aria-label="Close dialog">×</button>
+      </div>
+      <div id="dialog-content"></div>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
