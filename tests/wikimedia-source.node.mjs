@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { searchWikimedia } from "../frontend/js/wikimedia-source.js";
+import { searchWikimedia, searchWikimediaImages } from "../frontend/js/wikimedia-source.js";
 
 const originalFetch = globalThis.fetch;
 let calls = 0;
@@ -28,5 +28,17 @@ globalThis.fetch = async () => new Response(JSON.stringify({ ...valid, image: { 
 assert.equal((await searchWikimedia("quiet coast")).status, "unavailable");
 globalThis.fetch = async () => new Response(JSON.stringify({ status: "rate_limited", image: null }), { status: 429 });
 assert.equal((await searchWikimedia("quiet coast")).status, "rate_limited");
+let batchCalls = 0;
+globalThis.fetch = async (_url, options) => {
+  batchCalls++;
+  const query = JSON.parse(options.body).prompt;
+  return new Response(JSON.stringify({
+    status: "available",
+    image: { ...valid.image, id: `wikimedia-${batchCalls}`, externalPhotoId: String(batchCalls), title: query },
+  }), { status: 200 });
+};
+const batch = await searchWikimediaImages(["coast", "cliff", "coast", "harbor"]);
+assert.equal(batchCalls, 3, "Wikimedia search is capped at three unique phrases");
+assert.equal(batch.images.length, 3, "multiple Wikimedia images are returned without duplicate IDs");
 globalThis.fetch = originalFetch;
-console.log("Wikimedia source adapter checks passed (3 assertions).");
+console.log("Wikimedia source adapter checks passed (5 assertions).");

@@ -4,7 +4,7 @@ import { apiOrigin } from "./config/api-origin.js";
 
 const endpoint = new URL("/api/image-sources/wikimedia", apiOrigin());
 export const wikimediaSourceMessages = {
-  available: "One Wikimedia Commons image added.",
+  available: "Wikimedia Commons image references added.",
   rate_limited: "Wikimedia Commons is rate limited. Sample images are shown; try again later.",
   no_results: "Wikimedia Commons found no matching image. Sample images are shown.",
   not_configured: "Wikimedia Commons is not configured on this server. Sample images are shown.",
@@ -41,4 +41,23 @@ export async function searchWikimedia(prompt) {
       return { status: "unavailable" };
     return { status: "available", image: { ...image, position: "detail", pinned: false, imported: false } };
   } catch { return { status: "unavailable" }; }
+}
+
+export async function searchWikimediaImages(queries) {
+  const uniqueQueries = [...new Set((Array.isArray(queries) ? queries : []).filter((query) => typeof query === "string" && query.trim()).map((query) => query.trim()))].slice(0, 3);
+  const images = [];
+  const statuses = [];
+  for (const query of uniqueQueries) {
+    const result = await searchWikimedia(query);
+    statuses.push(result.status);
+    if (result.image && !images.some((image) => image.id === result.image.id)) images.push(result.image);
+  }
+  const status = images.length
+    ? "available"
+    : statuses.includes("rate_limited")
+      ? "rate_limited"
+      : statuses.includes("unavailable")
+        ? "unavailable"
+        : "no_results";
+  return { status, images };
 }

@@ -1,5 +1,6 @@
 import { sourceMessages as unsplashSourceMessages } from "./unsplash-source.js";
 import { wikimediaSourceMessages } from "./wikimedia-source.js";
+import { searchWikimediaImages } from "./wikimedia-source.js";
 import { iconify } from "./icons.js";
 import {
   setupVideoImporter,
@@ -131,6 +132,18 @@ function renderImage(item) {
     card.append(badge, remove);
   }
   return card;
+}
+function replaceSampleImages(boardValue, images) {
+  const slots = boardValue.items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.type === "image" && !item.provider && !item.pinned);
+  let replaced = 0;
+  for (const image of images) {
+    const slot = slots[replaced++];
+    if (!slot) break;
+    boardValue.items[slot.index] = { ...image, position: slot.item.position };
+  }
+  return replaced;
 }
 function renderPalette(item) {
   const card = element("section", "board-card palette-card");
@@ -589,7 +602,7 @@ $("#reference").addEventListener("change", async (event) => {
   $("#reference-name").textContent = file.name;
   $("#reference-preview").hidden = false;
   $("#upload-label").hidden = true;
-  notify("Reference added locally. Demo results do not analyze uploads yet.");
+  notify("Reference added locally. Explore will use it to guide the AI and Wikimedia search; it is not saved to your board.");
 });
 $("#remove-reference").addEventListener("click", removeReference);
 $("#prompt-form").addEventListener("submit", async (event) => {
@@ -612,23 +625,27 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       prompt,
       referenceFile,
       fetchImages: true,
+      fetchWikimedia: false,
       ...researchOptions(),
     });
     try {
       const direction = await createCreativeDirection({
         prompt,
+        referenceFile,
         ...researchOptions(),
       });
       next.title = direction.title;
       next.description = direction.description;
       next.mode = "ai";
       next.items = next.items.map((item) =>
-        item.type === "palette"
-          ? { ...item, colors: direction.palette }
-          : item.type === "note"
+        item.type === "note"
             ? { ...item, text: direction.note }
             : item,
       );
+      const visualSearch = await searchWikimediaImages(direction.imageQueries || [prompt]);
+      next.wikimediaSourceStatus = visualSearch.status;
+      next.wikimediaImageCount = replaceSampleImages(next, visualSearch.images);
+      if (next.wikimediaImageCount) next.mode = "ai";
       next.items = next.items.filter(
         (item) =>
           (item.type !== "song" || researchOptions().includeSongs) &&
@@ -654,6 +671,11 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       }
     } catch {
       notify("AI is unavailable, so a local sample direction is shown instead.");
+    }
+    if (!next.wikimediaSourceStatus) {
+      const fallbackVisualSearch = await searchWikimediaImages([prompt]);
+      next.wikimediaSourceStatus = fallbackVisualSearch.status;
+      next.wikimediaImageCount = replaceSampleImages(next, fallbackVisualSearch.images);
     }
     if (runVersion !== boardVersion) return;
     // Preserve explicitly pinned choices when refining this local exploration.
@@ -904,7 +926,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore selects curated local collections; uploaded reference images are previewed only. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. When configured, the separate Unsplash host can add a credited photo within its shared hourly request budget. Cloud board saving and music-service connections remain planned.",
+      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore uses the prompt and optional submitted reference image for AI direction and can replace sample image slots with credited Wikimedia references; the palette remains local. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. When configured, the separate Unsplash host can add a credited photo within its shared hourly request budget. Cloud board saving and music-service connections remain planned.",
     ),
   ),
 );

@@ -111,7 +111,7 @@ The fixed prompts are:
 | After hours  | A cinematic city after midnight. Deep indigo, warm amber light, grainy photography, and atmospheric electronic music. |
 | Earth & form | An earthy design studio. Sculptural forms, warm clay, natural textures, and quiet instrumental music.                 |
 
-The reference image remains a separate prompt input. It is not inserted into the board, persisted with the board, uploaded, or analyzed by the demo service. Image-only submission is not supported: the prompt must contain non-whitespace text. The upload interface is a file picker; drag-and-drop is not implemented.
+The reference image remains a separate prompt input. On Explore, the validated JPG/PNG/WebP is sent as a base64 image input to the server-side AI and is used to produce bounded Wikimedia visual-search phrases. It is not inserted into the board or persisted with the board; the provider request is not made until the user submits the prompt. Image-only submission is not supported: the prompt must contain non-whitespace text. The upload interface is a file picker; drag-and-drop is not implemented.
 
 ### 3.3 Section 02 — A World Taking Shape
 
@@ -132,7 +132,7 @@ Filters update their `aria-pressed` state. Selecting a filter does not edit or s
 
 Image cards show photography, a title, a source link, and a pin toggle. Source links open a new tab with `noopener noreferrer`. Pinning updates `pinned`, accessible pressed state, tooltip/label text, the save label, and a toast. Generated image pins survive a refinement when the next generated image has the same ID. Imported Pinterest cards also show their sample/source-board badge and an individual removal control.
 
-Generated images cannot currently be removed through the UI. Pinning is a preservation signal during refinement; it does not reorder or drag cards. Imported images can be removed and later reimported.
+Generated/source images cannot currently be removed through the UI. Prompt submissions can replace unpinned local sample image slots with up to three Wikimedia references selected from AI-derived visual-search phrases. Pinning is a preservation signal during refinement; it does not reorder or drag cards. Imported images can be removed and later reimported.
 
 #### Palette cards
 
