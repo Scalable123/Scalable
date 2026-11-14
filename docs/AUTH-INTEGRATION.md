@@ -20,7 +20,7 @@ The authenticated session is an ASP.NET Identity cookie. GraphQL requests includ
 - [x] Request password resets through GraphQL with a neutral response.
 - [x] Reset passwords through a single-use ASP.NET Identity token.
 - [x] Remove the legacy browser auth SDK, config, mocks, and package dependency.
-- [ ] Add database migrations for production deployment instead of relying on `EnsureCreated`.
+- [x] Add database migrations for production deployment and apply them at startup.
 - [ ] Replace the development logging email adapter with a production email provider.
 - [ ] Add email verification, CSRF protection appropriate to the deployment, and rate limiting before production launch.
 - [ ] Move boards/profile/preferences from browser-only storage to authenticated, user-owned backend records.
@@ -56,7 +56,8 @@ The deployment boundary is deliberately server-side:
 - `ConnectionStrings:Default` selects the durable database. SQLite remains the
   local default; production must supply a persistent database location or a
   supported production provider and must use migrations rather than relying on
-  `EnsureCreated`.
+  checked-in EF migrations; startup applies pending migrations with
+  `Database.Migrate()`.
 - `App:PublicBaseUrl` must be the public frontend URL used in password-reset
   links. The local fallback is only for development.
 - The API includes `Scalable.Api/Dockerfile` and listens on container port
