@@ -874,10 +874,15 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
           Availability depends on each provider’s API access.
         </p>
         <form id="spotify-search-form" class="import-form">
-          <label for="spotify-search">Search Spotify's catalog</label>
+          <label for="music-provider">Search a music catalog</label>
           <div class="form-pair">
+            <select id="music-provider" aria-label="Music provider">
+              <option value="spotify">Spotify</option>
+              <option value="jamendo">Jamendo</option>
+              <option value="soundcloud">SoundCloud</option>
+            </select>
             <input id="spotify-search" maxlength="100" placeholder="Artist, song, or mood" required />
-            <button class="done-button" type="submit">Search Spotify ↗</button>
+            <button class="done-button" type="submit">Search catalog ↗</button>
           </div>
           <p id="spotify-search-status" class="field-help" role="status" aria-live="polite"></p>
           <div id="spotify-search-results" class="provider-tracks"></div>

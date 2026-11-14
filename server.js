@@ -7,6 +7,7 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 const frontendRoot = join(root, "frontend");
 const port = Number(process.env.PORT || 3000);
 let spotifyToken = null;
+let soundcloudToken = null;
 
 async function spotifyAccessToken() {
   if (spotifyToken && spotifyToken.expiresAt > Date.now() + 30_000) return spotifyToken.value;
@@ -46,6 +47,59 @@ async function spotifySearch(query) {
     previewUrl: null,
     provider: "spotify",
     resourceType: "song",
+  }));
+}
+
+async function jamendoSearch(query) {
+  const clientId = process.env.JAMENDO_CLIENT_ID;
+  if (!clientId) throw new Error("Jamendo is not configured on the server.");
+  const url = new URL("https://api.jamendo.com/v3.0/tracks/");
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "8");
+  url.searchParams.set("namesearch", query);
+  url.searchParams.set("audioformat", "mp32");
+  const response = await fetch(url);
+  const payload = await response.json();
+  if (!response.ok || payload.headers?.status !== "success") throw new Error("Jamendo search failed.");
+  return (payload.results || []).map((track) => ({
+    id: String(track.id), title: track.name, artist: track.artist_name, album: track.album_name,
+    imageUrl: track.image || null, discoveryUrl: track.shareurl, previewUrl: null,
+    provider: "jamendo", resourceType: "song",
+  }));
+}
+
+async function soundcloudAccessToken() {
+  if (soundcloudToken && soundcloudToken.expiresAt > Date.now() + 30_000) return soundcloudToken.value;
+  const clientId = process.env.SOUNDCLOUD_CLIENT_ID;
+  const clientSecret = process.env.SOUNDCLOUD_CLIENT_SECRET;
+  if (!clientId || !clientSecret) throw new Error("SoundCloud is not configured on the server.");
+  const response = await fetch("https://secure.soundcloud.com/oauth/token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  const payload = await response.json();
+  if (!response.ok || typeof payload.access_token !== "string") throw new Error("SoundCloud authorization failed.");
+  soundcloudToken = { value: payload.access_token, expiresAt: Date.now() + Number(payload.expires_in || 3600) * 1000 };
+  return soundcloudToken.value;
+}
+
+async function soundcloudSearch(query) {
+  const url = new URL("https://api.soundcloud.com/tracks");
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", "8");
+  url.searchParams.set("linked_partitioning", "true");
+  const response = await fetch(url, { headers: { Authorization: `OAuth ${await soundcloudAccessToken()}` } });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.message || "SoundCloud search failed.");
+  return (payload.collection || []).map((track) => ({
+    id: String(track.id), title: track.title, artist: track.user?.username || "Unknown artist",
+    album: null, imageUrl: track.artwork_url || track.user?.avatar_url || null,
+    discoveryUrl: track.permalink_url, previewUrl: null, provider: "soundcloud", resourceType: "song",
   }));
 }
 
@@ -139,6 +193,16 @@ async function serve(request, response) {
     if (!query || query.length > 100) return json(response, 400, { error: "Search text must be between 1 and 100 characters." }, request);
     try { return json(response, 200, { items: await spotifySearch(query) }, request); }
     catch (error) { return json(response, 503, { error: error.message || "Spotify is unavailable." }, request); }
+  }
+  if (url.pathname === "/api/music/jamendo/search" || url.pathname === "/api/music/soundcloud/search") {
+    if (request.method === "OPTIONS") return json(response, 204, {}, request);
+    if (request.method !== "GET") return json(response, 405, { error: "Method not allowed." }, request);
+    const query = url.searchParams.get("q")?.trim();
+    if (!query || query.length > 100) return json(response, 400, { error: "Search text must be between 1 and 100 characters." }, request);
+    try {
+      const items = url.pathname.includes("jamendo") ? await jamendoSearch(query) : await soundcloudSearch(query);
+      return json(response, 200, { items });
+    } catch (error) { return json(response, 503, { error: error.message || "Music provider is unavailable." }, request); }
   }
   if (url.pathname === "/api/ai/creative-direction") {
     const configuredOrigin = process.env.FRONTEND_ORIGIN?.trim();

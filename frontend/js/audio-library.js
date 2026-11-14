@@ -28,6 +28,13 @@ export const providers = [
     color: "#a65e32",
     note: "Music & independent sounds",
   },
+  {
+    id: "jamendo",
+    name: "Jamendo",
+    mark: "J",
+    color: "#7a5b9e",
+    note: "Independent and openly licensed music",
+  },
 ];
 const amazonHosts = new Set(
   [
@@ -95,6 +102,9 @@ export function parseMediaLink(value) {
   ) {
     provider = "soundcloud";
     resourceType = parts.includes("sets") ? "playlist" : "sound";
+  } else if (["jamendo.com", "www.jamendo.com"].includes(host) && parts.length) {
+    provider = "jamendo";
+    resourceType = "song";
   } else if (
     ["www.youtube.com", "youtube.com", "music.youtube.com"].includes(host) &&
     ((url.pathname === "/watch" && url.searchParams.get("v")) ||
@@ -307,11 +317,12 @@ export function setupAudioImporter({ onImport, getBoardId, element }) {
     const query = $("#spotify-search").value.trim();
     const statusNode = $("#spotify-search-status");
     const results = $("#spotify-search-results");
+    const provider = $("#music-provider").value;
     if (!query) return;
-    statusNode.textContent = "Searching Spotify…";
+    statusNode.textContent = `Searching ${provider}…`;
     results.replaceChildren();
     try {
-      const response = await fetch(`/api/music/spotify/search?q=${encodeURIComponent(query)}`, { credentials: "same-origin" });
+      const response = await fetch(`/api/music/${provider}/search?q=${encodeURIComponent(query)}`, { credentials: "same-origin" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Spotify search is unavailable.");
       spotifyTracks = payload.items.map((track) => reference({
@@ -319,7 +330,7 @@ export function setupAudioImporter({ onImport, getBoardId, element }) {
         title: track.title,
         artist: track.artist,
         url: track.discoveryUrl,
-        sourceKind: "spotify-api",
+        sourceKind: `${provider}-api`,
         isSample: false,
       }));
       spotifyTracks.forEach((item, index) => {
@@ -328,7 +339,7 @@ export function setupAudioImporter({ onImport, getBoardId, element }) {
         checkbox.type = "checkbox";
         checkbox.value = String(index);
         const copy = element("span");
-        copy.append(element("strong", "", item.title), element("small", "", `${item.artist} · Spotify`));
+        copy.append(element("strong", "", item.title), element("small", "", `${item.artist} · ${provider}`));
         label.append(checkbox, copy);
         results.append(label);
       });
