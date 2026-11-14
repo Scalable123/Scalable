@@ -1,4 +1,6 @@
-# Unsplash image source
+# Retired Unsplash image source
+
+This is a historical implementation record. Unsplash was removed from the active application in T007; these details are retained for audit history only and do not describe a live route or supported configuration.
 
 Application ID: **1133409**. The Access Key is server configuration; the Secret Key is not needed or stored. See [backend setup](BACKEND.md). Do not add either key to browser code, documentation, URLs, or Git.
 

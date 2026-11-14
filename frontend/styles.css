@@ -3510,19 +3510,16 @@ html[data-theme="dark"] .danger-button {
 }
 
 /* Provider attribution stays visible on narrow cards and in both themes. */
-.unsplash-card figcaption strong,
 .wikimedia-card figcaption strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.unsplash-card .photo-credit,
 .wikimedia-card .photo-credit {
   display: block;
   overflow-wrap: anywhere;
   font-size: 11px;
 }
-.unsplash-card .photo-credit a,
 .wikimedia-card .photo-credit a {
   display: inline;
 }

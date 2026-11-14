@@ -1,6 +1,4 @@
-import { sourceMessages as unsplashSourceMessages } from "./unsplash-source.js";
-import { wikimediaSourceMessages } from "./wikimedia-source.js";
-import { searchWikimediaImages } from "./wikimedia-source.js";
+import { wikimediaSourceMessages, searchWikimediaImages } from "./wikimedia-source.js";
 import { iconify } from "./icons.js";
 import {
   setupVideoImporter,
@@ -73,15 +71,15 @@ function renderImage(item) {
   source.rel = "noopener noreferrer";
   source.title = item.sourceLabel;
   caption.append(element("strong", "", item.title));
-  if (item.provider === "unsplash" || item.provider === "wikimedia") {
+  if (item.provider === "wikimedia") {
     card.classList.add(`${item.provider}-card`);
-    const credit = element("span", "photo-credit", item.provider === "wikimedia" ? "By " : "Photo by ");
+    const credit = element("span", "photo-credit", "By ");
     const creator = element("a", "", item.creatorName);
     creator.href = item.creatorUrl;
     creator.target = "_blank";
     creator.rel = "noopener noreferrer";
-    source.textContent = item.provider === "wikimedia" ? "Wikimedia Commons ↗" : "Unsplash ↗";
-    credit.append(creator, document.createTextNode(item.provider === "wikimedia" ? ` · ${item.licenseName} · ` : " on "), source);
+    source.textContent = "Wikimedia Commons ↗";
+    credit.append(creator, document.createTextNode(` · ${item.licenseName} · `), source);
     caption.append(credit);
   } else {
     caption.append(source);
@@ -273,10 +271,7 @@ function renderBoard() {
   );
   $("#board-description").textContent = board.description;
   const sourceStatus = $("#image-source-status");
-  sourceStatus.textContent = [
-    unsplashSourceMessages[board.imageSourceStatus],
-    wikimediaSourceMessages[board.wikimediaSourceStatus],
-  ].filter(Boolean).join(" ");
+  sourceStatus.textContent = wikimediaSourceMessages[board.wikimediaSourceStatus] || "";
   sourceStatus.hidden = !sourceStatus.textContent;
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
@@ -624,8 +619,6 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     const next = await boardService.research({
       prompt,
       referenceFile,
-      fetchImages: true,
-      fetchWikimedia: false,
       ...researchOptions(),
     });
     try {
@@ -687,27 +680,24 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       return pin ? { ...pin, position: item.position } : item;
     });
     const preserved = [
-      ...pinned.filter((item) => ["unsplash", "wikimedia"].includes(item.provider)),
+      ...pinned.filter((item) => item.provider === "wikimedia"),
       ...(board?.items || []).filter((item) => item.imported),
     ];
     for (const item of preserved) {
       if (!next.items.some((candidate) => candidate.id === item.id))
         next.items.push(
-          ["unsplash", "wikimedia"].includes(item.provider) ? { ...item, position: "pinterest" } : item,
+          item.provider === "wikimedia" ? { ...item, position: "pinterest" } : item,
         );
     }
     // A repeated result retains its pin without adding a duplicate.
     if (next.mode !== "ai")
-      next.mode = next.items.some((item) => ["unsplash", "wikimedia"].includes(item.provider))
-        ? "sample-with-sources"
+      next.mode = next.items.some((item) => item.provider === "wikimedia")
+        ? "sample-with-wikimedia"
         : "demo";
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
-    const sourceMessage = [
-      unsplashSourceMessages[board.imageSourceStatus],
-      wikimediaSourceMessages[board.wikimediaSourceStatus],
-    ].filter(Boolean).join(" ");
+    const sourceMessage = wikimediaSourceMessages[board.wikimediaSourceStatus];
     notify(
       sourceMessage
         ? next.mode === "ai"
@@ -926,7 +916,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore uses the prompt and optional submitted reference image for AI direction and can replace sample image slots with credited Wikimedia references; the palette remains local. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. When configured, the separate Unsplash host can add a credited photo within its shared hourly request budget. Cloud board saving and music-service connections remain planned.",
+      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore uses the prompt and optional submitted reference image for AI direction and can replace sample image slots with credited Wikimedia references; the palette remains local. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. Cloud board saving and music-service connections remain planned.",
     ),
   ),
 );

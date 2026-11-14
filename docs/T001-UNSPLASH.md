@@ -1,6 +1,6 @@
-# T001 — Unsplash image source (branch history)
+# T001 — Retired Unsplash image source (branch history)
 
-This preserves the Unsplash implementation record from the feature branch. Its T001 identifier is distinct from the Pinterest T001 record on `main`; current architecture and integration details are maintained in [BACKEND.md](BACKEND.md) and [UNSPLASH-INTEGRATION.md](UNSPLASH-INTEGRATION.md).
+This preserves the historical Unsplash implementation record from the feature branch. Unsplash was retired in T007 and is no longer an active provider, route, client, configuration, or test.
 
 ## Decisions
 

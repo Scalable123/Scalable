@@ -359,9 +359,7 @@ const path = require("node:path");
     await blockedPage
       .getByText("Applied for this visit.", { exact: false })
       .waitFor();
-    assert(requests.every((request) => request.method === "GET" || (
-      request.method === "POST" && request.url === `${url}/api/image-sources/unsplash`
-    )), "Only explicit same-origin image searches may send POST requests");
+    assert(requests.every((request) => request.method === "GET" || request.url.endsWith("/graphql")), "Account/video flows must not send image-provider POST requests");
     const external = requests.filter(
       (request) =>
         /^https?:/.test(request.url) && new URL(request.url).origin !== url,

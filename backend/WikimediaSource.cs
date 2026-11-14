@@ -4,6 +4,13 @@ using System.Text.RegularExpressions;
 
 namespace Scalable.Api;
 
+public sealed record PhotoItem(
+    string Id, string Type, string Provider, string ExternalPhotoId, string Url,
+    string Title, string Description, string SourceUrl, string SourceLabel,
+    string CreatorName, string CreatorUrl, string Position = "hero", bool Pinned = false,
+    bool IsSample = false, string? LicenseName = null);
+public sealed record SourceResult(string Status, PhotoItem? Image = null);
+
 public sealed class WikimediaSource(HttpClient http, RequestBudget budget, string userAgent)
 {
     private const string ApiHost = "commons.wikimedia.org";
