@@ -1,12 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
+import { supabaseConfig } from "./supabase-config.js";
 
-const supabaseUrl = import.meta.env.SUPABASE_URL;
-const supabasePublishableKey = import.meta.env.SUPABASE_PUBLISHABLE_KEY;
+const supabaseUrl = supabaseConfig.url;
+const supabasePublishableKey = supabaseConfig.publishableKey;
 
 if (!supabaseUrl || !supabasePublishableKey) {
   throw new Error(
-    "Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY. " +
-      "Add them to the frontend environment configuration."
+    "Missing Supabase URL or publishable key. " +
+      "Set them in frontend/js/config/supabase-config.js."
   );
 }
 

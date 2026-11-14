@@ -42,10 +42,10 @@
         <h2 id="login-title">Welcome back<span>.</span></h2>
         <p class="dialog-copy">Your next creative direction is waiting.</p>
         <div class="preview-explainer">
-          <strong>Frontend login preview</strong>
+          <strong>Secure Supabase sign-in</strong>
           <p>
-            Use sample details. No credentials are sent or saved, and this does
-            not authenticate an account.
+            Your password is sent directly to Supabase Auth over HTTPS and is
+            never saved in this app.
           </p>
         </div>
         <form id="login-form" class="import-form">
@@ -58,7 +58,7 @@
             placeholder="you@example.com"
             autocomplete="off"
           /><label for="login-password"
-            >Password <span>(sample only, 8+ characters)</span></label
+            >Password <span>(8+ characters)</span></label
           >
           <div class="password-field">
             <input
@@ -67,8 +67,8 @@
               required
               minlength="8"
               maxlength="128"
-              placeholder="Enter a sample password"
-              autocomplete="off"
+              placeholder="Enter your password"
+              autocomplete="current-password"
             /><button
               id="show-password"
               type="button"
@@ -89,8 +89,8 @@
           Explore the demo account
         </button>
         <p class="field-help login-help">
-          The account preview is available without signing in. Cloud sync and
-          real authentication will connect through the .NET backend.
+          Password recovery uses a single-use Supabase email link. The demo
+          account remains available without signing in.
         </p>
         <p
           id="login-status"

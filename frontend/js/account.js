@@ -4,6 +4,7 @@ import {
   updateAppearance,
   resetAppearance,
 } from "./appearance.js";
+import { supabase } from "./config/supabaseClient.js";
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
 const sessionKey = "scalable.demoSession";
@@ -45,12 +46,21 @@ function startDemo() {
   location.assign("account.html");
 }
 if (document.body.dataset.page === "login") {
-  $("#login-form").addEventListener("submit", (event) => {
+  $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!$("#login-email").value.trim()) return;
-    // Never persist, send, log, or copy the password/email entered in this mock form.
+    const email = $("#login-email").value.trim();
+    const password = $("#login-password").value;
+    const status = $("#login-status");
+    if (!email || !password) return;
+    status.textContent = "Signing in…";
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      status.textContent =
+        "We could not sign you in. Check your email and password and try again.";
+      return;
+    }
     event.target.reset();
-    startDemo();
+    location.assign("account.html");
   });
   $("#demo-account").addEventListener("click", startDemo);
   $("#show-password").addEventListener("click", () => {
@@ -63,9 +73,20 @@ if (document.body.dataset.page === "login") {
       show ? "Hide sample password" : "Show sample password",
     );
   });
-  $("#forgot-password").addEventListener("click", () => {
-    $("#login-status").textContent =
-      "Password recovery is a preview. No email was sent; a backend identity service is required.";
+  $("#forgot-password").addEventListener("click", async () => {
+    const email = $("#login-email").value.trim();
+    const status = $("#login-status");
+    if (!email) {
+      status.textContent = "Enter your email address, then choose Forgot password.";
+      $("#login-email").focus();
+      return;
+    }
+    status.textContent = "Sending recovery instructions…";
+    const redirectTo = new URL("update-password.html", window.location.href).href;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    status.textContent = error
+      ? "We could not send recovery instructions. Please try again later."
+      : "If an account exists for that email, recovery instructions are on the way.";
   });
 } else {
   const defaults = { name: "Your creative space", email: "you@example.com" };
@@ -101,12 +122,13 @@ if (document.body.dataset.page === "login") {
   } catch {
     $("#account-board-count").textContent = "—";
   }
-  try {
-    if (sessionStorage.getItem(sessionKey))
-      $("#account-session").textContent = "Demo session · not authenticated";
-  } catch {
-    /* No authenticated state is inferred. */
-  }
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) {
+      $("#account-session").textContent = "Authenticated session";
+      if (data.session.user.email) profile.email = data.session.user.email;
+      showProfile();
+    }
+  });
   const titles = {
     profile: "profile-title",
     appearance: "account-appearance-title",
@@ -198,7 +220,8 @@ if (document.body.dataset.page === "login") {
     $("#security-status").textContent =
       "Password changes are not active in this preview. No password or account settings were changed.";
   });
-  $("#demo-signout").addEventListener("click", () => {
+  $("#demo-signout").addEventListener("click", async () => {
+    await supabase.auth.signOut();
     try {
       sessionStorage.removeItem(sessionKey);
     } catch {
