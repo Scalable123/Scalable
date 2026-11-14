@@ -39,7 +39,12 @@ builder.Services
 
 builder.Services.AddAuthorization();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-    policy.WithOrigins("http://localhost:3000", "http://localhost:5078")
+    policy.SetIsOriginAllowed(origin =>
+        Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+        uri.Scheme == Uri.UriSchemeHttp &&
+        (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+         uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+         uri.Host.Equals("::1", StringComparison.OrdinalIgnoreCase)))
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials()));

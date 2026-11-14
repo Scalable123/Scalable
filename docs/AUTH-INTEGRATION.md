@@ -50,6 +50,7 @@ The authenticated session is an ASP.NET Identity cookie. GraphQL requests includ
 - Removed the SDK package, browser client/config files, test mock, and stale documentation references.
 - Added the development email adapter and isolated development Data Protection key ring after live token generation exposed stale profile-key decryption failures.
 - Browser regression execution was attempted but is currently unavailable because the workspace does not have the `playwright` package installed.
+- Local API launch was aligned to `http://localhost:5078`, matching the frontend GraphQL endpoint; development CORS accepts HTTP origins on loopback hosts (`localhost`, `127.0.0.1`, and `::1`) so IDE dev-server ports work without enabling a production-wide wildcard.
 
 ## Verification commands
 
