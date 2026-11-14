@@ -1,6 +1,6 @@
 # AI integration
 
-This document describes the implemented Node AI prompt flow. It is separate from the ASP.NET GraphQL/Identity and Pinterest API; GraphQL is the application account API instead of Supabase. See [BACKEND.md](BACKEND.md) for current service boundaries and [T003](T003.md) for validation.
+This document describes the implemented Node AI prompt flow. It is separate from the ASP.NET GraphQL/Identity API; GraphQL is the application account API instead of Supabase. See [BACKEND.md](BACKEND.md) for current service boundaries and [T003](T003.md) for validation.
 
 ## Local setup
 
@@ -9,7 +9,7 @@ This document describes the implemented Node AI prompt flow. It is separate from
 3. Start the application with `npm start`.
 4. Open `http://localhost:3000/`. The server serves `frontend/` and the API from the same origin.
 
-Node serves the contents of `frontend/` at its URL root, so login is `/login.html`, not `/frontend/login.html`. Run the .NET API separately for accounts/Pinterest. `PORT` overrides 3000.
+Node serves the contents of `frontend/` at its URL root, so login is `/login.html`, not `/frontend/login.html`. Run the .NET API separately for accounts. `PORT` overrides 3000.
 
 The existing `python3 -m http.server ... --directory frontend` preview remains available, but it cannot call the AI endpoint because it does not run the backend.
 
@@ -30,6 +30,6 @@ If the API key is missing, the provider fails, or the app is opened through a st
 - Never add `OPENAI_API_KEY` to browser JavaScript or expose it through frontend configuration.
 - The endpoint currently has no authentication or rate limiting; add both before production use. Render CORS is restricted to the configured `FRONTEND_ORIGIN`.
 - AI songs are creative recommendations with catalog-search links, not verified provider results.
-- Reference images are uploaded only on explicit Explore submission, as validated base64 JPG/PNG/WebP data, and are not persisted by the app. Pinterest imports are never included in the frontend request; browser research-policy guards reject Pinterest inputs. The Node endpoint itself has no equivalent Pinterest-specific server guard, which remains required before expanding research/tools.
+- Reference images are uploaded only on explicit Explore submission, as validated base64 JPG/PNG/WebP data, and are not persisted by the app. Previously saved references are never included in the frontend request; only the explicitly uploaded reference is submitted.
 - The endpoint limits prompts to 2,000 characters, reference files to 10 MB in the browser, and the encoded JSON request to 15,000,000 characters. Invalid prompts/images return 400; JSON/size/provider failures return 502.
 - Wikimedia requests are server-side only. Configure `Wikimedia:UserAgent` and, when needed, `Wikimedia:BudgetPath`; the source uses a conservative 180 requests/minute budget below the documented 200 requests/minute identified-client guidance.

@@ -309,7 +309,7 @@ const path = require("node:path");
     await page.locator("[data-account-panel=connections]").click();
     assert.equal(
       await page.getByText("Not connected", { exact: true }).count(),
-      6,
+      5,
     );
     await page
       .getByRole("link", { name: "Open YouTube import preview", exact: true })

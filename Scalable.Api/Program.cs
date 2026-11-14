@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Path = System.IO.Path;
 using Scalable.Api.GraphQL;
@@ -109,11 +108,6 @@ builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.Applic
     };
 });
 
-builder.Services.AddSingleton(services => new PinterestStore(Path.Combine(
-    dataRoot,
-    "pinterest.db")));
-builder.Services.AddSingleton<PinterestIntegration>();
-builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddSingleton(new ProviderRequestBudget(
     builder.Configuration["Wikimedia:BudgetPath"] ?? Path.Combine(dataRoot, "wikimedia-budget.json"),
     TimeProvider.System));
@@ -125,12 +119,6 @@ builder.Services.AddSingleton<WikimediaSource>(services => new WikimediaSource(
     }) { Timeout = TimeSpan.FromSeconds(5) },
     services.GetRequiredService<ProviderRequestBudget>(),
     builder.Configuration["Wikimedia:UserAgent"] ?? "Scalable/1.0 (https://github.com/Scalable123/Scalable)"));
-builder.Services.AddHttpClient("Pinterest", client =>
-{
-    client.BaseAddress = new Uri("https://api.pinterest.com/v5/");
-    client.Timeout = TimeSpan.FromSeconds(25);
-    client.MaxResponseContentBufferSize = 4 *  1024 * 1024;
-}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 
 if (builder.Configuration.GetValue<bool>("App:CrossSiteCookies"))
 {
@@ -158,18 +146,9 @@ builder.Services.AddRateLimiter(options =>
         await context.HttpContext.Response.WriteAsJsonAsync(new
         {
             error = "rate_limited",
-            message = "Scalable's Pinterest request limit was reached. Wait a minute before retrying."
+            message = "Scalable's image-source request limit was reached. Wait a minute before retrying."
         }, cancellationToken);
     };
-    options.AddPolicy("pinterest", context => RateLimitPartition.GetFixedWindowLimiter(
-        context.User.FindFirstValue(ClaimTypes.NameIdentifier) ??
-        context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
-        _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 60,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0
-        }));
     options.AddPolicy("provider", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions
@@ -219,13 +198,6 @@ app.Use(async (context, next) =>
     {
         await next(context);
     }
-    catch (IntegrationException error)
-    {
-        if (error.RetryAfter is not null)
-            context.Response.Headers.RetryAfter = error.RetryAfter;
-        context.Response.StatusCode = error.Status;
-        await context.Response.WriteAsJsonAsync(new { error = error.Code, message = error.Message });
-    }
     catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
     {
     }
@@ -250,9 +222,6 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
-app.MapGet("/api/integrations/pinterest/availability", (PinterestIntegration integration) =>
-    Results.Ok(new { available = integration.Available, researchAllowed = false }))
-    .RequireRateLimiting("pinterest");
 app.MapPost("/api/image-sources/wikimedia", async (WikimediaInput input, WikimediaSource source, CancellationToken token) =>
 {
     var prompt = input.Prompt?.Trim();
@@ -260,34 +229,9 @@ app.MapPost("/api/image-sources/wikimedia", async (WikimediaInput input, Wikimed
         return Results.BadRequest(new { error = "A prompt of 1–2000 characters is required." });
     return Results.Ok(await source.Search(prompt, token));
 }).RequireRateLimiting("provider");
-var pinterest = app.MapGroup("/api/integrations/pinterest")
-    .RequireAuthorization()
-    .RequireRateLimiting("pinterest");
-pinterest.MapGet("", async (HttpContext context, PinterestIntegration integration) =>
-    Results.Ok(await integration.Status(UserId(context), context.RequestAborted)));
-pinterest.MapPost("/authorize", async (HttpContext context, PinterestIntegration integration) =>
-    Results.Ok(await integration.Authorize(context, UserId(context))));
-pinterest.MapDelete("", async (HttpContext context, PinterestIntegration integration) =>
-{
-    await integration.Disconnect(UserId(context), context.RequestAborted);
-    return Results.Ok(new
-    {
-        status = "disconnected",
-        providerRevocationRequired = true,
-        message = "Disconnected from Scalable. Remove Scalable in Pinterest account settings to revoke Pinterest's grant."
-    });
-});
-pinterest.MapGet("/boards", async (HttpContext context, PinterestIntegration integration, string? bookmark) =>
-    Results.Ok(await integration.Boards(UserId(context), bookmark, context.RequestAborted)));
-pinterest.MapGet("/boards/{id}/pins", async (HttpContext context, PinterestIntegration integration, string id, string? bookmark) =>
-    Results.Ok(await integration.Pins(UserId(context), id, bookmark, context.RequestAborted)));
-app.MapGet("/api/integrations/pinterest/callback", async (HttpContext context, PinterestIntegration integration) =>
-    await integration.Callback(context)).RequireRateLimiting("pinterest");
 app.MapGraphQL("/graphql");
 
 app.Run();
-
-static string UserId(HttpContext context) => context.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
 static string DataRoot(IConfiguration configuration, IWebHostEnvironment environment) {
     var path = configuration["DataPath"] ?? "data";
