@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 using HotChocolate.Authorization;
 using HotChocolate;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Scalable.Api.Identity;
 
 namespace Scalable.Api.GraphQL;
@@ -20,6 +22,9 @@ public sealed class AccountMutations
         if (string.IsNullOrWhiteSpace(input.DisplayName) || input.DisplayName.Length > 80)
             return AuthPayload.Failure("Choose a display name of 80 characters or fewer.");
 
+        if (!new EmailAddressAttribute().IsValid(input.Email.Trim()))
+            return AuthPayload.Failure("Enter a valid email address.");
+
         if (input.Password.Length < 8)
             return AuthPayload.Failure("Choose a password with at least 8 characters.");
 
@@ -36,9 +41,32 @@ public sealed class AccountMutations
             DisplayName = input.DisplayName.Trim(),
         };
 
-        var result = await users.CreateAsync(user, input.Password);
+        IdentityResult result;
+        try
+        {
+            result = await users.CreateAsync(user, input.Password);
+        }
+        catch (DbUpdateException)
+        {
+            return AuthPayload.Failure("That username or email is already in use.");
+        }
+
         if (!result.Succeeded)
-            return AuthPayload.Failure("The account could not be created.");
+        {
+            if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.DuplicateUserName)))
+                return AuthPayload.Failure("That username is already in use.");
+
+            if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.DuplicateEmail)))
+                return AuthPayload.Failure("That email is already in use.");
+
+            if (result.Errors.Any(error => error.Code.StartsWith("Password", StringComparison.Ordinal)))
+                return AuthPayload.Failure("Choose a stronger password with at least 8 characters.");
+
+            if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.InvalidUserName)))
+                return AuthPayload.Failure("Use only letters, numbers, dots, dashes, or underscores in the username.");
+
+            return AuthPayload.Failure("The account details could not be accepted.");
+        }
 
         await signIn.SignInAsync(user, isPersistent: false);
         return AuthPayload.Success(UserSummary.From(user));
