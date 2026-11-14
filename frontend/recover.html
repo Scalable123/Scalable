@@ -51,11 +51,10 @@
         <h1 id="recovery-title">Find your way back<span>.</span></h1>
         <p class="dialog-copy">A calm place to start again.</p>
         <div class="preview-explainer" id="recovery-info">
-          <strong>Password recovery preview</strong>
+          <strong>Secure GraphQL password recovery</strong>
           <p>
-            No email can be sent from this static frontend. Use a sample address
-            to preview the recovery confirmation; real recovery will use the
-            backend identity service.
+            Enter your account email. The GraphQL identity service will send a
+            single-use reset link when email delivery is configured.
           </p>
         </div>
         <form
@@ -65,7 +64,7 @@
           method="get"
         >
           <label for="recovery-email"
-            >Email address <span>(sample only)</span></label
+            >Email address</label
           ><input
             id="recovery-email"
             type="email"
@@ -84,10 +83,10 @@
           tabindex="-1"
           hidden
         >
-          <h2>Preview complete.</h2>
+          <h2>Check your email.</h2>
           <p>
-            Password recovery is a preview. No email was sent; a backend
-            identity service is required.
+            If an account exists for that email, recovery instructions are on
+            the way. Check your inbox and use the single-use link.
           </p>
         </section>
         <a class="return-login" href="login.html">← Return to login</a>

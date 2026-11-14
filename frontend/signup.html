@@ -133,8 +133,8 @@
             </button>
           </div>
           <p id="signup-password-help" class="field-help signup-password-help">
-            Use at least 8 characters. Real password policies will be enforced
-            by the backend.
+             Use at least 8 characters. The backend enforces the policy and
+             stores only a secure password hash.
           </p>
           <label for="signup-confirm">Confirm password</label>
           <div class="password-field">
@@ -164,13 +164,13 @@
             type="submit"
             disabled
           >
-            Preview account creation ↗
+            Create permanent account ↗
           </button>
         </form>
         <noscript
           ><p class="field-help">
             Enable JavaScript to preview password confirmation. You can still
-            use the login and demo-account links below.
+            use the login and guest access links below.
           </p></noscript
         >
         <section
@@ -186,7 +186,7 @@
             Your account was created successfully.
           </p>
           <a class="done-button" href="account.html"
-            >Continue to account preview ↗</a
+            >Continue to your account ↗</a
           ><button id="signup-again" class="text-button" type="button">
             Try the form again
           </button>
@@ -194,8 +194,8 @@
         <p class="auth-switch">
           Already have an account? <a href="login.html">Log in ↗</a>
         </p>
-        <a class="signup-demo-link" href="account.html"
-          >Explore the demo account instead ↗</a
+        <a class="signup-demo-link" href="index.html"
+          >Continue without an account ↗</a
         >
         <p
           id="signup-status"

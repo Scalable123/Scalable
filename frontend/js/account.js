@@ -6,18 +6,6 @@ import {
   setupThemeControls,
 } from "./appearance.js";
 import { graphqlRequest } from "./config/graphqlClient.js";
-// Keep standalone preview pages usable even when the auth SDK is unavailable.
-let supabasePromise;
-async function getSupabase() {
-  if (!supabasePromise)
-    supabasePromise = import("./config/supabaseClient.js")
-      .then((module) => module.supabase)
-      .catch((error) => {
-        supabasePromise = null;
-        throw error;
-      });
-  return supabasePromise;
-}
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
 const sessionKey = "scalable.demoSession";
@@ -54,7 +42,7 @@ function startDemo() {
   } catch {
     /* The account remains a preview when storage is blocked. */
   }
-  location.assign("account.html");
+  location.assign("index.html");
 }
 function setupPasswordToggle(inputSelector, buttonSelector, label) {
   const input = $(inputSelector);
@@ -76,7 +64,7 @@ if (document.body.dataset.page === "login") {
     const status = $("#login-status");
     if (!email || !password) return;
     status.textContent = "Signing in…";
-    let error;
+    let result;
     try {
       result = await graphqlRequest(
         `mutation Login($input: LoginInput!) {
@@ -86,7 +74,7 @@ if (document.body.dataset.page === "login") {
       );
     } catch {
       status.textContent =
-        "Sign-in is temporarily unavailable. Please try again later, or explore the demo account.";
+        "Sign-in is temporarily unavailable. Please try again later, or continue without an account.";
       return;
     }
     if (!result.login.succeeded) {
@@ -112,20 +100,20 @@ if (document.body.dataset.page === "login") {
       return;
     }
     status.textContent = "Sending recovery instructions…";
-    const redirectTo = new URL("update-password.html", window.location.href)
-      .href;
     let result;
     try {
-      const supabase = await getSupabase();
-      ({ error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo }));
+      result = await graphqlRequest(
+        `mutation RequestPasswordReset($input: PasswordResetRequestInput!) {
+          requestPasswordReset(input: $input) { succeeded message }
+        }`,
+        { input: { email } },
+      );
     } catch {
       status.textContent =
         "Recovery is temporarily unavailable. Please try again later.";
       return;
     }
-    status.textContent = error
-      ? "We could not send recovery instructions. Please try again later."
-      : "If an account exists for that email, recovery instructions are on the way.";
+    status.textContent = result.requestPasswordReset.message;
   });
 } else if (document.body.dataset.page === "signup") {
   const form = $("#signup-form");
@@ -219,12 +207,27 @@ if (document.body.dataset.page === "login") {
   });
   $("#signup-submit").disabled = false;
 } else if (document.body.dataset.page === "recovery") {
-  $("#recovery-form").addEventListener("submit", (event) => {
+  $("#recovery-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!$("#recovery-email").value.trim()) return;
-    event.target.reset();
-    $("#recovery-result").hidden = false;
-    $("#recovery-result").focus();
+    const email = $("#recovery-email").value.trim();
+    if (!email) return;
+    const status = $("#recovery-status");
+    status.textContent = "Sending recovery instructions…";
+    try {
+      const { requestPasswordReset } = await graphqlRequest(
+        `mutation RequestPasswordReset($input: PasswordResetRequestInput!) {
+          requestPasswordReset(input: $input) { succeeded message }
+        }`,
+        { input: { email } },
+      );
+      event.target.reset();
+      $("#recovery-result").hidden = false;
+      $("#recovery-result").focus();
+      status.textContent = requestPasswordReset.message;
+    } catch {
+      status.textContent =
+        "Recovery is temporarily unavailable. Please try again later.";
+    }
   });
 } else {
   const defaults = { name: "Your creative space", email: "you@example.com" };

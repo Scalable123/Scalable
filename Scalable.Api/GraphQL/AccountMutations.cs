@@ -112,6 +112,40 @@ public sealed class AccountMutations
         await signIn.SignOutAsync();
         return true;
     }
+
+    public async Task<PasswordResetPayload> RequestPasswordReset(
+        PasswordResetRequestInput input,
+        [Service] UserManager<AppUser> users,
+        [Service] IAccountEmailSender emailSender,
+        [Service] IConfiguration configuration)
+    {
+        var email = input.Email.Trim();
+        var user = await users.FindByEmailAsync(email);
+        if (user is not null)
+        {
+            var token = await users.GeneratePasswordResetTokenAsync(user);
+            var baseUrl = configuration["App:PublicBaseUrl"]?.TrimEnd('/')
+                ?? "http://localhost:3000/frontend";
+            var resetUrl = $"{baseUrl}/update-password.html?email={Uri.EscapeDataString(user.Email ?? email)}&token={Uri.EscapeDataString(token)}";
+            await emailSender.SendPasswordResetAsync(user, resetUrl);
+        }
+
+        return PasswordResetPayload.Accepted();
+    }
+
+    public async Task<PasswordResetPayload> ResetPassword(
+        PasswordResetInput input,
+        [Service] UserManager<AppUser> users)
+    {
+        var user = await users.FindByEmailAsync(input.Email.Trim());
+        if (user is null || string.IsNullOrWhiteSpace(input.Token))
+            return PasswordResetPayload.Failure("The password reset link is invalid or has expired.");
+
+        var result = await users.ResetPasswordAsync(user, input.Token, input.Password);
+        return result.Succeeded
+            ? PasswordResetPayload.Successful()
+            : PasswordResetPayload.Failure("The password reset link is invalid or has expired.");
+    }
 }
 
 [ExtendObjectType<Query>]
@@ -132,10 +166,25 @@ public sealed record RegisterInput(string Username, string Email, string Display
 
 public sealed record LoginInput(string Identifier, string Password);
 
+public sealed record PasswordResetRequestInput(string Email);
+
+public sealed record PasswordResetInput(string Email, string Token, string Password);
+
 public sealed record AuthPayload(bool Succeeded, string Message, UserSummary? User)
 {
     public static AuthPayload Success(UserSummary user) => new(true, "", user);
     public static AuthPayload Failure(string message) => new(false, message, null);
+}
+
+public sealed record PasswordResetPayload(bool Succeeded, string Message)
+{
+    public static PasswordResetPayload Accepted() =>
+        new(true, "If an account exists for that email, password reset instructions are on the way.");
+
+    public static PasswordResetPayload Successful() =>
+        new(true, "Password updated. You can now sign in.");
+
+    public static PasswordResetPayload Failure(string message) => new(false, message);
 }
 
 public sealed record UserSummary(string Id, string Username, string Email, string DisplayName)

@@ -23,7 +23,7 @@ If the API key is missing, the provider fails, or the app is opened through a st
 
 ## Security and boundaries
 
-- Never add `OPENAI_API_KEY` to browser JavaScript or expose it through `SUPABASE_*` configuration.
+- Never add `OPENAI_API_KEY` to browser JavaScript or expose it through frontend configuration.
 - The endpoint currently has no authentication or rate limiting; add both before production use.
 - AI songs are creative recommendations with catalog-search links, not verified provider results.
 - Reference images remain local in this first pass and are not uploaded to the AI provider.

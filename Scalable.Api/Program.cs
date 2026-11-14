@@ -1,10 +1,21 @@
 using Scalable.Api.GraphQL;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Scalable.Api.Data;
 using Scalable.Api.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+if (builder.Environment.IsDevelopment())
+{
+    var keyDirectory = System.IO.Path.Combine(builder.Environment.ContentRootPath, ".keys");
+    Directory.CreateDirectory(keyDirectory);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default")
@@ -20,6 +31,7 @@ builder.Services
     .AddEntityFrameworkStores<AppDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
+builder.Services.AddSingleton<IAccountEmailSender, LoggingAccountEmailSender>();
 
 builder.Services
     .AddAuthentication(IdentityConstants.ApplicationScheme)
