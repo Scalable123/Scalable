@@ -3159,3 +3159,87 @@ html[data-layout="collage"]
 .symbol-play {
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 3l15 9-15 9z' fill='black'/%3E%3C/svg%3E");
 }
+
+/* Import entry points follow the Studio's three-step creative flow. */
+.prompt-panel .pinterest-dock {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 15px;
+  margin: 18px 0 10px;
+  background: var(--panel);
+}
+.prompt-panel .pinterest-mark {
+  width: 30px;
+  height: 30px;
+  font-size: 21px;
+}
+.prompt-panel .pinterest-dock strong {
+  font-size: 20px;
+  line-height: 1.2;
+}
+.prompt-panel .pinterest-dock p {
+  margin: 7px 0 0;
+}
+.prompt-panel .pinterest-dock button {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 44px;
+  text-align: center;
+  font-size: 11px;
+}
+.prompt-panel #pinterest-import-summary {
+  font-size: 10px;
+  margin: 10px 0 18px;
+}
+.soundtrack-section {
+  border-top: 1px solid var(--line);
+  padding-top: 26px;
+  margin-top: 30px;
+}
+.soundtrack-heading .section-label {
+  margin-bottom: 12px;
+}
+.soundtrack-heading h2 {
+  font: normal 30px / 1.15 var(--serif);
+  letter-spacing: -0.7px;
+  margin: 0;
+}
+.soundtrack-heading h2 > span {
+  color: var(--accent);
+}
+.soundtrack-heading > .song-caption {
+  margin-bottom: 0;
+}
+.soundtrack-section .audio-dock {
+  margin-top: 18px;
+}
+.soundtrack-section #song-section {
+  border: 0;
+  padding-top: 0;
+  margin-top: 24px;
+}
+.soundtrack-section #song-section .song-heading h3 {
+  font-size: 24px;
+}
+@media (max-width: 800px) {
+  .prompt-panel .pinterest-dock {
+    grid-template-columns: 35px minmax(0, 1fr);
+    gap: 12px 15px;
+    padding: 18px;
+  }
+  .prompt-panel .pinterest-mark {
+    width: 35px;
+    height: 35px;
+    font-size: 23px;
+  }
+  .prompt-panel .pinterest-dock strong {
+    font-size: 23px;
+  }
+  .soundtrack-heading h2 {
+    font-size: 28px;
+  }
+}

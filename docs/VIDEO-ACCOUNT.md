@@ -4,7 +4,7 @@ These additions use plain HTML/CSS/JavaScript and the Studio's shared appearance
 
 ## Video references
 
-Use **Import video** above the canvas, or open the Videos filter:
+Use **Import video** in **02 / A World Taking Shape**, above the canvas, or open the Videos filter:
 
 - **YouTube:** Paste an HTTPS watch, Shorts, embed, or youtu.be video URL and provide a title. The importer validates the hostname/video ID and normalizes optional numeric or `1m30s` start times. Equivalent links to the same video/start time are duplicates. Playlists and channel/library imports are not supported.
 - **On-demand embed:** Saving the reference makes no YouTube request and fetches no thumbnail or metadata. Click **Load YouTube player** to create a `youtube-nocookie.com` iframe; **Unload player** removes it. The source link remains available when embedding is disabled, a video is unavailable, or network restrictions prevent playback. Loading an embed contacts YouTube; no account connection is implied.
