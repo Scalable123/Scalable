@@ -294,7 +294,6 @@ if (document.body.dataset.page === "login") {
     ["Amazon Music", "audio", "Explore a candidate music integration."],
     ["Apple Music", "audio", "Collect links or preview a sample library."],
     ["SoundCloud", "audio", "Add independent music and sound references."],
-    ["YouTube", "video", "Save video references; load players on demand."],
   ]) {
     const row = document.createElement("article");
     row.className = "account-connection";

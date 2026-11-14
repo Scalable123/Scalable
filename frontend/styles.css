@@ -35,6 +35,21 @@ a,
 label.upload {
   -webkit-tap-highlight-color: transparent;
 }
+
+.wikimedia-note {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1.25rem 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line, #d7d2c8);
+  background: var(--paper, #f5f3ed);
+  color: var(--ink, #20231f);
+}
+
+.wikimedia-note span {
+  color: var(--muted, #6b6d65);
+  font-size: 0.85rem;
+}
 button {
   cursor: pointer;
   color: inherit;

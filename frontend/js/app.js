@@ -1,11 +1,5 @@
 import { wikimediaSourceMessages, searchWikimediaImages } from "./wikimedia-source.js";
 import { iconify } from "./icons.js";
-import {
-  setupVideoImporter,
-  renderVideoReference,
-  retainLocalVideos,
-  releaseLocalVideo,
-} from "./video-library.js";
 import { setupPinterestImporter } from "./pinterest-import.js";
 import {
   setupAudioImporter,
@@ -23,8 +17,6 @@ const grid = $("#board-grid");
 let board;
 let boardVersion = 0;
 let filter = "all";
-let referenceFile = null;
-let referenceUrl = null;
 let toastTimeout;
 let pendingBoardDeletion = null;
 let deletingBoard = false;
@@ -290,19 +282,11 @@ function renderBoard() {
     `${pinterestPins.length} imported ${pinterestPins.every(item => item.isSample) ? "sample " : ""}pin${pinterestPins.length === 1 ? "" : "s"} · ${sourceBoardCount} source board${sourceBoardCount === 1 ? "" : "s"} · save this mood board to keep the references`;
   $("#import-pinterest").disabled = false;
   $("#import-audio").disabled = false;
-  $("#import-video").disabled = false;
   grid.classList.toggle(
     "no-sound",
     !board.items.some((item) => item.type === "sound" && !item.imported),
   );
-  document.querySelectorAll("audio,video").forEach((audio) => audio.pause());
   grid.replaceChildren();
-  const videos = board.items.filter((item) => item.type === "video");
-  $("#video-list").replaceChildren(
-    ...videos.map((item) => renderVideoReference(item, videoHandlers)),
-  );
-  $("#video-library").hidden =
-    !(filter === "all" || filter === "video") || !videos.length;
   const songs = board.items.filter((item) => item.type === "song");
   $("#song-list").replaceChildren(...songs.map(renderSong));
   $("#song-section .sample-label").textContent = songs.some(
@@ -323,7 +307,6 @@ function renderBoard() {
   $("#song-section").hidden =
     !(filter === "all" || filter === "song") || songs.length === 0;
   grid.hidden =
-    (filter === "video" && videos.length > 0) ||
     (filter === "song" && songs.length > 0) ||
     (filter === "sound" &&
       sounds.length > 0 &&
@@ -352,9 +335,7 @@ function renderBoard() {
         "empty-state",
         filter === "song"
           ? "No song picks in this board yet. Enable song recommendations and explore your brief again."
-          : filter === "video"
-            ? "No videos yet. Use Import video to add a YouTube reference or a local clip."
-            : filter === "sound"
+          : filter === "sound"
               ? "No ambient sounds in this board. Enable ambient sounds and explore your brief again."
               : "No items in this view yet.",
       ),
@@ -383,30 +364,17 @@ async function updateSavedCount() {
     $("#saved-count").textContent = "—";
   }
 }
-function removeReference() {
-  if (referenceUrl) URL.revokeObjectURL(referenceUrl);
-  referenceUrl = null;
-  referenceFile = null;
-  $("#reference").value = "";
-  $("#reference-image").removeAttribute("src");
-  $("#reference-preview").hidden = true;
-  $("#upload-label").hidden = false;
-}
 const referenceHandlers = {
   element,
   onRemove(id) {
-    document.querySelectorAll("audio,video").forEach((audio) => audio.pause());
     const removed = board.items.find((item) => item.id === id);
     releaseLocalAudio(id);
-    releaseLocalVideo(id);
     board.items = board.items.filter((item) => item.id !== id);
     $("#save-label").textContent = "Save board";
     renderBoard();
     notify("Reference removed. Save to keep your changes.");
     $(
-      removed?.type === "video"
-        ? "#import-video"
-        : removed?.provider === "pinterest"
+      removed?.provider === "pinterest"
           ? "#import-pinterest"
           : "#import-audio",
     ).focus();
@@ -453,40 +421,6 @@ setupAudioImporter({
     return added.length;
   },
 });
-const videoHandlers = {
-  element,
-  onRemove: referenceHandlers.onRemove,
-  onReattach(id, fileInfo) {
-    const item = board.items.find((item) => item.id === id);
-    if (!item) {
-      releaseLocalVideo(id);
-      return;
-    }
-    item.fileInfo = fileInfo;
-    item.sourceKey = `video-file:${fileInfo.name}:${fileInfo.size}:${fileInfo.lastModified}`;
-    $("#save-label").textContent = "Save board";
-    renderBoard();
-    notify(
-      "Video attached for this visit. Save to keep its updated file details.",
-    );
-  },
-};
-setupVideoImporter({
-  element,
-  getBoardId: () => board?.id,
-  onImport(item, targetBoardId) {
-    if (!board || (targetBoardId && board.id !== targetBoardId))
-      throw new Error(
-        "The board changed while the video was loading. Open the importer and try again.",
-      );
-    if (board.items.some((existing) => existing.sourceKey === item.sourceKey))
-      return 0;
-    board.items.push(item);
-    selectFilter("all");
-    $("#save-label").textContent = "Save board";
-    return 1;
-  },
-});
 function resetResearchUI() {
   $("#generate").disabled = false;
   $("#generate").firstElementChild.textContent = "Explore this feeling";
@@ -504,12 +438,7 @@ setupPinterestImporter({
     if (destination === "new") {
       boardVersion += 1;
       resetResearchUI();
-      document
-        .querySelectorAll("audio,video")
-        .forEach((audio) => audio.pause());
       retainLocalAudio([]);
-      retainLocalVideos([]);
-      removeReference();
       board = {
         id: crypto.randomUUID(),
         title,
@@ -565,41 +494,6 @@ document.querySelectorAll("[data-prompt]").forEach((button) =>
   }),
 );
 $("#prompt").addEventListener("input", updateCharacters);
-$("#reference").addEventListener("change", async (event) => {
-  const file = event.target.files[0];
-  $("#input-error").textContent = "";
-  if (!file) return;
-  if (
-    !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-    file.size > 10 * 1024 * 1024
-  ) {
-    $("#input-error").textContent =
-      "Please choose a JPG, PNG or WebP image smaller than 10 MB.";
-    event.target.value = "";
-    return;
-  }
-  const candidate = URL.createObjectURL(file);
-  const probe = new Image();
-  probe.src = candidate;
-  try {
-    await probe.decode();
-  } catch {
-    URL.revokeObjectURL(candidate);
-    event.target.value = "";
-    $("#input-error").textContent =
-      "This image could not be read. Please try another file.";
-    return;
-  }
-  removeReference();
-  referenceFile = file;
-  referenceUrl = candidate;
-  $("#reference-image").src = referenceUrl;
-  $("#reference-name").textContent = file.name;
-  $("#reference-preview").hidden = false;
-  $("#upload-label").hidden = true;
-  notify("Reference added locally. Explore will use it to guide the AI and Wikimedia search; it is not saved to your board.");
-});
-$("#remove-reference").addEventListener("click", removeReference);
 $("#prompt-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const prompt = $("#prompt").value.trim();
@@ -618,13 +512,11 @@ $("#prompt-form").addEventListener("submit", async (event) => {
   try {
     const next = await boardService.research({
       prompt,
-      referenceFile,
       ...researchOptions(),
     });
     try {
       const direction = await createCreativeDirection({
         prompt,
-        referenceFile,
         ...researchOptions(),
       });
       next.title = direction.title;
@@ -722,7 +614,7 @@ $("#save-board").addEventListener("click", async () => {
     $("#save-label").textContent = "Saved locally";
     await updateSavedCount();
     notify(
-      "Board saved locally, including imported pin references. Uploaded images are not saved; local audio/video files need reattaching in a new visit.",
+      "Board saved locally, including imported pin references and Wikimedia attribution.",
     );
   } catch {
     notify("Could not save. Browser storage may be disabled or full.");
@@ -765,7 +657,6 @@ async function renderSavedBoards() {
       boardVersion += 1;
       resetResearchUI();
       retainLocalAudio(saved.items);
-      retainLocalVideos(saved.items);
       board = saved;
       $("#include-songs").checked =
         saved.researchOptions?.includeSongs ??
@@ -775,7 +666,6 @@ async function renderSavedBoards() {
         saved.items.some((item) => item.type === "sound");
       $("#prompt").value = saved.prompt;
       updateCharacters();
-      removeReference();
       selectFilter("all");
       $("#save-label").textContent = "Saved locally";
       $("#dialog").close();
@@ -885,12 +775,9 @@ $("#confirm-delete-board").addEventListener("click", async () => {
 $("#new-board").addEventListener("click", async () => {
   const runVersion = ++boardVersion;
   resetResearchUI();
-  document.querySelectorAll("audio,video").forEach((audio) => audio.pause());
   retainLocalAudio([]);
-  retainLocalVideos([]);
   $("#prompt").value = "";
   updateCharacters();
-  removeReference();
   if (board)
     board.items.forEach((item) => {
       if (item.type === "image") item.pinned = false;
@@ -916,7 +803,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore uses the prompt and optional submitted reference image for AI direction and can replace sample image slots with credited Wikimedia references; the palette remains local. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. Cloud board saving and music-service connections remain planned.",
+      "Shape a direction from a written brief, then explore credited Wikimedia Commons references alongside a local palette and soundtrack. Pinterest account linking and owned-board imports are available when an approved integration is configured; Pinterest content stays excluded from AI research. GraphQL handles sign-in; local profiles and boards remain in browser storage.",
     ),
   ),
 );
@@ -966,7 +853,6 @@ const importTarget = new URL(location.href).searchParams.get("import");
 const importButtons = {
   pinterest: "#import-pinterest",
   audio: "#import-audio",
-  video: "#import-video",
 };
 if (Object.hasOwn(importButtons, importTarget) && board) {
   $(importButtons[importTarget]).click();

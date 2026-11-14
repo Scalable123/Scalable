@@ -1,6 +1,6 @@
 import { assertResearchInputAllowed } from "./research-policy.js";
 /** UI boundary. Replace this instance with ApiBoardService when .NET is available.
- * DTOs are JSON-friendly: camelCase, string IDs, ISO dates. File uploads are separate.
+ * DTOs are JSON-friendly: camelCase, string IDs, ISO dates.
  */
 const STORAGE_KEY = "scalable.boards.v1";
 export const prompts = {
@@ -255,16 +255,14 @@ export class ApiBoardService {
   // Proposed job API: the UI will also need polling/cancellation when this is enabled.
   startResearch(
     prompt,
-    referenceFile,
     { includeSongs = true, includeSounds = true } = {},
   ) {
     assertResearchInputAllowed(prompt);
-    const form = new FormData();
-    form.append("prompt", prompt);
-    form.append("includeSongs", String(includeSongs));
-    form.append("includeSounds", String(includeSounds));
-    if (referenceFile) form.append("reference", referenceFile);
-    return this.request("/research-runs", { method: "POST", body: form });
+    return this.request("/research-runs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, includeSongs, includeSounds }),
+    });
   }
   getResearchRun(id) {
     return this.request(`/research-runs/${encodeURIComponent(id)}`);
