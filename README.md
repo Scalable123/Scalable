@@ -2,7 +2,7 @@
 
 Turn a prompt, a reference picture, or both into a researched creative direction: images, color palettes, textures, typography ideas, and music that belong together.
 
-**Status:** The Studio is the selected frontend, built in HTML/CSS/JavaScript with dark mode and appearance customization. The planned backend is C# / ASP.NET Core with a SQL database and server-side AI/media APIs; it is not implemented yet.
+**Status:** The Studio is the selected frontend, built in HTML/CSS/JavaScript with dark mode and appearance customization. The selected backend direction is **C# / ASP.NET Core with GraphQL instead of Supabase for application data access**. GraphQL is the API layer; the underlying database engine and ORM remain undecided. No application backend or GraphQL server is implemented yet; boards currently persist in browser localStorage.
 
 ## Try the frontend
 
@@ -24,9 +24,11 @@ Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
+The [complete frontend documentation](documentation/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests. The [backend architecture guide](docs/BACKEND.md) defines the GraphQL direction, proposed operations, persistence/identity decisions, and migration work. Supabase remains in the current source for legacy authentication only; it is not the selected application database/backend. See [T001](docs/T001.md) for this documentation audit's decisions and validation.
+
 ## GitHub Pages
 
-The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; Supabase Auth remains an external service, and the planned .NET backend is not hosted by Pages.
+The repository root redirects visitors directly to `frontend/login.html`. After human review/merge, publish the intended branch from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; existing Supabase Auth calls use an external service, and the planned .NET GraphQL backend needs separate hosting.
 
 ## Product vision
 
@@ -89,17 +91,17 @@ Music discovery initially means recommendations and outbound links. In-app playb
 
 ## Proposed technical approach
 
-Use HTML, CSS, and JavaScript for the frontend and C# / ASP.NET Core for the backend, connecting to a SQL database and external AI/media APIs. Confirm provider capabilities and pricing with a working research spike before committing to integrations.
+Use HTML, CSS, and JavaScript for the frontend and C# / ASP.NET Core with GraphQL for the application backend, connecting server-side persistence and external AI/media APIs. GraphQL does not select a database or replace authentication by itself. Select those components explicitly and migrate the legacy Supabase Auth integration before removing it. Confirm provider capabilities and pricing with a working research spike before committing to integrations.
 
 | Area               | Proposed starting point                                                        | Purpose                                                                      |
 | ------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | Frontend           | HTML, CSS, JavaScript modules                                                  | Prompt entry, uploads, and board editor                                      |
-| Backend            | C# / ASP.NET Core                                                              | Authenticated endpoints, research orchestration, and external APIs           |
+| Backend            | C# / ASP.NET Core with GraphQL                                                 | Authorized queries/mutations, research orchestration, and external APIs       |
 | AI interpretation  | Multimodal model behind a provider adapter                                     | Understand prompts/images and produce validated structured briefs            |
 | Research           | Search and image-provider adapters                                             | Retrieve references with traceable metadata                                  |
 | Palette extraction | Image processing and color clustering                                          | Derive actual colors before AI naming and curation                           |
 | Music discovery    | Music catalog/search adapter                                                   | Verify tracks and links; add audio-feature matching where supported          |
-| Data and accounts  | SQL database via EF Core; database engine and identity provider to be selected | Store boards, users, uploads, and research records; object storage for media |
+| Data and accounts  | Server persistence behind GraphQL; database/ORM and replacement identity service undecided | Store owner-scoped boards/users/research; object storage for media; migrate legacy Supabase Auth |
 | Background work    | Durable job runner, selected during the spike                                  | Run bounded research jobs with progress, retries, and cancellation           |
 | Validation         | Browser automation for the frontend; .NET tests for the backend                | Exercise research logic, integrations, and the main user journey             |
 
@@ -183,10 +185,23 @@ Each milestone ends with a demonstrable result. Sequence is more useful than cal
 
 Prioritize exports, sharing, playlists, typography, collaboration, and generated imagery based on beta feedback. Define acceptance criteria and provider requirements for each before implementation.
 
-## Validation plan
+## Current validation
+
+Run the four existing browser suites from the repository root:
+
+```sh
+node tests/studio.browser.cjs
+node tests/video-account.browser.cjs
+node tests/navigation-theme.browser.cjs
+node tests/saved-boards.browser.cjs
+```
+
+They require Node.js, Playwright, and Chromium (`CHROMIUM_PATH` override); video checks also require FFmpeg (`FFMPEG_PATH` override). They check local workflows, responsive layouts, invalid input, blocked storage, legacy boards, stale results, and safe deletion. Auth/YouTube are mocked where applicable. There is no npm test script or backend integration suite. See [coverage and limits](documentation/FRONTEND.md#18-validation-and-test-coverage).
+
+## Planned backend validation
 
 - **Unit tests:** Brief validation, palette extraction, ranking, duplicate handling, and research budget limits.
-- **Integration tests:** Provider response parsing, source preservation, retry/cancellation behavior, and persistence. Use fixtures for routine CI and explicit live checks for provider verification.
+- **Integration tests:** GraphQL schema/operation validation, resolver ownership, HTTP-200 GraphQL errors/partial data, pagination, version conflicts, provider response parsing, source preservation, retry/cancellation behavior, and persistence. Use fixtures for routine CI and explicit live checks for provider verification.
 - **End-to-end tests:** Create a board, upload a reference, pin and replace items, refine, save, and reopen. Include access-control and failure paths.
 - **Quality review:** Score a fixed evaluation set for creative coherence, constraint adherence, and usefulness. Keep human quality judgments separate from automated correctness checks.
 

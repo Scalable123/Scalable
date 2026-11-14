@@ -1,6 +1,6 @@
 # Pinterest board import: frontend and backend handoff
 
-The Studio now has a Pinterest import experience for starting from whole boards. It is a **frontend-only connection preview**. It does not open Pinterest sign-in, connect an account, scrape pages, read private boards, or fetch Pinterest images. The demo uses three local sample boards and the existing sample photography; no real Pinterest pin URLs or account details are invented.
+The Studio has a Pinterest import experience for starting from whole boards. It is a **frontend-only connection preview**. It does not open Pinterest sign-in, connect an account, scrape pages, read private boards, or fetch Pinterest images. The demo uses three local sample boards and the existing sample photography; no real Pinterest pin URLs or account details are invented. The selected application backend uses ASP.NET Core with **GraphQL instead of Supabase for application data access**; it is not implemented. Legacy Supabase Auth is separate from Pinterest authorization. See [BACKEND.md](BACKEND.md).
 
 ## Try the flow
 
@@ -49,19 +49,22 @@ Imported items extend the image DTO:
 
 `DemoPinterestService.listBoards()` currently returns the complete local library synchronously, including its pins. A real adapter requires an async loading/error/cancellation integration pass; it is not a drop-in URL replacement. The import callback receives selected items, destination, new-board title, and source-board summaries.
 
-## Proposed ASP.NET Core boundary — not implemented
+## Proposed ASP.NET Core GraphQL boundary — not implemented
 
-| Method | Endpoint                                       | Purpose                                                                                         |
-| ------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| GET    | `/api/integrations/pinterest`                  | Authenticated user's actual connection/capability status; no tokens                             |
-| POST   | `/api/integrations/pinterest/authorize`        | Start supported authorization; return the authorization URL                                     |
-| GET    | `/api/integrations/pinterest/callback`         | Validate OAuth response/state and exchange credentials server-side                              |
-| DELETE | `/api/integrations/pinterest`                  | Disconnect/revoke as supported without deleting imported references                             |
-| GET    | `/api/integrations/pinterest/boards`           | Paginated authorized board summaries                                                            |
-| GET    | `/api/integrations/pinterest/boards/{id}/pins` | Paginated pin previews for review                                                               |
-| POST   | `/api/pinterest-import-runs`                   | Start an authorized import using board IDs, all-pins or selected-pin mode, destination ID/title |
-| GET    | `/api/pinterest-import-runs/{id}`              | Progress, added/skipped/failed counts, destination board ID, terminal status                    |
-| DELETE | `/api/pinterest-import-runs/{id}`              | Cancel a running import                                                                         |
+Proposed fields at `/graphql`; exact input/output types remain to be defined:
+
+| Kind | Field | Purpose |
+| --- | --- | --- |
+| Query | `pinterestConnection` | Actual connection/capability status without tokens |
+| Mutation | `authorizePinterest` | Start supported OAuth; return the authorization URL |
+| Mutation | `disconnectPinterest` | Disconnect/revoke without deleting imported references |
+| Query | `pinterestBoards` | Bounded cursor-paginated authorized board summaries |
+| Query | `pinterestPins` | Bounded cursor-paginated pin previews for a selected board |
+| Mutation | `startPinterestImport` | Authorized board IDs, all-pins or selected-pin mode, destination ID/title |
+| Query | `pinterestImportRun` | Progress, added/skipped/failed counts, destination, terminal status |
+| Mutation | `cancelPinterestImport` | Cancel an authorized running import |
+
+OAuth callbacks can use separately implemented protocol-specific HTTP routes to validate state and exchange credentials server-side. Handle transport failures, GraphQL `errors` even with HTTP 200, and partial `data`; none alone confirms a complete import. The database/ORM behind the GraphQL service remains undecided.
 
 Before enabling this, verify Pinterest's current developer approval, available board/pin APIs, read permissions, access to the selected boards, limits, and media usage terms. Account/library access is not established by the preview. Do not ask for Pinterest passwords or put app secrets/access tokens into frontend files or browser storage.
 

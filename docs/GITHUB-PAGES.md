@@ -4,13 +4,13 @@ The repository root now contains a landing `index.html` that immediately redirec
 
 The existing Studio remains at `frontend/index.html`. Login, account, styles, scripts, and media keep their existing relative paths. Visiting the site root opens login; it does not add authentication or restrict direct access to the Studio.
 
-## Option 1: deploy directly from this branch
+## Option 1: deploy from a reviewed publishing branch
 
-After committing and pushing these files:
+After human review/merge, configure the intended publishing branch:
 
 1. Open the GitHub repository's **Settings → Pages**.
 2. Under **Build and deployment**, select **Deploy from a branch**.
-3. Select `front-end-design` and **/ (root)**, then save.
+3. Select the intended publishing branch (for example `front-end-design`) and **/ (root)**, then save. A documentation review branch does not need to become the publishing source.
 4. Wait for GitHub's Pages build to finish and use the URL reported by GitHub.
 
 The root `.nojekyll` file enables plain static hosting. Future pushes to the selected publishing branch will update the public site. Repository/account permissions and GitHub Pages availability still apply.
@@ -38,6 +38,8 @@ python3 -m http.server 8080
 
 Open `http://localhost:8080/`; it should lead straight to `/frontend/login.html`. The **Explore the demo account**, **Back to Studio**, and account service-preview links should stay under the same project path when hosted under `/Scalable/`.
 
-GitHub Pages hosts the static frontend only. Login, provider connections, and research remain previews; C#/.NET APIs and SQL must run on a separate backend when implemented. Published local-file imports still stay in the visitor's browser and need reattachment after reload.
+GitHub Pages hosts the static frontend only. Login/recovery/session/password-update/sign-out currently call external legacy Supabase Auth; signup, standalone recovery, profile editing, and media-provider connections remain previews, and research uses local samples. While those legacy calls remain, configure their allowed site/recovery URLs for the published project path; SDK-managed sessions do not protect the Studio or partition local boards.
+
+The selected application backend uses **C# / ASP.NET Core with GraphQL instead of Supabase for application data access**. GraphQL is an API layer, not a database engine; persistence and replacement identity choices are still open. No GraphQL API is deployed by this repository. Host the API, database, workers, and any uploads separately, with HTTPS, explicit CORS/API-origin configuration, and the chosen session strategy. See [BACKEND.md](BACKEND.md) for the migration and hosting requirements. Published local-file imports stay in the visitor's browser and need reattachment after reload.
 
 No Pages settings, repository publishing source, or live deployment are changed by adding these files. Actual publication is a separate step through GitHub.

@@ -2,7 +2,7 @@
 
 The Studio is the selected design: warm paper, forest green, terracotta accents, serif headings, and an editorial collage. The other design explorations have been removed. Light and dark modes use this same Studio layout.
 
-Plain HTML, CSS, and native JavaScript modules power the frontend. No framework, build step, runtime package dependency, or API key is required. The planned backend remains C# / ASP.NET Core with a SQL database and server-side AI/media integrations.
+Plain HTML, CSS, and native JavaScript modules power the frontend without a framework or build step. Local Studio features need no provider key. Legacy authentication loads the Supabase browser SDK from a pinned CDN URL and uses public project configuration; the manifest also declares that SDK. The selected backend direction is C# / ASP.NET Core with **GraphQL instead of Supabase for application data access**. No GraphQL server/client or database is implemented. See [BACKEND.md](BACKEND.md) for the authoritative backend direction and [the complete frontend reference](../documentation/FRONTEND.md) for detailed current behavior.
 
 ## Run
 
@@ -49,45 +49,51 @@ No external catalog lookup, live AI recommendation, or streaming-service playbac
 
 Previews: [saved boards](design-previews/studio-saved-boards.png), [delete confirmation](design-previews/studio-delete-board.png).
 
-There is no real authenticated account, cloud sync, SQL connection, sharing, export, or live AI yet. Login and account pages are local frontend previews. Browser storage is origin/device-specific and may be cleared. Image-only research and drag-and-drop uploads remain unimplemented.
+Login, recovery from login, session lookup, password update, and sign-out call legacy Supabase Auth. Signup, standalone recovery, profile editing, and provider connections remain local previews. There is no GraphQL connection, cloud board sync, server database persistence, sharing, export, or live AI. A Supabase session does not guard Studio/account routes or partition browser records by user. Browser storage is origin/device-specific and may be cleared. Image-only research and drag-and-drop uploads remain unimplemented.
 
 ## File map
 
 ```text
 frontend/
   index.html             Studio application shell and import/appearance dialogs
-  login.html             Frontend login preview
+  login.html             Legacy Supabase login and recovery request
   signup.html            Create-account form and validation preview
+  recover.html           Standalone recovery preview; no email
+  update-password.html   Legacy Supabase session/password update
   account.html           Local profile, preferences, and connection previews
   styles.css             Responsive Studio layout and appearance tokens
   js/appearance.js       Validated local preferences and device theme handling
   js/app.js              Studio rendering, filters, and interactions
-  js/account.js          Login/account preview interactions
+  js/account.js          Login/signup/recovery/account handlers
+  js/update-password.js  Session check, password update, and sign-out
+  js/config/             Public legacy Supabase client configuration/loader
+  js/theme-init.js       Theme initialization before paint
+  js/customize.js        Shared settings bindings and auth-page dialog
   js/icons.js            Shared vector symbols
   js/video-library.js    YouTube references and local video playback/imports
   js/audio-library.js    Link imports, provider previews, local audio registry
   js/pinterest-import.js Pinterest connection preview, board/pin selection, import DTOs
-  js/board-service.js    Demo service, saved-board compatibility, future HTTP adapter
+  js/board-service.js    Demo service, saved-board compatibility, inactive REST adapter
   assets/                Local sample photography and source notes
 ```
 
-## Connecting ASP.NET Core later
+## Connecting ASP.NET Core and GraphQL later
 
-The renderer uses `boardService`, not SQL or an AI SDK. `DemoBoardService` owns local sample generation and persistence. `ApiBoardService` documents an HTTP boundary and is not enabled.
+The renderer uses `boardService`, not a database or AI SDK. `DemoBoardService` owns local sample generation and persistence. `ApiBoardService` is an inactive REST-shaped adapter, not the selected GraphQL contract. Its `/api` paths and HTTP-204 deletion behavior describe existing unused code only.
 
-The production research lifecycle requires an integration pass: replace demo `research()` with `startResearch()`, poll `getResearchRun()` to completion, and add cancellation, partial results, timeouts, and loading/error states. The adapter sends a multipart prompt, optional reference file, and `includeSongs`/`includeSounds` booleans as text fields for .NET model binding.
+The production research lifecycle requires an integration pass: replace demo `research()` with a start/poll/completion flow and add cancellation, partial results, timeouts, and loading/error states. The old adapter sends multipart REST requests; GraphQL must instead use operations/variables and an agreed upload/media-ID flow. It must unwrap `data` and handle GraphQL `errors`, including HTTP-200 errors, before announcing success.
 
-Proposed endpoints (not implemented):
+Proposed operations at `/graphql` (not implemented; exact schema pending):
 
-| Method | Endpoint                  | Contract                                                                                                    |
-| ------ | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/research-runs`      | Multipart `prompt`, optional `reference`, `includeSongs`, `includeSounds`; return 202 with `{ id, status }` |
-| GET    | `/api/research-runs/{id}` | `{ id, status, progress, board?, error? }`; terminal states completed, failed, cancelled                    |
-| DELETE | `/api/research-runs/{id}` | Cancel active research; return 204                                                                          |
-| GET    | `/api/boards`             | Authenticated owner's board summaries, with pagination                                                      |
-| GET    | `/api/boards/{id}`        | Complete board DTO                                                                                          |
-| PUT    | `/api/boards/{id}`        | Validate/save board; add concurrency/version checks                                                         |
-| DELETE | `/api/boards/{id}`        | Delete the authenticated owner's board; return 204; enforce ownership on the server                         |
+| Kind | Field | Contract |
+| --- | --- | --- |
+| Mutation | `startResearch` | Prompt, optional media ID, independent song/sound flags; return run identity/status |
+| Query | `researchRun` | ID, status, progress, partial/completed board, safe error; terminal completed/failed/cancelled |
+| Mutation | `cancelResearch` | Cancel an authorized active run |
+| Query | `boards` | Paginated authenticated-owner summaries |
+| Query | `board` | Complete authorized board detail |
+| Mutation | `saveBoard` | Validate/save with ownership and expected-version checks |
+| Mutation | `deleteBoard` | Confirm authorized deletion or already-absent outcome |
 
 The demo list returns full boards. Adapt the saved-board UI to retrieve board detail when the backend returns summaries.
 
@@ -109,9 +115,9 @@ JSON uses camelCase, string IDs, and ISO 8601 timestamps:
 
 `linkKind: "catalog-search"` explicitly distinguishes sample search links from future verified track links. Extend the song/sound DTOs with provider IDs, attribution, licenses, and optional permitted previews after choosing providers. Keep song and sound filtering independent of provider choice.
 
-`position` is a prototype layout hint (`hero`, `detail`, `water`). Arbitrary production image counts need layout rules rather than fixed IDs. Resolve media through server-validated URLs. Map DTOs to database entities without exposing SQL rows.
+`position` is a prototype layout hint (`hero`, `detail`, `water`). Arbitrary production image counts need layout rules rather than fixed IDs. Resolve media through server-validated URLs. Map DTOs to database entities without exposing raw persistence entities.
 
-ASP.NET Core owns authorization, validation, upload verification/storage, research jobs, rate limits, and provider credentials. Never ship SQL credentials or API keys to JavaScript. Prefer same-origin hosting through `wwwroot` or a shared origin. Configure explicit CORS/authentication if origins differ and CSRF protection for cookie-authenticated mutations. Appearance is a browser preference now; a future user-settings endpoint can optionally sync it.
+ASP.NET Core owns authorization, validation, upload verification/storage, research jobs, rate limits, and provider credentials. GraphQL is the API layer; database/ORM and replacement identity choices remain open. Never ship database credentials or server API keys to JavaScript. Prefer same-origin hosting through `wwwroot` or a shared origin. Configure explicit CORS/authentication if origins differ and CSRF protection for cookie-authenticated mutations. Appearance is a browser preference now; future GraphQL preference operations can optionally sync it.
 
 ## Validation
 
@@ -156,19 +162,19 @@ The browser suite also exercises new preference persistence/reset, import dialog
 
 Use **Import Pinterest board** in **01 / The Starting Point**, alongside the reference-image input, for the local connection preview. Select complete sample boards, review/deselect pins, and add them to the current canvas or create a new named mood board. Imported sample pins retain board provenance, can be pinned/removed, survive refinement, and persist with saved boards. Duplicate pins are skipped. New board creation also guards against older research results overwriting the imported canvas.
 
-No Pinterest account is connected and no Pinterest content is fetched. The three demo boards use existing local sample photographs. [Pinterest integration notes](PINTEREST-INTEGRATION.md) describe the flow, limitations, data shape, and proposed .NET endpoints for real authorization and paginated whole-board imports.
+No Pinterest account is connected and no Pinterest content is fetched. The three demo boards use existing local sample photographs. [Pinterest integration notes](PINTEREST-INTEGRATION.md) describe the flow, limitations, data shape, and proposed .NET GraphQL operations for real authorization and paginated whole-board imports.
 
 ## Videos, login, and account
 
 **Import video** accepts YouTube references and browser-playable local files. Videos can be filtered, removed, saved as references, and retained through refinement. YouTube embeds load only on request. Local video files need reattachment after reload; file bytes are not saved.
 
-Use the Studio's **Log in** and **Account** links for the new pages. Login is a credential-free simulation after form validation; entered credentials are not transmitted or persisted. The account page has a local profile, shared appearance settings, service preview links, and sign-in/security placeholders. No browser flag is treated as authentication.
+Use the Studio's **Log in** and **Account** links for the account pages. Login transmits credentials to the configured legacy Supabase Auth project; SDK-managed session persistence is enabled. The app does not copy passwords into local profiles/boards. The account page reads the auth session while retaining a local profile, shared appearance settings, and service/security previews. No demo browser flag is authentication.
 
 See [video/account implementation and .NET handoff](VIDEO-ACCOUNT.md) for behavior, data contracts, test commands, and backend requirements.
 
 ## Login navigation and shared branding
 
-The Studio, login, recovery, and account pages use the same static star-and-wordmark logo. Logo links point to the Studio. Demo-account navigation and password-recovery navigation use real relative links, so they work under a GitHub Pages project path and without JavaScript. Valid sample sign-in details have an `account.html` fallback action; fields have no names and are never sent as form parameters. Password visibility is enabled only after its handler is ready.
+The Studio, login, signup, recovery, and account pages use the same static star-and-wordmark logo. Logo links point to the Studio. Demo-account navigation and password-recovery fallback use real relative links under a GitHub Pages project path and without JavaScript. The sign-in form has an `account.html` fallback action; fields have no names and are not sent as fallback GET parameters. This fallback only navigates; JavaScript-enabled login sends credentials through Supabase. Password visibility is enabled only after its handler is ready. The password-update page lacks the shared header/customization controls.
 
 `recover.html` is an explicit recovery preview, with a sample-email form and visible confirmation. It sends no email and does not implement authentication. See `node tests/navigation-theme.browser.cjs` for branding, navigation, device themes, overrides, legacy listeners, cross-tab updates, and no-JavaScript checks.
 
@@ -176,7 +182,7 @@ The Studio, login, recovery, and account pages use the same static star-and-word
 
 Login's **Create an account** link opens `signup.html`, with display name, email, password, and confirmation validation. A successful submission shows a frontend-only confirmation and clears the form; it does not register an account or store/send the entered details. Continue to the account preview or return to login through ordinary links. Shared branding, System/Light/Dark preferences, and responsive layouts match the other pages. See the [signup handoff](VIDEO-ACCOUNT.md#create-account-page).
 
-The branch also contains Supabase sign-in, recovery, session lookup, and sign-out hooks brought in by remote commits. These are preserved alongside the independent signup preview. Auth SDK loading is lazy and browser-compatible; the signup form does not call Supabase or register a user. Auth browser checks use a mocked client and do not contact the live project.
+Legacy Supabase sign-in, recovery, session lookup, password update, and sign-out remain alongside the independent signup preview. They require an explicit migration to the selected backend's identity service; GraphQL alone does not implement authentication. Auth SDK loading is lazy on account/login pages; the password-update module imports it directly. Signup does not call Supabase or register a user. Browser checks mock the client and do not verify live auth or password-update completion.
 
 ## Navigation cleanup
 

@@ -1,6 +1,6 @@
 # Video imports and account screens
 
-These additions use plain HTML/CSS/JavaScript and the Studio's shared appearance preferences. The planned backend remains C# / ASP.NET Core with SQL storage.
+These features use plain HTML/CSS/JavaScript and shared appearance preferences. The selected backend direction is C# / ASP.NET Core with **GraphQL instead of Supabase for application data access**. GraphQL is the API layer; database/ORM and replacement identity choices remain open. No backend is implemented. Existing Supabase Auth remains legacy source behavior pending deliberate migration. See [BACKEND.md](BACKEND.md).
 
 ## Video references
 
@@ -26,13 +26,13 @@ Use **Import video** in **02 / A World Taking Shape**, above the canvas, or open
   sourceKey, isSample: false }
 ```
 
-A future upload service should use authenticated media IDs and object storage with validation, permissions, and retention/deletion rules. Do not store recordings in SQL board JSON. Revalidate YouTube URLs server-side if later resolving metadata or fetching content. The current frontend does neither. Downloading YouTube videos or authenticated YouTube library access is not implemented.
+A future upload service should use authenticated media IDs and object storage with validation, permissions, and retention/deletion rules. Do not store recordings in persisted board JSON. Revalidate YouTube URLs server-side if later resolving metadata or fetching content. The current frontend does neither. Downloading YouTube videos or authenticated YouTube library access is not implemented.
 
 ## Login page
 
-`frontend/login.html` preserves the remote branch's Supabase sign-in and email-recovery integration. Sign-in sends credentials to Supabase Auth; passwords are not copied into the local demo profile. Recovery uses the entered email and a project-relative `update-password.html` callback. `update-password.js` retains the remote session-checked password-update flow. Actual emails/account sessions are not exercised by the browser tests.
+`frontend/login.html` uses legacy Supabase sign-in and email-recovery integration. Sign-in sends credentials to Supabase Auth; passwords are not copied into the local demo profile. Recovery uses the entered email and a project-relative `update-password.html` callback. `update-password.js` uses the existing session-checked password-update flow. Actual emails/account sessions are not exercised by the browser tests.
 
-The SDK is loaded lazily so signup, recovery preview, and theme/navigation controls do not depend on SDK availability. The client uses a pinned browser-compatible jsDelivr ES module for the same Supabase package version declared by the remote branch. Login/recovery failures report an unavailable state rather than preventing all page controls from loading. Supabase session persistence remains configured by the remote client; no tokens or project keys are embedded into the signup preview.
+The SDK is loaded lazily so signup, recovery preview, and theme/navigation controls do not depend on SDK availability. The client uses a pinned browser-compatible jsDelivr ES module for version `2.119.0`; the manifest declares range `^2.119.0`. Login/recovery failures report an unavailable state rather than preventing all page controls from loading. Supabase session persistence remains enabled in the client; no tokens or project keys are embedded into the signup preview.
 
 The demo-account shortcut remains available. Its tab-scoped `scalable.demoSession` flag is not authentication. The legacy `recover.html` page remains a standalone frontend preview; it does not send mail. Real password recovery from login uses the Supabase hook instead. Local board/profile data is still browser-origin storage and is not automatically secured or partitioned by a Supabase session.
 
@@ -44,7 +44,7 @@ Successful validation clears all fields, hides the form, and shows an explicit p
 
 The form's submit button is enabled only after its validation handlers are ready. With JavaScript unavailable, its notice explains the limit and ordinary login/demo links still work. Inputs have no form names, and the fallback action points to the local preview page, so form values cannot enter fallback GET parameters. Signup is not an authentication or ownership boundary.
 
-Real registration should call a future `POST /api/auth/register` through the .NET identity service, with authoritative validation, account creation, secure password handling, verified-email workflow, and actual success/error responses. Client-side confirmation is a convenience, not proof of account creation.
+Real registration should call a proposed GraphQL `registerAccount` mutation backed by the selected .NET identity service, with authoritative validation, account creation, secure password handling, verified-email workflow, and actual success/error responses. GraphQL alone does not provide authentication. Client-side confirmation is a convenience, not proof of account creation.
 
 Previews: [create account](design-previews/studio-signup.png) · [validation confirmation](design-previews/studio-signup-success.png).
 
@@ -55,24 +55,26 @@ Previews: [create account](design-previews/studio-signup.png) · [validation con
 - **Profile:** Edit local demo display name/email. `scalable.profile.v1` stores these explicitly entered profile details in this browser. The Studio sidebar displays the saved name. This is not an identity change or an email-verification flow.
 - **Appearance:** Uses the same theme/accent/spacing/edges/typography/layout/canvas/reading preferences as the Studio. Changes persist through `appearance.js`.
 - **Connected services:** Pinterest, Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube all remain **Not connected**. Links open their appropriate Studio import previews. The `?import=` deep link is consumed after opening a known local dialog.
-- **Sign-in & security:** Explains the future identity boundary. Password settings are a message-only preview. Ending the demo clears its tab flag and returns to login without deleting boards, profile details, or appearance preferences.
+- **Sign-in & security:** Password settings are a message-only preview. Ending the demo first calls legacy Supabase sign-out, then clears the tab flag and returns to login without deleting boards/profile/preferences. SDK/network exceptions keep the page open; a resolved sign-out error is currently not inspected. Some static disclaimer/security copy still describes all auth as a preview despite the actual auth calls.
 
-Local boards belong to the browser origin and are not partitioned by these demo profiles. Changing the profile or ending a demo session does not protect or switch their ownership. Real per-user authorization and SQL ownership checks belong in the backend.
+Local boards belong to the browser origin and are not partitioned by demo profiles or Supabase users. Changing the profile or ending a session does not protect or switch ownership. The account heading reads the current auth session and may show its email in memory, but direct Studio/account access remains unguarded. Per-user authorization belongs in GraphQL resolvers and server persistence services.
 
-`account.js` owns page interactions; `icons.js` supplies the shared vector symbols. Blocked/corrupt storage falls back to the local preview, with failure messages when a save cannot persist. No passwords, provider tokens, or credentials are stored by these screens.
+`account.js` owns page interactions; `icons.js` supplies shared vector symbols. Blocked/corrupt app storage falls back to the local preview, with failure messages when a save cannot persist. App profile/board records do not contain passwords or provider credentials; the Supabase SDK separately manages persisted auth sessions. The direct password-update module lacks robust network-exception handling and shared theme/navigation, and is not covered by the existing browser suites.
 
-## Future ASP.NET Core contract — not implemented
+## Future ASP.NET Core GraphQL contract — not implemented
 
-| Method    | Endpoint                   | Responsibility                                                      |
-| --------- | -------------------------- | ------------------------------------------------------------------- |
-| GET       | `/api/session`             | Actual authenticated session summary, without tokens                |
-| POST      | `/api/auth/login`          | Server identity validation and secure session creation              |
-| POST      | `/api/auth/logout`         | Server session invalidation                                         |
-| POST      | `/api/auth/password-reset` | Recovery request with neutral response and server-side rate limits  |
-| GET / PUT | `/api/account/profile`     | Authorized profile read/update and separate verified-email workflow |
-| GET / PUT | `/api/account/preferences` | Optional authenticated preference sync                              |
-| GET       | `/api/account/connections` | Real provider status/capabilities without secrets                   |
-| POST      | `/api/media/uploads`       | Optional authenticated local-media upload; return a media ID        |
+Proposed fields at `/graphql`; exact schema and replacement identity service remain undecided:
+
+| Kind | Field | Responsibility |
+| --- | --- | --- |
+| Query | `session` | Actual authenticated session summary without tokens |
+| Mutation | `registerAccount`, `login`, `logout` | Identity validation, registration, and secure session lifecycle |
+| Mutation | `requestPasswordReset`, `completePasswordReset` | Neutral recovery request and authorized recovery completion |
+| Query / Mutation | `profile` / `updateProfile` | Authorized profile read/update; separate verified-email changes |
+| Query / Mutation | `preferences` / `updatePreferences` | Optional authenticated preference sync |
+| Query | `connections` | Actual provider status/capabilities without secrets |
+
+Optional media uploads need a separately designed authenticated upload transport that returns stable media IDs for GraphQL variables. Protocol-specific OAuth/email recovery callbacks may use ordinary HTTP routes. Handle HTTP failures and GraphQL `errors`, including HTTP-200 errors and partial `data`, before showing success. Migrate legacy Supabase sessions/identities/recovery deliberately before removing the SDK; do not create unrelated identities or silently claim local boards.
 
 Use the application's supported identity service, secure session handling, appropriate CSRF protections for cookie mutations, server-side input validation, and ownership checks. Replace demo flags/profile storage with service adapters; never treat the presence of browser data as authentication. Keep provider connections separate from application login. Add real loading, success, failure, recovery, and session-expiry behavior only from server responses.
 
@@ -80,7 +82,7 @@ Use the application's supported identity service, secure session handling, appro
 
 Run `node tests/studio.browser.cjs` for the existing Studio/audio/Pinterest regression suite and `node tests/video-account.browser.cjs` for these additions. Both require Playwright and Chromium; the new suite also uses FFmpeg (`FFMPEG_PATH` override) to generate a tiny local WebM fixture.
 
-The new suite checks URL rejection/normalization, duplicate moments, explicit embed load/unload, local video decoding/playback and reattachment after reload, removal, refinement preservation, mobile layouts, login validation, lack of credential persistence/transmission, local profile persistence, shared preferences, service deep links, preview sign-out, and blocked storage. The YouTube iframe route is intercepted by the test; live YouTube playback, identity APIs, provider APIs, SQL, and cloud uploads are not verified or implemented.
+The video/account suite checks URL rejection/normalization, duplicate moments, explicit embed load/unload, local video decoding/playback and reattachment after reload, removal, refinement preservation, mobile layouts, login validation, lack of app credential persistence/external transmission under the mock, local profile persistence, shared preferences, service deep links, sign-out wiring, and blocked storage. The YouTube iframe and Supabase client are intercepted; no GraphQL API, database, live identity/provider operation, cloud upload, or real YouTube playback is verified. Password-update completion is not covered. Signup's no-transmission/no-storage guarantee applies to its preview; real login calls Supabase in the running application.
 
 Previews: [login](design-previews/studio-login.png) · [account](design-previews/studio-account.png) · [connections](design-previews/studio-account-connections.png) · [video import](design-previews/studio-video-import.png) · [video reference](design-previews/studio-video-reference.png).
 
@@ -88,6 +90,6 @@ Login, signup, recovery, account, and Studio pages share a static logo with the 
 
 The navigation/theme browser suite also checks signup navigation under `/Scalable/`, required/whitespace/email/length/mismatch validation, visibility toggles and reset, no persistence or transmission of submitted details, blocked storage, and light/dark layouts at five widths.
 
-### Remote-branch integration validation
+### Existing authentication validation
 
-The signup change was rebased over a remote Supabase integration. Browser suites intercept `supabaseClient.js` with `tests/helpers/mock-supabase.cjs` to check the preserved sign-in/recovery/session/sign-out hooks without sending credentials or recovery mail to the live project. The signup path performs no auth-client calls. The pinned SDK URL was checked for successful HTTPS delivery with a JavaScript content type; live project authentication is not claimed as verified.
+Browser suites intercept `supabaseClient.js` with `tests/helpers/mock-supabase.cjs` to check the preserved sign-in/recovery/session/sign-out hooks without sending credentials or recovery mail to the live project. The signup path performs no auth-client calls. These checks validate frontend wiring; they do not establish current CDN availability or successful live authentication.
