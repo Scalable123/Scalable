@@ -1,5 +1,6 @@
 // Development-only browser checks. Requires Playwright and Chromium, not app dependencies.
 const { chromium } = require("playwright");
+const mockSupabase = require("./helpers/mock-supabase.cjs");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 const fs = require("node:fs/promises");
@@ -46,6 +47,7 @@ const path = require("node:path");
       viewport: { width: 1440, height: 1100 },
       colorScheme: "light",
     });
+    await mockSupabase(context);
     const page = await context.newPage();
     const errors = [];
     const requests = [];
@@ -116,13 +118,11 @@ const path = require("node:path");
     assert.equal(await page.locator("iframe").count(), 0);
     await page.locator("#import-video").click();
     await page.locator("#local-video-tab").click();
-    await page
-      .locator("#video-file")
-      .setInputFiles({
-        name: "broken.mp4",
-        mimeType: "video/mp4",
-        buffer: Buffer.from("not a video"),
-      });
+    await page.locator("#video-file").setInputFiles({
+      name: "broken.mp4",
+      mimeType: "video/mp4",
+      buffer: Buffer.from("not a video"),
+    });
     await page.locator("#add-local-video").click();
     await page
       .getByText("This video could not be decoded.", { exact: false })
@@ -240,8 +240,19 @@ const path = require("node:path");
     await page.goto(`${url}/login.html`);
     await page.locator("#forgot-password").click();
     await page
+      .getByText("Enter your email address, then choose Forgot password.", {
+        exact: true,
+      })
+      .waitFor();
+    await page.goto(`${url}/recover.html`);
+    await page.locator("#recovery-email").fill("demo@example.test");
+    await page.locator("#recovery-form [type=submit]").click();
+    await page
       .getByText("Password recovery is a preview.", { exact: false })
       .waitFor();
+    await page
+      .getByRole("link", { name: "Return to login", exact: false })
+      .click();
     await page.locator("#login-email").fill("invalid-email");
     await page.locator("#login-password").fill("sample-pass-42");
     await page.locator("#login-form [type=submit]").click();
@@ -339,6 +350,7 @@ const path = require("node:path");
         throw new DOMException("Blocked", "SecurityError");
       };
     });
+    await mockSupabase(blocked);
     const blockedPage = await blocked.newPage();
     blockedPage.on("pageerror", (e) => errors.push(e.message));
     await blockedPage.goto(`${url}/account.html`);

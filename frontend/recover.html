@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f6f4ee" />
+    <title>Password recovery — Scalable Studio</title>
+    <script src="js/theme-init.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="js/account.js"></script>
+  </head>
+  <body data-page="recovery">
+    <a class="skip-link" href="#main">Skip to password recovery</a>
+    <header class="account-topbar">
+      <a class="brand" href="index.html" aria-label="Scalable home"
+        ><span class="brand-mark" aria-hidden="true"
+          >s<svg
+            class="brand-star"
+            viewBox="0 0 100 100"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M50 2v96M2 50h96M16 16l68 68M16 84l68-68"
+              stroke="currentColor"
+              stroke-width="8"
+            /></svg
+        ></span>
+        scalable<span class="brand-period">.</span></a
+      >
+      <div class="appearance-actions">
+        <label class="theme-picker" for="page-theme-toggle"
+          ><span>Theme</span
+          ><select
+            id="page-theme-toggle"
+            data-theme-control
+            aria-label="Color theme"
+            disabled
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select></label
+        ><a href="index.html" class="toolbar-button">Back to Studio ↗</a>
+      </div>
+    </header>
+
+    <main id="main" class="recovery-layout">
+      <section class="login-panel" aria-labelledby="recovery-title">
+        <p class="eyebrow">A WAY BACK TO YOUR CREATIVE WORLD</p>
+        <h1 id="recovery-title">Find your way back<span>.</span></h1>
+        <p class="dialog-copy">A calm place to start again.</p>
+        <div class="preview-explainer" id="recovery-info">
+          <strong>Password recovery preview</strong>
+          <p>
+            No email can be sent from this static frontend. Use a sample address
+            to preview the recovery confirmation; real recovery will use the
+            backend identity service.
+          </p>
+        </div>
+        <form
+          id="recovery-form"
+          class="import-form"
+          action="recover.html#recovery-info"
+          method="get"
+        >
+          <label for="recovery-email"
+            >Email address <span>(sample only)</span></label
+          ><input
+            id="recovery-email"
+            type="email"
+            required
+            maxlength="254"
+            placeholder="you@example.com"
+            autocomplete="off"
+          /><button type="submit" class="done-button">
+            Preview recovery ↗
+          </button>
+        </form>
+        <section
+          id="recovery-result"
+          class="recovery-result"
+          role="status"
+          tabindex="-1"
+          hidden
+        >
+          <h2>Preview complete.</h2>
+          <p>
+            Password recovery is a preview. No email was sent; a backend
+            identity service is required.
+          </p>
+        </section>
+        <a class="return-login" href="login.html">← Return to login</a>
+        <p id="recovery-status" class="settings-status" role="status"></p>
+      </section>
+    </main>
+  </body>
+</html>

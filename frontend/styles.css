@@ -3243,3 +3243,198 @@ html[data-layout="collage"]
     font-size: 28px;
   }
 }
+
+/* Shared branding and the same explicit theme preference on every page. */
+.brand-star {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: -3px;
+  right: -7px;
+  color: var(--accent);
+}
+.theme-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.theme-picker > span {
+  color: var(--muted);
+}
+.theme-picker select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  min-height: 40px;
+  padding: 8px 26px 8px 10px;
+  cursor: pointer;
+}
+.theme-picker select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.login-panel .demo-account-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.login-panel #forgot-password {
+  display: block;
+}
+.recovery-layout {
+  min-height: calc(100vh - 90px);
+  display: grid;
+  place-items: center;
+  padding: 35px 20px;
+}
+.recovery-layout .login-panel {
+  width: min(100%, 570px);
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius);
+}
+.recovery-layout h1 {
+  font: normal 45px/1.1 var(--serif);
+  letter-spacing: -1.5px;
+  margin: 0;
+}
+.recovery-layout h1 > span {
+  color: var(--accent);
+}
+.recovery-result {
+  border-top: 1px solid var(--line);
+  padding-top: 15px;
+  margin-top: 20px;
+}
+.recovery-result h2 {
+  font: normal 26px var(--serif);
+}
+.recovery-result p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.return-login {
+  display: inline-block;
+  font-size: 12px;
+  margin-top: 22px;
+  text-underline-offset: 4px;
+}
+@media (max-width: 500px) {
+  .theme-picker > span {
+    display: none;
+  }
+  .theme-picker select {
+    font-size: 11px;
+  }
+  .recovery-layout .login-panel {
+    padding: 30px 22px;
+  }
+  .recovery-layout h1 {
+    font-size: 38px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --bg: #1c211e;
+    --panel: #262e28;
+    --ink: #e8e7dd;
+    --muted: #acb3a5;
+    --line: #424b40;
+    --accent: #e5a286;
+    --button: #c6d3b3;
+    --on-button: #20261d;
+    --card: #30392f;
+    --palette-bg: #30392e;
+    --palette-ink: #e0e5d7;
+    --note-bg: #39382c;
+    --note-ink: #ded9c4;
+    --sound-bg: #2d3b2d;
+    --sound-ink: #d9e6ce;
+    --accent-on: #241d15;
+  }
+}
+
+/* Account creation shares the login's Studio identity and theme controls. */
+.auth-switch {
+  font-size: 12px;
+  line-height: 1.9;
+  text-align: center;
+  color: var(--muted);
+  margin: 20px 0;
+}
+.auth-switch a,
+.signup-demo-link {
+  color: var(--ink);
+  text-underline-offset: 4px;
+}
+.auth-switch a {
+  margin-left: 4px;
+}
+.signup-panel {
+  padding-top: 38px;
+  padding-bottom: 30px;
+}
+.signup-panel h2 {
+  font-size: 42px;
+}
+.signup-password-help {
+  margin: 0;
+  font-size: 10px;
+}
+.signup-panel #signup-match-error {
+  margin: 0;
+}
+.signup-demo-link {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.signup-result {
+  margin: 24px 0;
+  padding: 25px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius);
+  background: var(--panel);
+  text-align: center;
+}
+.signup-result h3 {
+  font: normal 28px/1.15 var(--serif);
+  letter-spacing: -0.5px;
+  margin: 0 0 15px;
+}
+.signup-result p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--muted);
+  margin: 0 0 20px;
+}
+.signup-result .done-button {
+  display: inline-block;
+  text-decoration: none;
+  line-height: 1.7;
+}
+.signup-result .text-button {
+  display: block;
+  margin: 12px auto 0;
+}
+.account-security-card .toolbar-button + .toolbar-button {
+  margin-left: 8px;
+}
+@media (max-width: 800px) {
+  .signup-panel h2 {
+    font-size: 38px;
+  }
+  .signup-panel {
+    padding-top: 35px;
+  }
+  .account-security-card .toolbar-button + .toolbar-button {
+    margin: 10px 0 0;
+  }
+}

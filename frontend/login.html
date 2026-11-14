@@ -5,26 +5,52 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#f6f4ee" />
     <title>Log in — Scalable Studio</title>
+    <script src="js/theme-init.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <script type="module" src="js/account.js"></script>
   </head>
   <body data-page="login">
     <a class="skip-link" href="#main">Skip to login</a>
     <header class="account-topbar">
-      <a class="brand" href="index.html"
-        ><span class="brand-mark">s</span> scalable<span class="brand-period"
-          >.</span
-        ></a
+      <a class="brand" href="index.html" aria-label="Scalable home"
+        ><span class="brand-mark" aria-hidden="true"
+          >s<svg
+            class="brand-star"
+            viewBox="0 0 100 100"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M50 2v96M2 50h96M16 16l68 68M16 84l68-68"
+              stroke="currentColor"
+              stroke-width="8"
+            /></svg
+        ></span>
+        scalable<span class="brand-period">.</span></a
       >
       <div class="appearance-actions">
-        <button id="page-theme-toggle" class="toolbar-button">Dark mode</button
+        <label class="theme-picker" for="page-theme-toggle"
+          ><span>Theme</span
+          ><select
+            id="page-theme-toggle"
+            data-theme-control
+            aria-label="Color theme"
+            disabled
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select></label
         ><a href="index.html" class="toolbar-button">Back to Studio ↗</a>
       </div>
     </header>
     <main id="main" class="login-layout">
       <section class="login-story">
         <p class="eyebrow">A LITTLE SPACE FOR YOUR NEXT BIG IDEA</p>
-        <h1>Come back<br />to your <em>creative world.</em></h1>
+        <h1>
+          Come back<br />
+          to your <em>creative world.</em>
+        </h1>
         <p>
           A place for everything that moves you.<br />Images, colors, songs, and
           moments in motion.
@@ -48,7 +74,12 @@
             never saved in this app.
           </p>
         </div>
-        <form id="login-form" class="import-form">
+        <form
+          id="login-form"
+          class="import-form"
+          action="account.html"
+          method="get"
+        >
           <label for="login-email">Email address</label
           ><input
             id="login-email"
@@ -71,6 +102,7 @@
               autocomplete="current-password"
             /><button
               id="show-password"
+              hidden
               type="button"
               aria-pressed="false"
               aria-label="Show sample password"
@@ -78,16 +110,25 @@
               Show
             </button>
           </div>
-          <button id="forgot-password" class="text-button" type="button">
-            Forgot password?</button
+          <a id="forgot-password" class="text-button" href="recover.html"
+            >Forgot password?</a
           ><button class="done-button login-submit" type="submit">
-            Preview sign-in ↗
+            Sign in ↗
           </button>
         </form>
+        <p class="auth-switch">
+          New to the Studio?
+          <a id="create-account-link" href="signup.html"
+            >Create an account ↗</a
+          >
+        </p>
         <div class="login-divider"><span>OR KEEP EXPLORING</span></div>
-        <button id="demo-account" class="toolbar-button demo-account-button">
-          Explore the demo account
-        </button>
+        <a
+          id="demo-account"
+          class="toolbar-button demo-account-button"
+          href="account.html"
+          >Explore the demo account</a
+        >
         <p class="field-help login-help">
           Password recovery uses a single-use Supabase email link. The demo
           account remains available without signing in.

@@ -30,9 +30,23 @@ A future upload service should use authenticated media IDs and object storage wi
 
 ## Login page
 
-`frontend/login.html` has email/password validation, password show/hide, a recovery-message preview, a preview sign-in action, and a demo-account shortcut. It is **not authentication**. Use sample details only. The form does not send, log, persist, or copy entered email/password values into the profile. Submitting valid sample details resets the form and opens the account preview.
+`frontend/login.html` preserves the remote branch's Supabase sign-in and email-recovery integration. Sign-in sends credentials to Supabase Auth; passwords are not copied into the local demo profile. Recovery uses the entered email and a project-relative `update-password.html` callback. `update-password.js` retains the remote session-checked password-update flow. Actual emails/account sessions are not exercised by the browser tests.
 
-A tab-scoped `scalable.demoSession` flag controls preview labeling only. It is not a token, access check, or security boundary. The account page is deliberately accessible without it. Password recovery sends no email; there is no account creation, password change, or verified identity yet.
+The SDK is loaded lazily so signup, recovery preview, and theme/navigation controls do not depend on SDK availability. The client uses a pinned browser-compatible jsDelivr ES module for the same Supabase package version declared by the remote branch. Login/recovery failures report an unavailable state rather than preventing all page controls from loading. Supabase session persistence remains configured by the remote client; no tokens or project keys are embedded into the signup preview.
+
+The demo-account shortcut remains available. Its tab-scoped `scalable.demoSession` flag is not authentication. The legacy `recover.html` page remains a standalone frontend preview; it does not send mail. Real password recovery from login uses the Supabase hook instead. Local board/profile data is still browser-origin storage and is not automatically secured or partitioned by a Supabase session.
+
+## Create-account page
+
+`frontend/signup.html` is linked from login and the account page's security section. It shares the static logo, device-following theme, and split-screen Studio layout. Its form validates a nonblank display name, email format, an 8-character minimum sample password, and matching confirmation. Both password fields have independent show/hide controls.
+
+Successful validation clears all fields, hides the form, and shows an explicit preview confirmation with links to the account preview and login. **No account is registered, no email is sent, and no signup name, email, password, or session is saved or transmitted.** Existing local profiles, boards, and appearance preferences are preserved. The retry action starts with an empty form.
+
+The form's submit button is enabled only after its validation handlers are ready. With JavaScript unavailable, its notice explains the limit and ordinary login/demo links still work. Inputs have no form names, and the fallback action points to the local preview page, so form values cannot enter fallback GET parameters. Signup is not an authentication or ownership boundary.
+
+Real registration should call a future `POST /api/auth/register` through the .NET identity service, with authoritative validation, account creation, secure password handling, verified-email workflow, and actual success/error responses. Client-side confirmation is a convenience, not proof of account creation.
+
+Previews: [create account](design-previews/studio-signup.png) · [validation confirmation](design-previews/studio-signup-success.png).
 
 ## Account page
 
@@ -69,3 +83,11 @@ Run `node tests/studio.browser.cjs` for the existing Studio/audio/Pinterest regr
 The new suite checks URL rejection/normalization, duplicate moments, explicit embed load/unload, local video decoding/playback and reattachment after reload, removal, refinement preservation, mobile layouts, login validation, lack of credential persistence/transmission, local profile persistence, shared preferences, service deep links, preview sign-out, and blocked storage. The YouTube iframe route is intercepted by the test; live YouTube playback, identity APIs, provider APIs, SQL, and cloud uploads are not verified or implemented.
 
 Previews: [login](design-previews/studio-login.png) · [account](design-previews/studio-account.png) · [connections](design-previews/studio-account-connections.png) · [video import](design-previews/studio-video-import.png) · [video reference](design-previews/studio-video-reference.png).
+
+Login, signup, recovery, account, and Studio pages share a System/Light/Dark theme selector and a static logo with the Studio star. System follows the device by default. `theme-init.js` initializes appearance before paint; `appearance.js` handles explicit overrides, device updates, cross-tab synchronization, and cached-page restoration. The navigation/theme suite also verifies legacy MediaQueryList behavior and real links with JavaScript disabled.
+
+The navigation/theme browser suite also checks signup navigation under `/Scalable/`, required/whitespace/email/length/mismatch validation, visibility toggles and reset, no persistence or transmission of submitted details, blocked storage, and light/dark layouts at five widths.
+
+### Remote-branch integration validation
+
+The signup change was rebased over a remote Supabase integration. Browser suites intercept `supabaseClient.js` with `tests/helpers/mock-supabase.cjs` to check the preserved sign-in/recovery/session/sign-out hooks without sending credentials or recovery mail to the live project. The signup path performs no auth-client calls. The pinned SDK URL was checked for successful HTTPS delivery with a JavaScript content type; live project authentication is not claimed as verified.

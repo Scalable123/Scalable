@@ -18,9 +18,10 @@ Previews: [light](design-previews/studio.png), [dark](design-previews/studio-dar
 
 ## Appearance and customization
 
-- The top mode button switches between light and dark.
+- Studio, login, recovery, and account pages use the same **Theme: System / Light / Dark** selector. System is the default and follows device changes; manual overrides persist until System is selected again.
 - **Customize** offers light, dark, or device-following appearance; terracotta, olive, or plum accents; comfortable or compact canvas spacing; and soft or square card edges.
 - Changes apply immediately. Device-following mode responds to changes in the operating system color scheme. Reset restores the default device-following theme, terracotta accent, comfortable spacing, and soft edges.
+- `theme-init.js` applies the device/stored theme before styles paint. Preferences synchronize across open tabs and are re-read on back/forward-cache restoration. Legacy MediaQueryList listeners are supported; CSS follows the device when JavaScript is disabled.
 - Preferences are stored separately from boards under `scalable.appearance.v1`. Invalid values fall back to defaults. Old design-switcher preferences are ignored. Blocked browser storage still allows changes for the current visit and displays a persistence notice.
 - Actual board color swatches do not change when the interface theme or accent changes.
 
@@ -52,6 +53,7 @@ There is no real authenticated account, cloud sync, SQL connection, sharing, exp
 frontend/
   index.html             Studio application shell and import/appearance dialogs
   login.html             Frontend login preview
+  signup.html            Create-account form and validation preview
   account.html           Local profile, preferences, and connection previews
   styles.css             Responsive Studio layout and appearance tokens
   js/appearance.js       Validated local preferences and device theme handling
@@ -156,3 +158,15 @@ No Pinterest account is connected and no Pinterest content is fetched. The three
 Use the Studio's **Log in** and **Account** links for the new pages. Login is a credential-free simulation after form validation; entered credentials are not transmitted or persisted. The account page has a local profile, shared appearance settings, service preview links, and sign-in/security placeholders. No browser flag is treated as authentication.
 
 See [video/account implementation and .NET handoff](VIDEO-ACCOUNT.md) for behavior, data contracts, test commands, and backend requirements.
+
+## Login navigation and shared branding
+
+The Studio, login, recovery, and account pages use the same static star-and-wordmark logo. Logo links point to the Studio. Demo-account navigation and password-recovery navigation use real relative links, so they work under a GitHub Pages project path and without JavaScript. Valid sample sign-in details have an `account.html` fallback action; fields have no names and are never sent as form parameters. Password visibility is enabled only after its handler is ready.
+
+`recover.html` is an explicit recovery preview, with a sample-email form and visible confirmation. It sends no email and does not implement authentication. See `node tests/navigation-theme.browser.cjs` for branding, navigation, device themes, overrides, legacy listeners, cross-tab updates, and no-JavaScript checks.
+
+## Create-account flow
+
+Login's **Create an account** link opens `signup.html`, with display name, email, password, and confirmation validation. A successful submission shows a frontend-only confirmation and clears the form; it does not register an account or store/send the entered details. Continue to the account preview or return to login through ordinary links. Shared branding, System/Light/Dark preferences, and responsive layouts match the other pages. See the [signup handoff](VIDEO-ACCOUNT.md#create-account-page).
+
+The branch also contains Supabase sign-in, recovery, session lookup, and sign-out hooks brought in by remote commits. These are preserved alongside the independent signup preview. Auth SDK loading is lazy and browser-compatible; the signup form does not call Supabase or register a user. Auth browser checks use a mocked client and do not contact the live project.
