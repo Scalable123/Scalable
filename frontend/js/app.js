@@ -16,7 +16,6 @@ import {
 import { boardService, prompts } from "./board-service.js";
 import { setupCustomization } from "./customize.js";
 import { createCreativeDirection } from "./ai-service.js";
-import { paletteFromImages } from "./palette.js";
 
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
@@ -143,11 +142,6 @@ function replaceSampleImages(boardValue, images) {
     boardValue.items[slot.index] = { ...image, position: slot.item.position };
   }
   return replaced;
-}
-async function updatePaletteFromImages(boardValue, images, prompt) {
-  const palette = boardValue.items.find((item) => item.type === "palette");
-  if (!palette || !images?.length) return;
-  palette.colors = await paletteFromImages(images, prompt, palette.colors);
 }
 function renderPalette(item) {
   const card = element("section", "board-card palette-card");
@@ -644,7 +638,6 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       const visualSearch = await searchWikimediaImages(direction.imageQueries || [prompt]);
       next.wikimediaSourceStatus = visualSearch.status;
       next.wikimediaImageCount = replaceSampleImages(next, visualSearch.images);
-      await updatePaletteFromImages(next, visualSearch.images, prompt);
       if (next.wikimediaImageCount) next.mode = "ai";
       next.items = next.items.filter(
         (item) =>
@@ -676,7 +669,6 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       const fallbackVisualSearch = await searchWikimediaImages([prompt]);
       next.wikimediaSourceStatus = fallbackVisualSearch.status;
       next.wikimediaImageCount = replaceSampleImages(next, fallbackVisualSearch.images);
-      await updatePaletteFromImages(next, fallbackVisualSearch.images, prompt);
     }
     if (runVersion !== boardVersion) return;
     // Preserve explicitly pinned choices when refining this local exploration.

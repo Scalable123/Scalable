@@ -1,4 +1,8 @@
-const endpoint = "/api/ai/creative-direction";
+import { aiOrigin } from "./config/ai-origin.js";
+
+function endpoint() {
+  return new URL("/api/ai/creative-direction", aiOrigin()).toString();
+}
 
 function fileDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -16,7 +20,7 @@ export async function createCreativeDirection({
   referenceFile = null,
 }) {
   const referenceImage = referenceFile ? await fileDataUrl(referenceFile) : undefined;
-  const response = await fetch(endpoint, {
+  const response = await fetch(endpoint(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",

@@ -144,9 +144,9 @@ export class DemoBoardService {
     assertResearchInputAllowed(prompt);
     // Deliberate preview delay; this is local sample selection, not AI research.
     await new Promise((resolve) => setTimeout(resolve, 650));
-    const key = /night|midnight|city|indigo/i.test(prompt)
+    const key = /night|midnight|city|indigo|navy|violet|purple|charcoal|black/i.test(prompt)
       ? "night"
-      : /earth|clay|sculptur|studio/i.test(prompt)
+      : /earth|clay|sculptur|studio|terracotta|brown|orange|amber|sand|beige|warm|ochre|red|rose|pink/i.test(prompt)
         ? "earth"
         : "coast";
     const collection = collections[key];
