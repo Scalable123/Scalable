@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f6f4ee" />
+    <title>Create account — Scalable Studio</title>
+    <script src="js/theme-init.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="js/account.js"></script>
+  </head>
+  <body data-page="signup">
+    <a class="skip-link" href="#main">Skip to create account</a>
+    <header class="account-topbar">
+      <a class="brand" href="index.html" aria-label="Scalable home"
+        ><span class="brand-mark" aria-hidden="true"
+          >s<svg
+            class="brand-star"
+            viewBox="0 0 100 100"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M50 2v96M2 50h96M16 16l68 68M16 84l68-68"
+              stroke="currentColor"
+              stroke-width="8"
+            /></svg
+        ></span>
+        scalable<span class="brand-period">.</span></a
+      >
+      <div class="appearance-actions">
+        <label class="theme-picker" for="page-theme-toggle"
+          ><span>Theme</span
+          ><select
+            id="page-theme-toggle"
+            data-theme-control
+            aria-label="Color theme"
+            disabled
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select></label
+        ><a href="index.html" class="toolbar-button">Back to Studio ↗</a>
+      </div>
+    </header>
+    <main id="main" class="login-layout signup-layout">
+      <section class="login-story">
+        <p class="eyebrow">EVERY GOOD IDEA NEEDS A PLACE TO START</p>
+        <h1>
+          Make room<br />
+          for your <em>next big idea.</em>
+        </h1>
+        <p>
+          Gather what inspires you.<br />Give your creative world a place of its
+          own.
+        </p>
+        <div class="login-art">
+          <img
+            src="assets/water.jpg"
+            alt="Gentle blue water stretching toward a quiet horizon"
+          /><span class="login-note"
+            >A spark today.<br />A world tomorrow.</span
+          >
+        </div>
+        <span class="login-story-caption">SCALABLE / THE STUDIO</span>
+      </section>
+      <section class="login-panel signup-panel" aria-labelledby="signup-title">
+        <p class="eyebrow">YOUR CREATIVE WORLD STARTS HERE</p>
+        <h2 id="signup-title">Create your space<span>.</span></h2>
+        <p class="dialog-copy">A home for the things that move you.</p>
+        <div class="preview-explainer" id="signup-info">
+          <strong>Frontend registration preview</strong>
+          <p>
+            Use sample details. This form previews validation only. No account
+            is registered, no email is sent, and your name, email, and passwords
+            are not sent or saved.
+          </p>
+        </div>
+        <form
+          id="signup-form"
+          class="import-form"
+          action="signup.html#signup-info"
+          method="get"
+        >
+          <label for="signup-name">Display name</label
+          ><input
+            id="signup-name"
+            required
+            maxlength="80"
+            placeholder="Your creative name"
+            autocomplete="off"
+          />
+          <label for="signup-email">Email address</label
+          ><input
+            id="signup-email"
+            type="email"
+            required
+            maxlength="254"
+            placeholder="you@example.com"
+            autocomplete="off"
+          />
+          <label for="signup-password"
+            >Password <span>(sample only, 8+ characters)</span></label
+          >
+          <div class="password-field">
+            <input
+              id="signup-password"
+              type="password"
+              required
+              minlength="8"
+              maxlength="128"
+              placeholder="Create a sample password"
+              autocomplete="off"
+              aria-describedby="signup-password-help"
+            /><button
+              id="show-signup-password"
+              type="button"
+              aria-label="Show sample password"
+              aria-pressed="false"
+              hidden
+            >
+              Show
+            </button>
+          </div>
+          <p id="signup-password-help" class="field-help signup-password-help">
+            Use at least 8 characters. Real password policies will be enforced
+            by the backend.
+          </p>
+          <label for="signup-confirm">Confirm password</label>
+          <div class="password-field">
+            <input
+              id="signup-confirm"
+              type="password"
+              required
+              minlength="8"
+              maxlength="128"
+              placeholder="Repeat your sample password"
+              autocomplete="off"
+              aria-describedby="signup-match-error"
+            /><button
+              id="show-signup-confirm"
+              type="button"
+              aria-label="Show sample password confirmation"
+              aria-pressed="false"
+              hidden
+            >
+              Show
+            </button>
+          </div>
+          <p id="signup-match-error" class="input-error" role="status"></p>
+          <button
+            id="signup-submit"
+            class="done-button login-submit"
+            type="submit"
+            disabled
+          >
+            Preview account creation ↗
+          </button>
+        </form>
+        <noscript
+          ><p class="field-help">
+            Enable JavaScript to preview password confirmation. You can still
+            use the login and demo-account links below.
+          </p></noscript
+        >
+        <section
+          id="signup-result"
+          class="signup-result"
+          tabindex="-1"
+          aria-labelledby="signup-result-title"
+          hidden
+        >
+          <span class="import-complete-mark" aria-hidden="true">✓</span>
+          <h3 id="signup-result-title">Your next chapter looks good.</h3>
+          <p>
+            Validation complete. No account was registered and no form details
+            were saved. Real registration will connect through the .NET backend.
+          </p>
+          <a class="done-button" href="account.html"
+            >Continue to account preview ↗</a
+          ><button id="signup-again" class="text-button" type="button">
+            Try the form again
+          </button>
+        </section>
+        <p class="auth-switch">
+          Already have an account? <a href="login.html">Log in ↗</a>
+        </p>
+        <a class="signup-demo-link" href="account.html"
+          >Explore the demo account instead ↗</a
+        >
+        <p
+          id="signup-status"
+          class="settings-status"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </section>
+    </main>
+  </body>
+</html>

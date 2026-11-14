@@ -53,6 +53,7 @@ There is no real authenticated account, cloud sync, SQL connection, sharing, exp
 frontend/
   index.html             Studio application shell and import/appearance dialogs
   login.html             Frontend login preview
+  signup.html            Create-account form and validation preview
   account.html           Local profile, preferences, and connection previews
   styles.css             Responsive Studio layout and appearance tokens
   js/appearance.js       Validated local preferences and device theme handling
@@ -163,3 +164,9 @@ See [video/account implementation and .NET handoff](VIDEO-ACCOUNT.md) for behavi
 The Studio, login, recovery, and account pages use the same static star-and-wordmark logo. Logo links point to the Studio. Demo-account navigation and password-recovery navigation use real relative links, so they work under a GitHub Pages project path and without JavaScript. Valid sample sign-in details have an `account.html` fallback action; fields have no names and are never sent as form parameters. Password visibility is enabled only after its handler is ready.
 
 `recover.html` is an explicit recovery preview, with a sample-email form and visible confirmation. It sends no email and does not implement authentication. See `node tests/navigation-theme.browser.cjs` for branding, navigation, device themes, overrides, legacy listeners, cross-tab updates, and no-JavaScript checks.
+
+## Create-account flow
+
+Login's **Create an account** link opens `signup.html`, with display name, email, password, and confirmation validation. A successful submission shows a frontend-only confirmation and clears the form; it does not register an account or store/send the entered details. Continue to the account preview or return to login through ordinary links. Shared branding, System/Light/Dark preferences, and responsive layouts match the other pages. See the [signup handoff](VIDEO-ACCOUNT.md#create-account-page).
+
+The branch also contains Supabase sign-in, recovery, session lookup, and sign-out hooks brought in by remote commits. These are preserved alongside the independent signup preview. Auth SDK loading is lazy and browser-compatible; the signup form does not call Supabase or register a user. Auth browser checks use a mocked client and do not contact the live project.
