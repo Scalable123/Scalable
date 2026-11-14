@@ -13,12 +13,7 @@ import {
   releaseLocalAudio,
 } from "./audio-library.js";
 import { boardService, prompts } from "./board-service.js";
-import {
-  onAppearanceChange,
-  updateAppearance,
-  resetAppearance,
-  setupThemeControls,
-} from "./appearance.js";
+import { setupCustomization } from "./customize.js";
 
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
@@ -500,45 +495,7 @@ setupPinterestImporter({
     return { added, skipped: items.length - added };
   },
 });
-onAppearanceChange((preferences) => {
-  for (const field of [
-    "theme",
-    "density",
-    "corners",
-    "typography",
-    "layout",
-    "canvas",
-    "textSize",
-  ])
-    $("#appearance-form").elements[field].value = preferences[field];
-  $("#appearance-form").elements.accent.value = preferences.accent;
-});
-function appearanceStatus(saved) {
-  $("#appearance-status").textContent = saved
-    ? "Preferences saved in this browser."
-    : "Applied for this visit. Browser storage is unavailable, so preferences could not be saved.";
-}
-setupThemeControls((saved) => {
-  appearanceStatus(saved);
-  if (!saved)
-    notify("Theme applied for this visit. Browser storage is unavailable.");
-});
-$("#customize").addEventListener("click", () =>
-  $("#appearance-dialog").showModal(),
-);
-for (const id of ["close-appearance", "done-appearance"])
-  $("#" + id).addEventListener("click", () => $("#appearance-dialog").close());
-$("#appearance-form").addEventListener("submit", (event) =>
-  event.preventDefault(),
-);
-$("#appearance-form").addEventListener("change", (event) => {
-  appearanceStatus(
-    updateAppearance({ [event.target.name]: event.target.value }),
-  );
-});
-$("#reset-appearance").addEventListener("click", () =>
-  appearanceStatus(resetAppearance()),
-);
+setupCustomization();
 document
   .querySelectorAll("[data-filter]")
   .forEach((button) =>
@@ -726,7 +683,6 @@ $("#new-board").addEventListener("click", async () => {
     "A fresh start. The canvas shows a sample until you explore your own brief.",
   );
 });
-$("#explore").addEventListener("click", () => $("#prompt").focus());
 $("#about").addEventListener("click", () =>
   showDialog(
     "Welcome to The Studio",

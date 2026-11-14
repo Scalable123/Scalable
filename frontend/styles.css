@@ -93,8 +93,7 @@ button:hover:not(:disabled) {
   white-space: nowrap;
 }
 .concept-label i,
-.demo-badge i,
-.board-footer i {
+.demo-badge i {
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -811,20 +810,7 @@ textarea {
   border: 1px solid #95a28b;
   font-size: 13px;
 }
-.board-footer {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 9px;
-  margin-top: 14px;
-  gap: 12px;
-}
-.board-footer i {
-  width: 4px;
-  height: 4px;
-  background: #879477;
-  margin-right: 4px;
-}
+
 .board-grid.filtered {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: 210px;
@@ -1048,9 +1034,7 @@ body .board-grid.filtered > .board-card {
   .board-heading h2 {
     font-size: 27px;
   }
-  .board-footer > span:last-child {
-    display: none;
-  }
+
   .concept-bar {
     justify-content: space-between;
   }
@@ -1313,8 +1297,7 @@ body .board-grid.filtered > .board-card {
   }
   .sidebar .nav-arrow,
   .sidebar .count,
-  .sidebar .nav-heading,
-  .sidebar #explore {
+  .sidebar .nav-heading {
     display: none;
   }
   .sidebar #saved-boards > span:first-child {
@@ -2531,7 +2514,6 @@ html[data-layout="collage"]
 }
 
 /* Motion references */
-.account-link,
 .login-link {
   display: inline-flex;
   align-items: center;
@@ -3244,7 +3226,7 @@ html[data-layout="collage"]
   }
 }
 
-/* Shared branding and the same explicit theme preference on every page. */
+/* Shared branding on every page. */
 .brand-star {
   position: absolute;
   width: 16px;
@@ -3253,30 +3235,7 @@ html[data-layout="collage"]
   right: -7px;
   color: var(--accent);
 }
-.theme-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  letter-spacing: 0;
-}
-.theme-picker > span {
-  color: var(--muted);
-}
-.theme-picker select {
-  font: inherit;
-  color: var(--ink);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  min-height: 40px;
-  padding: 8px 26px 8px 10px;
-  cursor: pointer;
-}
-.theme-picker select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-}
+
 .login-panel .demo-account-button {
   display: flex;
   align-items: center;
@@ -3325,12 +3284,6 @@ html[data-layout="collage"]
   text-underline-offset: 4px;
 }
 @media (max-width: 500px) {
-  .theme-picker > span {
-    display: none;
-  }
-  .theme-picker select {
-    font-size: 11px;
-  }
   .recovery-layout .login-panel {
     padding: 30px 22px;
   }
@@ -3437,4 +3390,35 @@ html[data-layout="collage"]
   .account-security-card .toolbar-button + .toolbar-button {
     margin: 10px 0 0;
   }
+}
+
+/* One account entry, preserved as a compact profile link on small screens. */
+@media (max-width: 800px) {
+  .sidebar-bottom {
+    display: block;
+    margin: 0;
+  }
+  .sidebar-bottom > #about {
+    display: none;
+  }
+  .sidebar-bottom .profile {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .sidebar-bottom .profile > div {
+    display: none;
+  }
+  .sidebar-bottom .avatar {
+    width: 34px;
+    height: 34px;
+  }
+}
+/* Let the section heading introduce the soundtrack; the action bar just offers import. */
+.soundtrack-section .audio-dock {
+  padding: 14px 18px;
+}
+.soundtrack-section .audio-dock p {
+  margin: 0;
+  font-size: 12px;
 }

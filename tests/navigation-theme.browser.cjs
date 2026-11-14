@@ -1,5 +1,6 @@
 // Development-only browser checks. Requires Playwright and Chromium, not app dependencies.
 const { chromium } = require("playwright");
+const { openCustomize, setTheme } = require("./helpers/customize.cjs");
 const mockSupabase = require("./helpers/mock-supabase.cjs");
 const assert = require("node:assert/strict");
 const http = require("node:http");
@@ -65,7 +66,9 @@ const path = require("node:path");
     watch(page);
     await page.goto(base);
     await page.waitForURL(base + "frontend/login.html");
-    await page.locator("[data-theme-control]:not([disabled])").waitFor();
+    await page
+      .locator("[data-theme-control]:not([disabled])")
+      .waitFor({ state: "attached" });
     assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
     assert.equal(
       await page.locator("[data-theme-control]").inputValue(),
@@ -114,7 +117,7 @@ const path = require("node:path");
       .getByRole("link", { name: "Return to login", exact: false })
       .click();
     await page.waitForURL(base + "frontend/login.html");
-    await page.locator("[data-theme-control]").selectOption("light");
+    await setTheme(page, "light");
     await page.locator("#demo-account").click();
     await page.waitForURL(base + "frontend/account.html");
     assert.equal(
@@ -148,7 +151,7 @@ const path = require("node:path");
       })),
       logo,
     );
-    await page.locator("[data-theme-control]").selectOption("system");
+    await setTheme(page, "system");
     await page.emulateMedia({ colorScheme: "light" });
     await page.waitForFunction(
       () => document.documentElement.dataset.theme === "light",
@@ -160,8 +163,10 @@ const path = require("node:path");
     const other = await context.newPage();
     watch(other);
     await other.goto(base + "frontend/login.html");
-    await other.locator("[data-theme-control]:not([disabled])").waitFor();
-    await other.locator("[data-theme-control]").selectOption("light");
+    await other
+      .locator("[data-theme-control]:not([disabled])")
+      .waitFor({ state: "attached" });
+    await setTheme(other, "light");
     await page.waitForFunction(
       () => document.documentElement.dataset.theme === "light",
     );
@@ -169,7 +174,7 @@ const path = require("node:path");
       await page.locator("[data-theme-control]").inputValue(),
       "light",
     );
-    await other.locator("[data-theme-control]").selectOption("system");
+    await setTheme(other, "system");
     await page.waitForFunction(
       () => document.documentElement.dataset.theme === "dark",
     );
@@ -192,7 +197,9 @@ const path = require("node:path");
       "index.html",
     ]) {
       await page.goto(base + "frontend/" + pathname);
-      await page.locator("[data-theme-control]:not([disabled])").waitFor();
+      await page
+        .locator("[data-theme-control]:not([disabled])")
+        .waitFor({ state: "attached" });
       for (const width of [1440, 768, 390, 320]) {
         await page.setViewportSize({ width, height: 900 });
         assert(
@@ -201,7 +208,18 @@ const path = require("node:path");
           )),
           `${pathname} overflow at ${width}`,
         );
+        assert.equal(
+          await page
+            .locator(
+              "header [data-theme-control], .concept-bar [data-theme-control]",
+            )
+            .count(),
+          0,
+        );
+        await openCustomize(page);
         assert(await page.locator("[data-theme-control]").isVisible());
+        if (await page.locator("#appearance-dialog").isVisible())
+          await page.keyboard.press("Escape");
       }
     }
     // Registration is a validation-only frontend flow, reached through real links.
@@ -292,7 +310,7 @@ const path = require("node:path");
     assert(await page.locator("#signup-result").isHidden());
     assert.equal(await page.locator("#signup-name").inputValue(), "");
     for (const theme of ["light", "dark"]) {
-      await page.locator("[data-theme-control]").selectOption(theme);
+      await setTheme(page, theme);
       for (const width of [1440, 1024, 768, 390, 320]) {
         await page.setViewportSize({ width, height: 900 });
         assert(
@@ -304,7 +322,7 @@ const path = require("node:path");
       }
     }
     await page.setViewportSize({ width: 1440, height: 1100 });
-    await page.locator("[data-theme-control]").selectOption("system");
+    await setTheme(page, "system");
     await page.emulateMedia({ colorScheme: "dark" });
     await page.waitForFunction(
       () => document.documentElement.dataset.theme === "dark",
@@ -342,10 +360,11 @@ const path = require("node:path");
     watch(blockedSignup);
     await blockedSignup.goto(base + "frontend/signup.html");
     await blockedSignup.locator("#signup-submit:not([disabled])").waitFor();
-    await blockedSignup.locator("[data-theme-control]").selectOption("light");
+    await setTheme(blockedSignup, "light", false);
     await blockedSignup
-      .getByText("Theme applied for this visit.", { exact: false })
+      .getByText("Applied for this visit.", { exact: false })
       .waitFor();
+    await blockedSignup.keyboard.press("Escape");
     await blockedSignup.locator("#signup-name").fill("Blocked browser");
     await blockedSignup.locator("#signup-email").fill("blocked@example.test");
     await blockedSignup
@@ -377,7 +396,9 @@ const path = require("node:path");
     const legacyPage = await legacy.newPage();
     watch(legacyPage);
     await legacyPage.goto(base + "frontend/login.html");
-    await legacyPage.locator("[data-theme-control]:not([disabled])").waitFor();
+    await legacyPage
+      .locator("[data-theme-control]:not([disabled])")
+      .waitFor({ state: "attached" });
     await legacyPage.emulateMedia({ colorScheme: "dark" });
     await legacyPage.waitForFunction(
       () => document.documentElement.dataset.theme === "dark",

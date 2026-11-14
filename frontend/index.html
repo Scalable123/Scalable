@@ -17,22 +17,14 @@
         <span class="studio-edition">/ YOUR CREATIVE SPACE</span></span
       >
       <div class="appearance-actions">
-        <a class="toolbar-button account-link" href="account.html">Account</a>
         <a class="toolbar-button login-link" href="login.html">Log in</a>
-        <label class="theme-picker" for="theme-toggle"
-          ><span>Theme</span
-          ><select
-            id="theme-toggle"
-            data-theme-control
-            aria-label="Color theme"
-            disabled
-          >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select></label
+
+        <button
+          id="customize"
+          data-customize-trigger
+          class="toolbar-button"
+          aria-haspopup="dialog"
         >
-        <button id="customize" class="toolbar-button" aria-haspopup="dialog">
           Customize <span aria-hidden="true">↗</span>
         </button>
       </div>
@@ -61,10 +53,6 @@
         </button>
         <nav aria-label="Workspace">
           <span class="nav-heading">YOUR WORKSPACE</span>
-          <button class="nav-item active" id="explore">
-            <span aria-hidden="true">◈</span> Explore a direction
-            <span class="nav-arrow">↗</span>
-          </button>
           <button class="nav-item" id="saved-boards">
             <span aria-hidden="true">▧</span> Saved boards
             <span id="saved-count" class="count">0</span>
@@ -287,7 +275,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
               </div>
               <div class="audio-dock">
                 <div>
-                  <strong>Bring your own soundtrack.</strong>
                   <p>Add music links or local audio to your board.</p>
                 </div>
                 <button
@@ -339,10 +326,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 <div id="sound-list" class="song-list"></div>
               </section>
             </section>
-            <div class="board-footer">
-              <span><i></i> Curated demo collection</span
-              ><span>Follow the feeling, not the formula. ↗</span>
-            </div>
           </section>
         </div>
         <footer class="page-footer">
@@ -365,8 +348,8 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
       <form id="appearance-form" class="appearance-form">
         <div class="appearance-field">
           <label for="theme-preference">Appearance</label>
-          <select id="theme-preference" name="theme">
-            <option value="system">Follow device</option>
+          <select id="theme-preference" name="theme" data-theme-control>
+            <option value="system">System — follow device</option>
             <option value="light">Light — warm paper</option>
             <option value="dark">Dark — evening studio</option>
           </select>

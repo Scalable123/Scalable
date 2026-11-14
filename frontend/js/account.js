@@ -1,10 +1,5 @@
 import { iconify } from "./icons.js";
-import {
-  onAppearanceChange,
-  updateAppearance,
-  resetAppearance,
-  setupThemeControls,
-} from "./appearance.js";
+import { setupCustomization } from "./customize.js";
 // Keep standalone preview pages usable even when the auth SDK is unavailable.
 let supabasePromise;
 async function getSupabase() {
@@ -21,32 +16,7 @@ iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
 const sessionKey = "scalable.demoSession";
 const profileKey = "scalable.profile.v1";
-onAppearanceChange((preferences) => {
-  if ($("#appearance-form")) {
-    for (const field of [
-      "theme",
-      "density",
-      "corners",
-      "typography",
-      "layout",
-      "canvas",
-      "textSize",
-    ])
-      $("#appearance-form").elements[field].value = preferences[field];
-    $("#appearance-form").elements.accent.value = preferences.accent;
-  }
-});
-setupThemeControls((saved) => {
-  if (!saved) {
-    const status =
-      $("#login-status") ||
-      $("#profile-status") ||
-      $("#recovery-status") ||
-      $("#signup-status");
-    status.textContent =
-      "Theme applied for this visit. Browser storage is unavailable.";
-  }
-});
+setupCustomization();
 function startDemo() {
   try {
     sessionStorage.setItem(sessionKey, "preview");
@@ -287,25 +257,6 @@ if (document.body.dataset.page === "login") {
       $("#profile-status").textContent =
         "Applied for this visit. Browser storage is unavailable; the profile could not be saved.";
     }
-  });
-  const appearanceStatus = (saved) => {
-    $("#appearance-status").textContent = saved
-      ? "Preferences saved in this browser."
-      : "Applied for this visit. Browser storage is unavailable.";
-  };
-  $("#appearance-form").addEventListener("submit", (event) =>
-    event.preventDefault(),
-  );
-  $("#appearance-form").addEventListener("change", (event) =>
-    appearanceStatus(
-      updateAppearance({ [event.target.name]: event.target.value }),
-    ),
-  );
-  $("#reset-appearance").addEventListener("click", () =>
-    appearanceStatus(resetAppearance()),
-  );
-  $("#account-appearance-done").addEventListener("click", () => {
-    location.hash = "profile";
   });
   for (const [name, target, description] of [
     ["Pinterest", "pinterest", "Import full sample boards or individual pins."],
