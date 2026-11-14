@@ -15,6 +15,7 @@ import {
 } from "./audio-library.js";
 import { boardService, prompts } from "./board-service.js";
 import { setupCustomization } from "./customize.js";
+import { createCreativeDirection } from "./ai-service.js";
 
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
@@ -53,6 +54,7 @@ function showDialog(title, content) {
 function renderImage(item) {
   const card = element("figure", `board-card image-card ${item.position}`);
   const img = element("img");
+  if (item.provider === "pinterest") img.referrerPolicy = "no-referrer";
   img.src = item.url;
   img.alt = item.description;
   if (item.imagePosition) img.style.objectPosition = item.imagePosition;
@@ -62,7 +64,7 @@ function renderImage(item) {
     "",
     item.provider === "pinterest" && item.isSample
       ? "Sample photo source ↗"
-      : "View image source ↗",
+      : item.provider === "pinterest" ? "View on Pinterest ↗" : "View image source ↗",
   );
   source.href = item.sourceUrl;
   source.target = "_blank";
@@ -79,7 +81,19 @@ function renderImage(item) {
     source.textContent = "Unsplash ↗";
     credit.append(creator, document.createTextNode(" on "), source);
     caption.append(credit);
-  } else caption.append(source);
+  } else {
+    caption.append(source);
+    if (item.provider === "pinterest" && !item.isSample && item.creatorSourceUrl) {
+      try {
+        const url = new URL(item.creatorSourceUrl);
+        if (url.protocol === "https:" && !url.username && !url.password && !url.port) {
+          const creator = element("a", "", "Original source ↗");
+          creator.href = url.href; creator.target = "_blank"; creator.rel = "noopener noreferrer";
+          caption.append(creator);
+        }
+      } catch { /* Invalid restored attribution remains plain metadata. */ }
+    }
+  }
   const pin = element("button", "pin", item.pinned ? "✓" : "+");
   pin.type = "button";
   pin.setAttribute(
@@ -258,10 +272,10 @@ function renderBoard() {
   );
   $("#pinterest-import-summary").hidden = pinterestPins.length === 0;
   const sourceBoardCount = new Set(
-    pinterestPins.map((item) => item.sourceBoard?.id),
+    pinterestPins.flatMap((item) => (item.sourceBoards || [item.sourceBoard]).map(source => source?.id)).filter(Boolean),
   ).size;
   $("#pinterest-import-summary").textContent =
-    `${pinterestPins.length} imported sample pin${pinterestPins.length === 1 ? "" : "s"} · ${sourceBoardCount} source board${sourceBoardCount === 1 ? "" : "s"} · save this mood board to keep the references`;
+    `${pinterestPins.length} imported ${pinterestPins.every(item => item.isSample) ? "sample " : ""}pin${pinterestPins.length === 1 ? "" : "s"} · ${sourceBoardCount} source board${sourceBoardCount === 1 ? "" : "s"} · save this mood board to keep the references`;
   $("#import-pinterest").disabled = false;
   $("#import-audio").disabled = false;
   $("#import-video").disabled = false;
@@ -468,6 +482,7 @@ function resetResearchUI() {
 }
 setupPinterestImporter({
   element,
+  getBoardId: () => board?.id,
   onImport({ items, destination, title, boards }) {
     if (!board)
       throw new Error(
@@ -486,8 +501,9 @@ setupPinterestImporter({
       board = {
         id: crypto.randomUUID(),
         title,
-        description: `Inspired by ${boards.map((board) => board.title).join(", ")}. Sample Pinterest import.`,
-        prompt: `Develop a creative direction inspired by ${boards.map((board) => board.title).join(", ")}.`,
+        description: items.every(item => item.isSample) ? `Inspired by ${boards.map((board) => board.title).join(", ")}. Sample Pinterest import.` : "References imported from your Pinterest boards. Excluded from AI research.",
+        // Provider board titles/descriptions and imported images are never research input.
+        prompt: items.every(item => item.isSample) ? `Develop a creative direction inspired by ${boards.map((board) => board.title).join(", ")}.` : "",
         createdAt: new Date().toISOString(),
         mode: "demo",
         researchOptions: { includeSongs: true, includeSounds: true },
@@ -503,7 +519,15 @@ setupPinterestImporter({
         board.items.map((item) => item.sourceKey).filter(Boolean),
       );
       const fresh = items.filter((item) => {
-        if (existing.has(item.sourceKey)) return false;
+        if (existing.has(item.sourceKey)) {
+          const current = board.items.find(saved => saved.sourceKey === item.sourceKey);
+          if (current && item.sourceBoards) {
+            const associations = new Map((current.sourceBoards || [current.sourceBoard]).filter(Boolean).map(source => [source.id, source]));
+            item.sourceBoards.forEach(source => associations.set(source.id, source));
+            current.sourceBoards = [...associations.values()];
+          }
+          return false;
+        }
         existing.add(item.sourceKey);
         return true;
       });
@@ -511,7 +535,7 @@ setupPinterestImporter({
       added = fresh.length;
     }
     selectFilter("all");
-    if (added) $("#save-label").textContent = "Save board";
+    if (items.length) $("#save-label").textContent = "Save board";
     return { added, skipped: items.length - added };
   },
 });
@@ -586,6 +610,47 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       fetchImages: true,
       ...researchOptions(),
     });
+    try {
+      const direction = await createCreativeDirection({
+        prompt,
+        ...researchOptions(),
+      });
+      next.title = direction.title;
+      next.description = direction.description;
+      next.mode = "ai";
+      next.items = next.items.map((item) =>
+        item.type === "palette"
+          ? { ...item, colors: direction.palette }
+          : item.type === "note"
+            ? { ...item, text: direction.note }
+            : item,
+      );
+      next.items = next.items.filter(
+        (item) =>
+          (item.type !== "song" || researchOptions().includeSongs) &&
+          (item.type !== "sound" || researchOptions().includeSounds),
+      );
+      if (researchOptions().includeSongs) {
+        next.items.push(...direction.songs.map((song, index) => ({
+          id: `ai-song-${index}`,
+          type: "song",
+          ...song,
+          discoveryUrl: `https://open.spotify.com/search/${encodeURIComponent(`${song.title} ${song.artist}`)}`,
+          linkKind: "catalog-search",
+          isSample: false,
+        })));
+      }
+      if (researchOptions().includeSounds) {
+        next.items.push(...direction.sounds.map((sound, index) => ({
+          id: `ai-sound-${index}`,
+          type: "sound",
+          ...sound,
+          isSample: false,
+        })));
+      }
+    } catch {
+      notify("AI is unavailable, so a local sample direction is shown instead.");
+    }
     if (runVersion !== boardVersion) return;
     // Preserve explicitly pinned choices when refining this local exploration.
     const pinned = (board?.items || []).filter(
@@ -606,19 +671,27 @@ $("#prompt-form").addEventListener("submit", async (event) => {
         );
     }
     // A repeated result retains its pin without adding a duplicate.
-    next.mode = next.items.some((item) => item.provider === "unsplash")
-      ? "sample-with-unsplash"
-      : "demo";
+    if (next.mode !== "ai")
+      next.mode = next.items.some((item) => item.provider === "unsplash")
+        ? "sample-with-unsplash"
+        : "demo";
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
+    const sourceMessage = sourceMessages[board.imageSourceStatus];
     notify(
-      sourceMessages[board.imageSourceStatus] || "Sample direction composed.",
+      sourceMessage
+        ? next.mode === "ai"
+          ? `${sourceMessage} AI direction composed.`
+          : sourceMessage
+        : next.mode === "ai"
+          ? "AI direction composed."
+          : "Sample direction composed.",
     );
-  } catch {
+  } catch (error) {
     if (runVersion === boardVersion)
       $("#input-error").textContent =
-        "We could not compose this board. Your current board is still here; please try again.";
+        error.message || "We could not compose this board. Your current board is still here; please try again.";
   } finally {
     if (runVersion === boardVersion) resetResearchUI();
   }
@@ -824,7 +897,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Import Pinterest board previews selecting full boards or individual pins; no Pinterest account is connected. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio and video can play in this browser. YouTube players load only when requested. Login and account pages are frontend previews, not authenticated accounts. When the Unsplash backend is configured, each submitted brief can add one sourced photo with photographer credit, subject to the shared hourly request budget. Other provider connections remain previews; live AI and SQL board storage are not connected. Boards and appearance preferences stay in browser storage.",
+      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore selects curated local collections; uploaded reference images are previewed only. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. When configured, the separate Unsplash host can add a credited photo within its shared hourly request budget. Cloud board saving and music-service connections remain planned.",
     ),
   ),
 );

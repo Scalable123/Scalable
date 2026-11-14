@@ -1,53 +1,95 @@
-# Backend
+# Backend architecture and current implementation
 
-The image-source backend is a minimal C# / ASP.NET Core application targeting .NET 10. It has no third-party runtime packages. It serves the existing `frontend/` as its public web root and implements only the Unsplash source endpoint. AI research jobs, SQL board persistence, account authorization, and other providers remain future work. Supabase browser auth is unchanged.
+Audited against `main` commit `68e573c` on November 14, 2026. See [T003](T003.md) for decisions and fresh validation results.
 
-## Run locally
+## GraphQL and persistence
 
-Install the .NET 10 SDK, then from the repository root:
+Scalable uses **the ASP.NET Core GraphQL API and ASP.NET Identity instead of Supabase Auth or a Supabase browser database client**. GraphQL is the API layer, not a database engine. The browser has no Supabase SDK/configuration/dependency. A PostgreSQL hosting vendor is an infrastructure choice, not the application's auth API.
+
+The repository contains three distinct storage boundaries:
+
+| Data | Implemented storage | Scope |
+| --- | --- | --- |
+| Application users/password hashes | EF Core Identity database; SQLite locally, Npgsql/PostgreSQL selectable by server configuration | Real registration and login accounts |
+| Pinterest credentials/OAuth state | Separate `PinterestStore` SQLite database at `<DataPath>/pinterest.db`; credentials encrypted with owner-specific Data Protection purposes | Per authenticated Identity user; still SQLite even if Identity uses PostgreSQL |
+| Boards/profile/appearance | Browser localStorage | Origin-specific local records; not partitioned by Identity user |
+
+`AppDbContext` contains Identity entities and a unique normalized-email index, not board/media entities. The GraphQL `boards` query always returns an empty array; the active `DemoBoardService` still saves boards locally. There are no cloud board mutations, board migrations, durable research jobs, or upload/object-storage service.
+
+## Run the two services
+
+Use Node.js with native ES modules/global fetch and a .NET 10 SDK. From the repository root, in separate terminals:
 
 ```sh
-cp .env.example .env
-# Edit .env and supply Unsplash__AccessKey; keep it private.
-bash backend/run.sh
+App__PublicBaseUrl=http://localhost:3000 dotnet run --project Scalable.Api
 ```
 
-Open `http://localhost:5080/` (Studio), `/login.html`, or `/account.html`. The root of this host is the frontend directory, unlike the repository-root Pages login redirect. `run.sh` reads trusted local `.env` shell assignments and starts `dotnet run`. Set `ASPNETCORE_URLS` to configure listening addresses. Configuration values supplied through deployment environment variables work without `.env`.
+```sh
+npm start
+```
 
-For production, `dotnet publish backend/Scalable.Api.csproj -c Release -o work/publish` creates the server artifacts. Deploy those with the existing `frontend/` directory and set **FrontendPath** to its absolute location. Run the published DLL with .NET 10. Configure HTTPS/reverse-proxy routing and a persistent quota volume. Secrets and quota files must be outside the public frontend directory. The server exposes only public frontend files; it never serves the repository root.
+Open `http://localhost:3000/` for Studio; authentication pages are `/login.html`, `/signup.html`, and `/account.html`. Node serves the contents of `frontend/` at its URL root. The API launch profile uses `http://localhost:5078/graphql`. Node does not start/proxy the .NET API, and the .NET API does not serve the frontend.
 
-## Configuration
+The `App__PublicBaseUrl` override above corrects the checked-in `/frontend` suffix for Node's URL layout. With a repository-root Python server on port 8080, use `http://localhost:8080/frontend` instead. It must identify the directory that actually serves `update-password.html`. ASP.NET does not load the root `.env`; only Node reads it.
 
-| Environment variable | Purpose |
+## Implemented GraphQL contract
+
+All operations use JSON POST `/graphql`. `graphqlRequest()` includes cookies, rejects non-OK HTTP responses and GraphQL `errors`, and returns `data`. Auth payload `succeeded` must also be checked; HTTP 200 alone does not establish a successful operation.
+
+| Operation | Inputs / result |
 | --- | --- |
-| `Unsplash__AccessKey` | Server-only Unsplash Access Key; required for real search |
-| `Unsplash__ApplicationId` | Optional operator metadata, application 1133409; not used for photo search |
-| `Unsplash__BudgetPath` | Absolute persistent quota JSON path, default `backend/data/unsplash-budget.json` in a source checkout |
-| `FrontendPath` | Absolute path to public frontend files when deployed separately |
-| `ASPNETCORE_URLS` | ASP.NET listener configuration |
+| Query `serviceStatus` | `name`, `message`, `checkedAt`; public diagnostic |
+| Query `boards` | Public scaffold returning an empty summary list, not the browser's saved boards |
+| Query `me` | Authorized user `id`, `username`, `email`, `displayName` |
+| Mutation `register` | `RegisterInput { username, email, displayName, password }`; `succeeded`, `message`, optional `user` |
+| Mutation `login` | `LoginInput { identifier, password }`; same auth payload |
+| Mutation `logout` | Clears the Identity cookie; returns boolean |
+| Mutation `requestPasswordReset` | `PasswordResetRequestInput { email }`; neutral `succeeded`/`message` |
+| Mutation `resetPassword` | `PasswordResetInput { email, token, password }`; `succeeded`/`message` |
 
-No Unsplash Secret Key is needed for public search. `.env`, `.env.*` (except the template), SDK scratch files, binaries, and local quota state are ignored by Git. Provision the Access Key in the deployment's secret environment; pushing the branch does not provision it on a host.
+Registration rejects duplicate username/email, hashes passwords through Identity, and signs in the new user. Login accepts email when the identifier contains `@`, username otherwise. Identity enforces an eight-character minimum plus its default complexity requirements; failed password attempts use lockout with a threshold of five. Both login and registration use `isPersistent: false`: stored accounts survive restarts when the database persists, but the session is a browser session cookie.
 
-## HTTP boundary
+Reset requests generate an Identity token for an existing account and pass its URL to `IAccountEmailSender`. The installed `LoggingAccountEmailSender` logs only a generic message. It neither sends email nor logs the URL, token, or account address. Configure real delivery before treating recovery as usable end to end. Token completion is implemented, but email verification is not.
 
-`POST /api/image-sources/unsplash` accepts JSON `{ "prompt": "quiet coast" }`. Prompt text is trimmed and must be 1–2000 characters. The endpoint sends text only; it does not receive or analyze reference files. The request body limit is 16 KiB.
+## Configuration and deployment
 
-A successful HTTP response contains `{ "status": "available", "image": { ... } }` or `{ "status": "rate_limited" | "not_configured" | "no_results" | "unavailable", "image": null }`. Status describes this optional source; other board content can still be composed. Invalid input returns 400, unsupported content type 415, oversized bodies 413, and cross-origin browser requests 403. Responses are `Cache-Control: no-store`.
+| Setting | Current behavior / requirement |
+| --- | --- |
+| `ConnectionStrings__Default` | Default `Data Source=scalable.db`. Strings beginning `Host=` or `postgres` select Npgsql; other strings select SQLite. Use a provider-valid Npgsql `Host=…;Database=…;Username=…;Password=…` format for PostgreSQL; prefix detection alone does not validate/convert a provider URL. Never commit actual credentials. |
+| `DataPath` | Defaults to `data` relative to the ASP.NET content root. Holds separate Pinterest SQLite data and fallback Data Protection keys. Does not relocate the Identity database automatically. |
+| `DataProtection__KeysPath` | Explicit persistent key directory; otherwise `<DataPath>/keys` is used in development and as the nondevelopment fallback. The current default is not `.keys`. Protect and retain the key ring across restarts. |
+| `App__PublicBaseUrl` | Directory for reset-link `update-password.html`; set for Node root hosting or the actual Pages project path. |
+| `Cors__AllowedOrigins__0` and subsequent indices | Exact allowed browser origins, without project paths. Current configuration includes `http://localhost:3000` and `https://scalable123.github.io`. Development also permits HTTP loopback ports. |
+| `App__FrontendOrigin` | Additional permitted frontend origin and Pinterest's post-OAuth redirect origin. Must be an origin without a project path. |
+| `App__CrossSiteCookies` | `true` sets the Identity cookie to `SameSite=None; Secure`; cross-site deployments require HTTPS and browser permission for those cookies. Default is false. |
+| `PublicOrigin` | Public API origin for the Pinterest OAuth callback; defaults to localhost. Configure separately from the frontend. |
+| `Pinterest__Enabled`, `Pinterest__ImportUseApproved`, `Pinterest__ClientId`, `Pinterest__ClientSecret` | All required to offer live linking; disabled/empty by default. Follow the [Pinterest handoff](PINTEREST-INTEGRATION.md) before enabling. |
+| `AllowedHosts` | Set the intended backend host names for deployment; checked-in value is `*`. |
 
-Same-origin JSON requests only: no CORS allowance, cross-site Fetch Metadata rejected, and supplied Origin checked against the host. These checks are browser request controls, **not authentication**. The endpoint supports the existing public Studio preview; callers with direct HTTP access can spend its capped shared budget. Before a broader authenticated release, attach the selected Supabase token validation and per-user abuse limits. Do not interpret demo session flags as authorization. Do not expose this host as an unrestricted cross-origin proxy.
+The browser GraphQL client uses `window.GRAPHQL_ENDPOINT` if present; otherwise loopback hosts use `http://localhost:5078/graphql` and other hosts use the configured Render URL `https://scalable-5rgd.onrender.com/graphql`. This records source configuration, not verified deployment health.
 
-## Persistent budget
+**Pinterest currently resolves its API separately:** without that global it still defaults to localhost on every host. Set `window.GRAPHQL_ENDPOINT` to the intended absolute API URL before modules initialize to align both clients. The Pinterest callback always returns to `${App:FrontendOrigin}/index.html?import=pinterest&…`; it does not preserve a Pages project path. Root-hosted frontend routing or an implementation change is needed for reliable OAuth return to `/Scalable/frontend/index.html`.
 
-[Unsplash implementation](UNSPLASH-INTEGRATION.md) defines the two-call reservation and upstream quota behavior. Every process using the same Unsplash application/key must use **the same persistent BudgetPath and lock-capable filesystem**. The state and lock file are not per-browser or per-user. One host or multiple local processes can share them; independent replica disks cannot enforce a combined cap. Use a shared transactional quota store before deploying across independent hosts/regions.
-
-Do not delete/reset the quota state on restarts, redeployments, provider errors, or hourly timers. A rolling window ages reservations out. Invalid/unreadable/unwritable state or lock contention fails closed. Keep permissions restricted to the service account. Filesystem loss or manually deleting state loses usage history; restore history or wait a full hour before resuming. Other applications/tools using the key are outside this local reservation counter; upstream exhausted-quota headers/429 block this source for a further hour.
-
-## Validation
+The Dockerfile's build context is `Scalable.Api/`:
 
 ```sh
-dotnet build backend/Scalable.Api.csproj
-dotnet run --project tests/backend/Scalable.Api.Checks.csproj
-node tests/unsplash.browser.cjs
+docker build -f Scalable.Api/Dockerfile -t scalable-api Scalable.Api
 ```
 
-The browser suite requires Playwright, Chromium, and the built Debug backend. Override `DOTNET_PATH` or `CHROMIUM_PATH` when needed. The backend checks use a fake HTTP handler and a controlled clock, plus four child processes sharing a real quota file. Host/browser checks use the actual .NET host with an empty key and routed provider fixtures, so ordinary validation spends no Unsplash quota. Existing frontend suites remain required for shared rendering/refinement changes.
+The container listens on port 8080 and contains the .NET API only. PostgreSQL for Identity does not remove the need for persistent Pinterest SQLite storage and Data Protection keys. Neither Pages nor the container launches Node's AI endpoint. A checked-in PostgreSQL `InitialIdentity` migration/model snapshot now exists under `Scalable.Api/Data/Migrations/`. Startup applies `Database.Migrate()` instead of `EnsureCreated()`. Provider compatibility and upgrading existing SQLite databases created without migration history require .NET validation; no such validation ran in this environment. Do not infer successful SQLite/PostgreSQL startup or a safe existing-data upgrade from the presence of a migration.
+
+## Implemented HTTP integrations
+
+Pinterest remains an explicit REST integration on the same Identity host, not GraphQL fields. `/api/integrations/pinterest/availability` and `/callback` are public; status, authorize, disconnect, boards, and pin pages require the GraphQL-issued Identity cookie. The host applies per-owner Pinterest limits and Origin checks on state-changing `/api` requests when Origin is supplied. Those checks/limits do not cover `/graphql`. See [routes, OAuth, pagination, permitted use, and research exclusion](PINTEREST-INTEGRATION.md).
+
+Node implements `POST /api/ai/creative-direction` separately. It uses `OPENAI_API_KEY` and optional `OPENAI_MODEL` (`gpt-4.1-mini` by default), serves `frontend/`, and returns creative metadata rather than researched images or verified tracks. It is unauthenticated and has no rate limiter. Static Pages cannot run it; its absolute-root frontend URL needs a separately designed proxy/hosting arrangement. See [AI-INTEGRATION.md](AI-INTEGRATION.md).
+
+The optional Unsplash integration is a separate ASP.NET Core application under `backend/`, not a route on the GraphQL/Identity `Scalable.Api` host. It serves the public frontend and `POST /api/image-sources/unsplash`, with a persistent shared request budget. Run it with `bash backend/run.sh` after supplying the server-only `Unsplash__AccessKey` configuration. When the frontend is hosted by Node, the GraphQL API, or static Pages, configure an explicit same-origin route to this host; those services do not proxy Unsplash requests. The Unsplash host does not provide GraphQL identity or Pinterest routes. See [Unsplash implementation and limits](UNSPLASH-INTEGRATION.md).
+
+The inactive REST `ApiBoardService` is a historical scaffold, not a running persistence API. Extending application data access should use the GraphQL service; agree schema/inputs, resolver ownership, pagination, version conflicts, error payloads, local-board import, and media storage before enabling cloud boards. Existing Pinterest and AI REST routes remain implemented exceptions; this documentation audit does not migrate them.
+
+## Verification and remaining work
+
+Run `dotnet test Scalable.sln`, the Unsplash backend checks with `dotnet run --project tests/backend/Scalable.Api.Checks.csproj`, and the browser commands documented in [FRONTEND.md](FRONTEND.md#18-validation-and-test-coverage), including `node tests/unsplash.browser.cjs`. The .NET tests exercise Identity-cookie-backed Pinterest routes and the separate Unsplash host with synthetic providers and temporary storage. Browser suites use mocks/static servers, not real accounts. [T003](T003.md) records the documentation audit's actual pass/fail/blocked outcomes; historical T001/T002 results are not current test guarantees.
+
+Production work includes validating migration application/provider compatibility and existing-data upgrades, durable/protected data and keys, mail delivery, email verification, GraphQL CSRF/rate-limit handling appropriate to the deployment, cross-site session verification, hosted Pinterest routing alignment, cloud board ownership, and current browser regression repairs. No live provider operation, infrastructure change, merge, or deployment is part of this audit.

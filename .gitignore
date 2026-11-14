@@ -5,4 +5,9 @@ node_modules/
 work/
 **/bin/
 **/obj/
-backend/data/
+backend/**/data/
+Scalable.Api/data/
+*.db
+*.db-shm
+*.db-wal
+Scalable.Api/.keys/

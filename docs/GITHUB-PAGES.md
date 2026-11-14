@@ -4,13 +4,13 @@ The repository root now contains a landing `index.html` that immediately redirec
 
 The existing Studio remains at `frontend/index.html`. Login, account, styles, scripts, and media keep their existing relative paths. Visiting the site root opens login; it does not add authentication or restrict direct access to the Studio.
 
-## Option 1: deploy directly from this branch
+## Option 1: deploy from a reviewed publishing branch
 
-After committing and pushing these files:
+After human review/merge, choose the intended publishing branch:
 
 1. Open the GitHub repository's **Settings → Pages**.
 2. Under **Build and deployment**, select **Deploy from a branch**.
-3. Select `front-end-design` and **/ (root)**, then save.
+3. Select the intended publishing branch (for example `main`) and **/ (root)**, then save. This documentation review branch does not need to become the publishing source.
 4. Wait for GitHub's Pages build to finish and use the URL reported by GitHub.
 
 The root `.nojekyll` file enables plain static hosting. Future pushes to the selected publishing branch will update the public site. Repository/account permissions and GitHub Pages availability still apply.
@@ -19,9 +19,9 @@ The root `.nojekyll` file enables plain static hosting. Future pushes to the sel
 
 `.github/workflows/pages.yml` provides a manual-only deployment:
 
-1. Make this workflow available on the repository's default branch; GitHub requires that for the **Run workflow** action to appear. You can continue developing on `front-end-design`.
+1. Make this workflow available on the repository's default branch; GitHub requires that for the **Run workflow** action to appear. Continue development on separate review branches.
 2. Set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
-3. Open **Actions → Deploy Studio to GitHub Pages → Run workflow**, select the desired branch/ref (for example `front-end-design`), and run it.
+3. Open **Actions → Deploy Studio to GitHub Pages → Run workflow**, select the desired branch/ref (for example `main`), and run it.
 4. Use the deployment URL produced by GitHub after the workflow completes. If the `github-pages` environment restricts deployment branches, allow the selected ref in its settings.
 
 This workflow publishes only the root landing page, `.nojekyll`, and the `frontend/` directory. There is no Node build or backend process. It has no push trigger, so committing/pushing the workflow alone does not deploy via Actions. The workflow does not change repository Pages settings for you.
@@ -36,9 +36,18 @@ To test the root entry point rather than opening the Studio directly, run from t
 python3 -m http.server 8080
 ```
 
-Open `http://localhost:8080/`; it should lead straight to `/frontend/login.html`. The **Explore the demo account**, **Back to Studio**, and account service-preview links should stay under the same project path when hosted under `/Scalable/`.
+Open `http://localhost:8080/`; it should lead straight to `/frontend/login.html`. The **Continue without an account**, **Back to Studio**, and account service-preview links should stay under the same project path when hosted under `/Scalable/`.
 
-GitHub Pages hosts the static frontend only. Login, provider connections, and research remain previews; C#/.NET APIs and SQL must run on a separate backend when implemented. Published local-file imports still stay in the visitor's browser and need reattachment after reload.
+## GraphQL, cookies, and service routing
+
+Pages serves static files only. The implemented account API uses ASP.NET Core GraphQL/Identity instead of Supabase; GraphQL is the API layer over server SQL persistence. The browser GraphQL client defaults to `https://scalable-5rgd.onrender.com/graphql` on nonlocal hosts and localhost on loopback hosts. That is source configuration, not verified live availability.
+
+Pinterest still has its own localhost default. Set `window.GRAPHQL_ENDPOINT` to the intended absolute API URL **before JavaScript modules initialize** to align both clients. The checked-in HTML does not set this override. The API already allowlists the exact browser origin `https://scalable123.github.io` in CORS; `/Scalable/` is a URL path, not part of the origin. Cross-site sessions also need HTTPS, `App__CrossSiteCookies=true`, and browser acceptance of credentialed cookies. The default flag is false. See [BACKEND.md](BACKEND.md) for configuration, persistent databases/keys, and remaining GraphQL CSRF/migration-validation/email requirements.
+
+Set `App__PublicBaseUrl=https://scalable123.github.io/Scalable/frontend` for reset links when using that published layout. The current email adapter sends no mail and logs no reset URLs/tokens. Pinterest OAuth has a separate limitation: it returns to `${App:FrontendOrigin}/index.html?...` and cannot preserve the Pages project path. Configure an appropriate root-hosted frontend return or implement project-path-aware callback routing before claiming that hosted linking works. Do not put a project path into `App__FrontendOrigin`, which must be an origin.
+
+Pages cannot execute `server.js`. The AI client uses absolute-root `/api/ai/creative-direction`; the repository does not configure a Pages proxy or remote AI endpoint override. On static Pages, Explore falls back locally. Local media files also remain browser-only and need reattachment after reload. Live Pinterest remains disabled until approved server configuration is supplied; the sample preview remains available.
+
 
 No Pages settings, repository publishing source, or live deployment are changed by adding these files. Actual publication is a separate step through GitHub.
 

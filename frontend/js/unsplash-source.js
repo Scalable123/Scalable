@@ -1,7 +1,7 @@
 // Same-origin backend only. Credentials and the shared quota never enter browser storage.
 const endpoint = new URL("../../api/image-sources/unsplash", import.meta.url);
 export const sourceMessages = {
-  available: "One Unsplash photo added. Other content is curated sample material; no live AI.",
+  available: "One Unsplash photo added.",
   rate_limited: "Unsplash’s hourly request budget is used up. Sample images are shown; try again later.",
   no_results: "Unsplash found no matching photo. Sample images are shown.",
   not_configured: "Unsplash is not configured on this server. Sample images are shown.",
