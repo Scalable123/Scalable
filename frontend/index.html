@@ -129,6 +129,23 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                   ×
                 </button>
               </div>
+              <div class="pinterest-dock">
+                <span class="pinterest-mark" aria-hidden="true">P</span>
+                <div>
+                  <strong>Start from Pinterest.</strong>
+                  <p>Use a full board as your starting point.</p>
+                </div>
+                <button
+                  type="button"
+                  id="import-pinterest"
+                  class="toolbar-button"
+                  aria-haspopup="dialog"
+                  disabled
+                >
+                  Import Pinterest board ↗
+                </button>
+              </div>
+              <p id="pinterest-import-summary" class="field-help" hidden></p>
               <p class="input-error" id="input-error" role="alert"></p>
               <span class="field-caption">OR BORROW A LITTLE INSPIRATION</span>
               <div class="prompt-chips">
@@ -177,40 +194,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 ↗ <span id="save-label">Save board</span>
               </button>
             </div>
-            <div class="pinterest-dock">
-              <span class="pinterest-mark" aria-hidden="true">P</span>
-              <div>
-                <p class="section-label">YOUR INSPIRATION, ALREADY COLLECTED</p>
-                <strong>Start with a board you love.</strong>
-                <p>
-                  Bring a full Pinterest board into your creative direction.
-                </p>
-              </div>
-              <button
-                id="import-pinterest"
-                class="toolbar-button"
-                aria-haspopup="dialog"
-                disabled
-              >
-                Import Pinterest board ↗
-              </button>
-            </div>
-            <p id="pinterest-import-summary" class="field-help" hidden></p>
-            <div class="audio-dock">
-              <div>
-                <p class="section-label">A SOUNDTRACK THAT’S YOURS</p>
-                <strong>Bring a little of your world.</strong>
-                <p>Add music links or local audio to your board.</p>
-              </div>
-              <button
-                id="import-audio"
-                class="toolbar-button"
-                aria-haspopup="dialog"
-                disabled
-              >
-                ＋ Import audio
-              </button>
-            </div>
             <div class="video-dock">
               <span class="video-dock-icon" aria-hidden="true">▶</span>
               <div>
@@ -247,46 +230,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
             </div>
             <div id="board-grid" class="board-grid" aria-busy="false"></div>
             <section
-              id="song-section"
-              class="song-section"
-              aria-labelledby="song-heading"
-              hidden
-            >
-              <div class="song-heading">
-                <div>
-                  <p class="section-label">03 / FIND YOUR SOUNDTRACK</p>
-                  <h3 id="song-heading">
-                    Songs for this feeling<span>.</span>
-                  </h3>
-                </div>
-                <span class="sample-label">Curated sample picks</span>
-              </div>
-              <p class="song-caption">
-                Curated suggestions and your own references. Sample picks are
-                not live research. Service links open their source; local audio
-                plays in this browser.
-              </p>
-              <div id="song-list" class="song-list"></div>
-            </section>
-            <section
-              id="sound-library"
-              class="song-section"
-              aria-labelledby="sound-library-heading"
-              hidden
-            >
-              <div class="song-heading">
-                <h3 id="sound-library-heading">
-                  Your sound references<span>.</span>
-                </h3>
-                <span class="sample-label">Added by you</span>
-              </div>
-              <p class="song-caption">
-                Linked references open at their source. Local recordings play
-                only in this browser.
-              </p>
-              <div id="sound-list" class="song-list"></div>
-            </section>
-            <section
               id="video-library"
               class="song-section"
               aria-labelledby="video-library-heading"
@@ -306,6 +249,74 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 this browser; save keeps its file details.
               </p>
               <div id="video-list" class="video-list"></div>
+            </section>
+            <section
+              id="soundtrack-section"
+              class="soundtrack-section"
+              aria-labelledby="soundtrack-heading"
+            >
+              <div class="soundtrack-heading">
+                <p class="section-label">03 / FIND YOUR SOUNDTRACK</p>
+                <h2 id="soundtrack-heading">
+                  Give your world a soundtrack<span>.</span>
+                </h2>
+                <p class="song-caption">
+                  Songs, sounds, and the references that bring it all together.
+                </p>
+              </div>
+              <div class="audio-dock">
+                <div>
+                  <strong>Bring your own soundtrack.</strong>
+                  <p>Add music links or local audio to your board.</p>
+                </div>
+                <button
+                  id="import-audio"
+                  class="toolbar-button"
+                  aria-haspopup="dialog"
+                  disabled
+                >
+                  ＋ Import audio
+                </button>
+              </div>
+              <section
+                id="song-section"
+                class="song-section"
+                aria-labelledby="song-heading"
+                hidden
+              >
+                <div class="song-heading">
+                  <div>
+                    <h3 id="song-heading">
+                      Songs for this feeling<span>.</span>
+                    </h3>
+                  </div>
+                  <span class="sample-label">Curated sample picks</span>
+                </div>
+                <p class="song-caption">
+                  Curated suggestions and your own references. Sample picks are
+                  not live research. Service links open their source; local
+                  audio plays in this browser.
+                </p>
+                <div id="song-list" class="song-list"></div>
+              </section>
+              <section
+                id="sound-library"
+                class="song-section"
+                aria-labelledby="sound-library-heading"
+                hidden
+              >
+                <div class="song-heading">
+                  <h3 id="sound-library-heading">
+                    Your sound references<span>.</span>
+                  </h3>
+                  <span class="sample-label">Added by you</span>
+                </div>
+                <p class="song-caption">
+                  Linked references open at their source. Local recordings play
+                  only in this browser.
+                </p>
+                <div id="sound-list" class="song-list"></div>
+              </section>
             </section>
             <div class="board-footer">
               <span><i></i> Curated demo collection</span

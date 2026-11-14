@@ -116,7 +116,7 @@ The checks cover desktop/mobile layouts, theme/device changes, persisted customi
 
 The Studio now also supports editorial/modern typography, collage/even-grid arrangement, plain/dotted canvas, and standard/larger reading text. Defaults and validation live in `appearance.js`; older saved preferences gain the new defaults without a migration or loss of existing choices. Reset restores all appearance settings without changing boards or imported media.
 
-Use **Import audio** above the canvas:
+Use **Import audio** in **03 / Find Your Soundtrack**. This section stays available when song results are empty or hidden by a filter:
 
 - **Paste a link:** Add a Spotify, Amazon Music, Apple Music, SoundCloud, or YouTube reference as a song or ambient sound. Supply a title and optional creator. This saves the reference, not a streamed recording or extracted metadata. Album/playlist links remain one reference. Shortened share links must be opened in a browser and replaced with the destination URL.
 - **Local audio:** Import a browser-decodable MP3, WAV, OGG, or M4A up to 20 MB. Native controls play the local file. Only metadata persists when saving a board; the file must be reattached after a page reload/new visit. Reattaching is available directly on the card. File bytes and temporary blob URLs never enter localStorage or a board DTO.
@@ -145,7 +145,7 @@ The browser suite also exercises new preference persistence/reset, import dialog
 
 ## Start from Pinterest boards
 
-Use **Import Pinterest board** for the local connection preview. Select complete sample boards, review/deselect pins, and add them to the current canvas or create a new named mood board. Imported sample pins retain board provenance, can be pinned/removed, survive refinement, and persist with saved boards. Duplicate pins are skipped. New board creation also guards against older research results overwriting the imported canvas.
+Use **Import Pinterest board** in **01 / The Starting Point**, alongside the reference-image input, for the local connection preview. Select complete sample boards, review/deselect pins, and add them to the current canvas or create a new named mood board. Imported sample pins retain board provenance, can be pinned/removed, survive refinement, and persist with saved boards. Duplicate pins are skipped. New board creation also guards against older research results overwriting the imported canvas.
 
 No Pinterest account is connected and no Pinterest content is fetched. The three demo boards use existing local sample photographs. [Pinterest integration notes](PINTEREST-INTEGRATION.md) describe the flow, limitations, data shape, and proposed .NET endpoints for real authorization and paginated whole-board imports.
 

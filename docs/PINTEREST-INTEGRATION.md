@@ -4,7 +4,7 @@ The Studio now has a Pinterest import experience for starting from whole boards.
 
 ## Try the flow
 
-1. Click **Import Pinterest board** above the canvas.
+1. Click **Import Pinterest board** in **01 / The Starting Point**, below the reference-image input.
 2. Choose **Preview Pinterest connection**. The library remains labeled “not connected.”
 3. Search or select one or more sample boards. Select all boards and clear selection work across the library, including boards hidden by a search.
 4. Review the pins. Every pin in each selected board is selected by default. Deselect individual pins or use Select every pin; zero selected pins disables import.
