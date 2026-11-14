@@ -301,46 +301,6 @@ export function setupAudioImporter({ onImport, getBoardId, element }) {
       status(error.message);
     }
   });
-  $("#audio-file-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = $("#add-file");
-    button.disabled = true;
-    status("Checking this local audio file…");
-    const id = crypto.randomUUID();
-    const targetBoardId = getBoardId();
-    try {
-      const file = $("#audio-file").files[0];
-      const fileInfo = await attachLocalAudio(id, file);
-      const item = {
-        id,
-        type: $("#file-kind").value,
-        title:
-          $("#file-title").value.trim() || file.name.replace(/\.[^.]+$/, ""),
-        artist: "",
-        imported: true,
-        sourceKind: "local-file",
-        fileInfo,
-        sourceKey: `file:${file.name}:${file.size}:${file.lastModified}`,
-        explanation:
-          "Local audio. Only file details are saved; reattach after reopening in a new visit.",
-        tags: "Local file · stays on this device",
-        isSample: false,
-      };
-      const count = onImport([item], targetBoardId);
-      if (!count) releaseLocalAudio(id);
-      status(
-        count
-          ? "Local audio added. The recording stays in this tab; save keeps its details only."
-          : "This file is already on this board.",
-      );
-      if (count) event.target.reset();
-    } catch (error) {
-      releaseLocalAudio(id);
-      status(error.message);
-    } finally {
-      button.disabled = false;
-    }
-  });
   for (const provider of providers) {
     const card = element("article", "provider-card");
     const mark = element("span", "provider-mark", provider.mark);
@@ -474,33 +434,13 @@ export function renderAudioReference(
           `Reattach ${item.fileInfo?.name || "the original audio file"} to play. Audio files are not saved.`,
         ),
       );
-    const label = element(
-      "label",
-      "reattach-button",
-      url ? "Replace file" : "Reattach audio",
+    copy.append(
+      element(
+        "p",
+        "reattach-notice",
+        `Audio file unavailable in this demo. ${item.fileInfo?.name || "The original audio file"} was not imported.`,
+      ),
     );
-    const input = element("input");
-    input.type = "file";
-    input.accept =
-      "audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a";
-    input.setAttribute("aria-label", `Reattach audio for ${item.title}`);
-    const message = element("p", "field-help");
-    message.setAttribute("role", "status");
-    input.addEventListener("change", async () => {
-      if (!input.files[0]) return;
-      input.disabled = true;
-      message.textContent = "Checking local audio…";
-      try {
-        const fileInfo = await attachLocalAudio(item.id, input.files[0]);
-        onReattach(item.id, fileInfo);
-      } catch (error) {
-        message.textContent = error.message;
-        input.disabled = false;
-      }
-    });
-    label.append(input);
-    actions.append(label);
-    copy.append(message);
   } else {
     try {
       const parsed = parseMediaLink(item.discoveryUrl);

@@ -255,19 +255,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                   Songs, sounds, and the references that bring it all together.
                 </p>
               </div>
-              <div class="audio-dock">
-                <div>
-                  <p>Add music links or local audio to your board.</p>
-                </div>
-                <button
-                  id="import-audio"
-                  class="toolbar-button"
-                  aria-haspopup="dialog"
-                  disabled
-                >
-                  ＋ Import audio
-                </button>
-              </div>
               <section
                 id="song-section"
                 class="song-section"
@@ -284,8 +271,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 </div>
                 <p class="song-caption">
                   Curated suggestions and your own references. Sample picks are
-                  not live research. Service links open their source; local
-                  audio plays in this browser.
+                  not live research. Service links open their source.
                 </p>
                 <div id="song-list" class="song-list"></div>
               </section>
@@ -536,16 +522,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
           Paste a link
         </button>
         <button
-          id="file-tab"
-          role="tab"
-          aria-selected="false"
-          aria-controls="file-panel"
-          tabindex="-1"
-          data-import-tab="file"
-        >
-          Local audio
-        </button>
-        <button
           id="services-tab"
           role="tab"
           aria-selected="false"
@@ -602,38 +578,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
             happens here.
           </p>
           <button class="done-button" type="submit">Add reference ↗</button>
-        </form>
-      </div>
-      <div id="file-panel" role="tabpanel" aria-labelledby="file-tab" hidden>
-        <form id="audio-file-form" class="import-form">
-          <label for="audio-file">Choose an audio file</label
-          ><input
-            id="audio-file"
-            type="file"
-            accept="audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a"
-            required
-            aria-describedby="file-help"
-          />
-          <p id="file-help" class="field-help">
-            MP3, WAV, OGG, or M4A · up to 20 MB · browser-supported audio only.
-            Files stay on your device. Save keeps the title and file details;
-            reopen a board and reattach the file to play it again.
-          </p>
-          <label for="file-title"
-            >Title <span>(optional; defaults to filename)</span></label
-          ><input
-            id="file-title"
-            maxlength="160"
-            placeholder="Morning rain on the windowsill"
-          />
-          <label for="file-kind">Add as</label
-          ><select id="file-kind">
-            <option value="sound">Ambient sound</option>
-            <option value="song">Song</option>
-          </select>
-          <button class="done-button" type="submit" id="add-file">
-            Add local audio ↗
-          </button>
         </form>
       </div>
       <div

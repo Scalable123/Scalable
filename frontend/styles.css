@@ -1749,38 +1749,6 @@ html[data-layout="grid"]
 html[data-layout="grid"] .board-grid:not(.filtered) .palette-colors {
   height: 90px;
 }
-.audio-dock {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
-  margin-top: 22px;
-  padding: 18px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--card-radius);
-}
-.audio-dock .section-label {
-  margin-bottom: 9px;
-  font-size: 8px;
-}
-.audio-dock strong {
-  font: normal 21px var(--serif);
-  letter-spacing: -0.5px;
-}
-.audio-dock p:last-child {
-  font-size: 11px;
-  line-height: 1.6;
-  margin: 8px 0 0;
-  color: var(--muted);
-}
-.audio-dock button {
-  white-space: nowrap;
-  flex-shrink: 0;
-  background: var(--button);
-  color: var(--on-button);
-  border: 0;
-}
 #audio-dialog {
   width: min(700px, calc(100% - 32px));
   max-height: 88vh;
@@ -1986,16 +1954,6 @@ html[data-layout="grid"] .board-grid:not(.filtered) .palette-colors {
   outline-offset: 4px;
 }
 @media (max-width: 800px) {
-  .audio-dock {
-    padding: 15px;
-    flex-wrap: wrap;
-  }
-  .audio-dock strong {
-    font-size: 23px;
-  }
-  .audio-dock button {
-    min-height: 44px;
-  }
   .form-pair {
     grid-template-columns: 1fr;
     gap: 5px;
@@ -2806,9 +2764,6 @@ html[data-layout="collage"]
 .soundtrack-heading > .song-caption {
   margin-bottom: 0;
 }
-.soundtrack-section .audio-dock {
-  margin-top: 18px;
-}
 .soundtrack-section #song-section {
   border: 0;
   padding-top: 0;
@@ -3011,15 +2966,6 @@ html[data-layout="collage"]
     height: 34px;
   }
 }
-/* Let the section heading introduce the soundtrack; the action bar just offers import. */
-.soundtrack-section .audio-dock {
-  padding: 14px 18px;
-}
-.soundtrack-section .audio-dock p {
-  margin: 0;
-  font-size: 12px;
-}
-
 /* Saved-board actions and an explicit, accessible deletion confirmation. */
 .saved-item > div:not(.saved-actions) {
   min-width: 0;

@@ -1,7 +1,6 @@
 import { wikimediaSourceMessages, searchWikimediaImages } from "./wikimedia-source.js";
 import { iconify } from "./icons.js";
 import {
-  setupAudioImporter,
   renderAudioReference,
   retainLocalAudio,
   releaseLocalAudio,
@@ -262,7 +261,6 @@ function renderBoard() {
     board.items.some((item) => item.type === "image" && item.imported) ||
       board.items.filter((item) => item.type === "image").length > 3,
   );
-  $("#import-audio").disabled = false;
   grid.classList.toggle(
     "no-sound",
     !board.items.some((item) => item.type === "sound" && !item.imported),
@@ -354,11 +352,7 @@ const referenceHandlers = {
     $("#save-label").textContent = "Save board";
     renderBoard();
     notify("Reference removed. Save to keep your changes.");
-    $(
-      removed?.type === "image"
-        ? "#prompt"
-          : "#import-audio",
-    ).focus();
+    $("#prompt").focus();
   },
   onReattach(id, fileInfo) {
     const item = board.items.find((item) => item.id === id);
@@ -375,33 +369,6 @@ const referenceHandlers = {
     );
   },
 };
-setupAudioImporter({
-  element,
-  getBoardId: () => board?.id,
-  onImport(items, targetBoardId) {
-    if (!board || (targetBoardId && board.id !== targetBoardId))
-      throw new Error(
-        "The board changed while the file was loading. Open the importer and try again.",
-      );
-    const existing = new Set(
-      board.items.filter((item) => item.imported).map((item) => item.sourceKey),
-    );
-    const added = items.filter((item) => {
-      if (existing.has(item.sourceKey)) return false;
-      existing.add(item.sourceKey);
-      return true;
-    });
-    board.items.push(...added);
-    if (added.length) {
-      selectFilter("all");
-      $("#save-label").textContent = "Save board";
-      notify(
-        `${added.length} audio reference${added.length === 1 ? "" : "s"} added. Save your board to keep the details.`,
-      );
-    }
-    return added.length;
-  },
-});
 function resetResearchUI() {
   $("#generate").disabled = false;
   $("#generate").firstElementChild.textContent = "Explore this feeling";
@@ -765,16 +732,4 @@ const initialBoard = await boardService.research({
 if (initialVersion === boardVersion) {
   board = initialBoard;
   renderBoard();
-}
-
-// Account connection cards can deep-link to the appropriate local import preview.
-const importTarget = new URL(location.href).searchParams.get("import");
-const importButtons = {
-  audio: "#import-audio",
-};
-if (Object.hasOwn(importButtons, importTarget) && board) {
-  $(importButtons[importTarget]).click();
-  const clean = new URL(location.href);
-  clean.searchParams.delete("import");
-  history.replaceState(null, "", clean.pathname + clean.search + clean.hash);
 }
