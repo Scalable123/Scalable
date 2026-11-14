@@ -1,2 +1,6 @@
 .env
 node_modules/
+work/
+**/bin/
+**/obj/
+backend/**/data/

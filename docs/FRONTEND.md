@@ -2,7 +2,7 @@
 
 The Studio is the selected design: warm paper, forest green, terracotta accents, serif headings, and an editorial collage. The other design explorations have been removed. Light and dark modes use this same Studio layout.
 
-Plain HTML, CSS, and native JavaScript modules power the frontend. No framework, build step, runtime package dependency, or API key is required. The planned backend remains C# / ASP.NET Core with a SQL database and server-side AI/media integrations.
+Plain HTML, CSS, and native JavaScript modules power the frontend. No framework, build step, or provider key is required for local previews. The optional ASP.NET Core backend now implements Pinterest linking and authorized board reads, using encrypted SQLite credential storage. Cloud boards and AI/media research remain planned.
 
 ## Run
 
@@ -66,7 +66,9 @@ frontend/
   js/icons.js            Shared vector symbols
   js/video-library.js    YouTube references and local video playback/imports
   js/audio-library.js    Link imports, provider previews, local audio registry
-  js/pinterest-import.js Pinterest connection preview, board/pin selection, import DTOs
+  js/pinterest-import.js Async live/sample board picker and review
+  js/pinterest-service.js Authenticated Pinterest HTTP calls, pagination, provenance
+  js/research-policy.js  Pinterest exclusion at research boundaries
   js/board-service.js    Demo service, saved-board compatibility, future HTTP adapter
   assets/                Local sample photography and source notes
 ```
@@ -154,9 +156,9 @@ The browser suite also exercises new preference persistence/reset, import dialog
 
 ## Start from Pinterest boards
 
-Use **Import Pinterest board** in **01 / The Starting Point**, alongside the reference-image input, for the local connection preview. Select complete sample boards, review/deselect pins, and add them to the current canvas or create a new named mood board. Imported sample pins retain board provenance, can be pinned/removed, survive refinement, and persist with saved boards. Duplicate pins are skipped. New board creation also guards against older research results overwriting the imported canvas.
+Use **Import Pinterest board** in **01 / The Starting Point** to link your account through the configured ASP.NET backend, select owned boards, read every pin page, and review supported image pins before adding references to the current canvas or a new named mood board. Failed/cancelled retrieval commits nothing. Imports retain Pin/creator links and all source-board associations, can be pinned/removed, survive refinement, and persist locally when saved. New-board creation guards against stale research results. Provider tokens stay encrypted on the server.
 
-No Pinterest account is connected and no Pinterest content is fetched. The three demo boards use existing local sample photographs. [Pinterest integration notes](PINTEREST-INTEGRATION.md) describe the flow, limitations, data shape, and proposed .NET endpoints for real authorization and paginated whole-board imports.
+Live use is disabled by default, pending approved provider use and credentials. The separate **Preview Pinterest connection** uses three local fixture boards and never claims a connection; it works on static hosting. Pinterest is never a research/search/analysis source. Imported items are not sent to research; new live-import boards have blank briefs, and research adapters reject Pinterest URL inputs. [Pinterest integration notes](PINTEREST-INTEGRATION.md) document setup, endpoints, security, permissions, disconnect limitations, and tests. See `node tests/pinterest-api.browser.cjs` and `dotnet test Scalable.sln` for the new mocked integration checks.
 
 ## Videos, login, and account
 

@@ -1,5 +1,6 @@
 import { iconify } from "./icons.js";
 import { setupCustomization } from "./customize.js";
+import { ApiPinterestService } from "./pinterest-service.js";
 // Keep standalone preview pages usable even when the auth SDK is unavailable.
 let supabasePromise;
 async function getSupabase() {
@@ -259,7 +260,7 @@ if (document.body.dataset.page === "login") {
     }
   });
   for (const [name, target, description] of [
-    ["Pinterest", "pinterest", "Import full sample boards or individual pins."],
+    ["Pinterest", "pinterest", "Link your account and import your boards. Pinterest is excluded from AI research."],
     ["Spotify", "audio", "Preview music library selection or paste a link."],
     ["Amazon Music", "audio", "Explore a candidate music integration."],
     ["Apple Music", "audio", "Collect links or preview a sample library."],
@@ -284,6 +285,20 @@ if (document.body.dataset.page === "login") {
     row.append(copy, link);
     iconify(row);
     $("#account-connections").append(row);
+    if (target === "pinterest") {
+      const api = new ApiPinterestService();
+      void (async () => {
+        if (!await api.available()) return;
+        link.textContent = "Manage Pinterest ↗";
+        link.setAttribute("aria-label", "Manage Pinterest connection and board imports");
+        try {
+          const connection = await api.status();
+          status.textContent = ({ connected: "Connected · board import only", expired: "Expired · reconnect to import", disconnected: "Not connected", unavailable: "Unavailable" })[connection.status] || "Unavailable";
+        } catch (error) {
+          status.textContent = error.code === "signed_out" ? "Log in to link Pinterest" : "Connection unavailable · retry in importer";
+        }
+      })();
+    }
   }
   $("#password-preview").addEventListener("click", () => {
     $("#security-status").textContent =

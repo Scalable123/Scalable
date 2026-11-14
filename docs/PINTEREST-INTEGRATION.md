@@ -1,74 +1,113 @@
-# Pinterest board import: frontend and backend handoff
+# Pinterest account linking and board import
 
-The Studio now has a Pinterest import experience for starting from whole boards. It is a **frontend-only connection preview**. It does not open Pinterest sign-in, connect an account, scrape pages, read private boards, or fetch Pinterest images. The demo uses three local sample boards and the existing sample photography; no real Pinterest pin URLs or account details are invented.
+Pinterest is available only for **user-directed account linking and importing the user's own boards**. Scalable does not search, crawl, scrape, or use Pinterest content for AI research, image analysis, recommendations, or training. Imports copy references into Scalable; originals on Pinterest are never modified or deleted.
 
-## Try the flow
+The implementation includes an ASP.NET Core API and an asynchronous browser importer. Live use is **disabled by default**. The separate sample preview still runs on a static server or GitHub Pages. Tests use synthetic responses; a successful live Pinterest connection has not been verified.
 
-1. Click **Import Pinterest board** in **01 / The Starting Point**, below the reference-image input.
-2. Choose **Preview Pinterest connection**. The library remains labeled “not connected.”
-3. Search or select one or more sample boards. Select all boards and clear selection work across the library, including boards hidden by a search.
-4. Review the pins. Every pin in each selected board is selected by default. Deselect individual pins or use Select every pin; zero selected pins disables import.
-5. Add to the current mood board, or start a new named mood board. Starting new replaces the unsaved canvas; the review screen explains this. Existing saved boards remain available.
-6. Confirm the import, review the added/skipped counts, and view the updated Studio canvas. Save the mood board to persist references in this browser.
+## Permitted use and provider requirements
 
-The demo boards have 6, 4, and 5 sample pins. A whole-board import includes every pin in the local fixture, not just its three preview thumbnails. Sample photography is reused for the fixture; these are not distinct images fetched from Pinterest.
+Before enabling live use, the operator must verify Pinterest developer approval, account eligibility, approved read scopes, the app's permitted import/reference-display use, and current media display/retention requirements. Set `Pinterest__ImportUseApproved=true` only after that review establishes permission for this specific use. The switch records operator attestation; it is not a legal determination by the software. If approval does not permit imports, keep live access disabled and use the local samples. Attribution does not grant reuse rights.
 
-Previews: [connection](design-previews/studio-pinterest-connect.png) · [board picker](design-previews/studio-pinterest-boards.png) · [pin review](design-previews/studio-pinterest-review.png) · [imported canvas](design-previews/studio-pinterest-canvas.png).
+Technical reference: [Pinterest's official API description](https://github.com/pinterest/api-description/blob/main/v5/openapi.yaml), consulted November 14, 2026. The developer website was inaccessible under this workspace's network policy; the official specification was the next available reference. Authorization uses `https://www.pinterest.com/oauth/`; server API calls use fixed paths at `https://api.pinterest.com/v5/`.
 
-## Working behavior
+Only `boards:read`, `pins:read`, and `user_accounts:read` are requested. No write or secret-board scopes, ad-account delegation, public discovery, arbitrary-pin lookup, or generic proxy is exposed. Board owners must match the linked account; group boards owned by others are excluded. Boards unavailable under these permissions remain unavailable.
 
-- Multi-board selection, search, no-match state, full-board selection, optional pin-level selection, and a review step.
-- Current-board and new-board destinations, required new-board title, and explicit confirmation of the destination.
-- Stable source keys prevent duplicates when adding the same pins again. A removed pin can be imported again.
-- Imported pins use the existing image filter and Studio layout. They can be pinned or removed individually and survive brief refinement along with imported audio.
-- New mood boards start with the selected pins and an editable starter prompt. Palette, songs, and sound recommendations arrive when the user explores that brief; the import does not invent research results.
-- Save/reopen preserves source-board metadata, demo identity, and pinned states. Ending the connection preview clears its selections without deleting already imported references. A page reload starts disconnected; no connection state is persisted.
-- A research result started before a new board is created cannot overwrite the new imported board.
-- All dialog controls and images are local. No Pinterest/provider requests or account popups are made.
+The specification says `/oauth/token/revoke` currently supports **system-user tokens only**. Ordinary account disconnect removes Scalable's credentials and pending authorizations, and tells the user to remove Scalable in Pinterest account settings to revoke the provider grant. It does not report remote revocation.
 
-## Code and DTOs
+## Local setup and deployment
 
-`frontend/js/pinterest-import.js` owns the sample library, pure pin-to-item conversion, and import flow. `app.js` owns canvas changes and persistence through the existing board service. Appearance preferences remain separate.
+Install a current .NET 10 SDK. From the repository root:
 
-Imported items extend the image DTO:
+```sh
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project backend/Scalable.Api --urls http://localhost:5080
+```
+
+Open `http://localhost:5080/frontend/index.html`. Only frontend assets are served under `/frontend`; the repository, server settings, database, and encryption keys are not static content. Defaults keep live access unavailable and offer the sample preview.
+
+Configure these **server-side** environment variables or equivalent deployment settings:
+
+| Setting | Value / responsibility |
+| --- | --- |
+| `Pinterest__Enabled` | `true` to offer live linking |
+| `Pinterest__ImportUseApproved` | `true` only after permitted-use review |
+| `Pinterest__ClientId` | Approved Pinterest app ID |
+| `Pinterest__ClientSecret` | App secret; never commit or ship to the frontend |
+| `Supabase__Url` | Same project as `frontend/js/config/supabase-config.js` |
+| `Supabase__PublishableKey` | That project's publishable key; no service-role key needed |
+| `PublicOrigin` | Exact external origin, e.g. `https://studio.example.com`; HTTPS required outside Development loopback |
+| `AllowedHosts` | Deployment's allowed host names |
+| `DataPath` | Private persistent directory outside static hosting; default project `data/` |
+
+Register `${PublicOrigin}/api/integrations/pinterest/callback` in the Pinterest app. ASP.NET does not automatically load `.env` files. Use environment configuration or the deployment secret manager, never browser configuration.
+
+Use one backend instance with persistent SQLite storage and ASP.NET Data Protection keys. Tokens, refresh credentials, username, scopes, and expirations are encrypted with an owner-specific purpose before SQL storage. Protect the private volume/key directory with restrictive permissions and host-appropriate encryption. The file-based development key ring is not independently wrapped with a production KMS. Preserve keys across restarts; losing them requires reconnecting accounts. Multiple API instances require a shared credential store/key management and distributed refresh/disconnect coordination.
+
+`dotnet publish backend/Scalable.Api -c Release -o work/publish` includes frontend assets in `wwwroot`. Run the published app with its content root set to the publish directory. Reverse-proxy hosting must serve `/frontend` and `/api` through the same HTTPS origin and set `PublicOrigin` to that external origin. Cross-origin CORS/cookies are not configured. GitHub Pages alone cannot host the API; its sample preview remains available. Keep query strings and authorization headers out of proxy/APM logs, especially OAuth callback queries.
+
+## User flow
+
+1. Log in to Scalable through existing Supabase sign-in. Save unsaved work before leaving for Pinterest authorization; the importer displays this reminder.
+2. Open **Import Pinterest board**. Availability is checked without loading the auth SDK on static-only hosts. When available, actual authenticated status is read. Account connection cards also show actual status.
+3. Choose **Link Pinterest account**. A bearer-authenticated POST starts OAuth. A hashed random ten-minute state is bound to the Scalable user and a random HttpOnly/SameSite=Lax browser cookie. Starting again invalidates older pending authorization for that user. Callback validates the binding and atomically consumes state before server-side code exchange. Replay, expiry, and denial cannot create a connection. Fixed callback redirects never contain credentials or codes.
+4. All board-summary pages load. Pins are read only after the user selects boards and requests review. Search and Select all cover the full loaded library.
+5. Review reads every pin page for each selected board. Progress and Cancel request are available; closing aborts outstanding work. Every page must finish before Review appears. A failed page, rate limit, pagination bound, or cancellation cannot commit earlier pages to the canvas.
+6. Review supported image pins, optionally deselect some, and choose the current or a new named Scalable board. Video, carousel, missing-image, and untrusted-image-host pins are excluded and counted. Zero selected pins disables Import. A changing Pinterest board can change during pagination; traversal is not a provider snapshot guarantee.
+7. Confirm to copy references locally. Save the Scalable board to persist them in this browser. Original Pin/creator links are retained; previews load directly from validated HTTPS `pinimg.com` hosts without referrers. No image downloader, cache, or AI processing is implemented.
+
+**Preview Pinterest connection** explicitly uses three local boards (6, 4, and 5 pins), local photography, and “not connected” labels. Live failures never silently switch to fixtures. Ending the preview resets selections. Real Disconnect preserves imported references and reports the provider-revocation limitation.
+
+## Implemented API
+
+Routes are under `/api/integrations/pinterest`. Availability/callback are public; all others require a Supabase bearer token validated against `/auth/v1/user`. The caller cannot choose another owner. Pinterest credentials never enter browser responses/storage. There are no cookie-only application mutations or permissive CORS settings.
+
+| Method | Suffix | Result |
+| --- | --- | --- |
+| GET | `/availability` | Deployment availability and `researchAllowed: false` |
+| GET | (none) | Status, optional username, `canImport`, `researchAllowed: false` |
+| POST | `/authorize` | OAuth URL and browser-binding cookie |
+| GET | `/callback` | One-time state validation, code exchange, provider identity, encrypted credential save, fixed redirect |
+| DELETE | (none) | Credential/pending-state removal; `providerRevocationRequired: true` |
+| GET | `/boards?bookmark=…` | Owned summaries: `{ items, bookmark }` |
+| GET | `/boards/{id}/pins?bookmark=…` | Authorized previews: `{ items, bookmark }` |
+
+Provider page size is 100. Opaque bookmarks are protected for the Scalable owner/resource. Numeric board IDs are validated; ownership is checked on each pin page. Tokens refresh before expiry, using continuous refresh and rotated credentials where returned. Invalid refresh credentials and revoked access require reconnection. Missing read scopes or returned write scopes fail linking. Provider redirects are not followed.
+
+Requests have timeouts, bounded response buffers, and a per-owner limit of 60 requests/minute (anonymous routes use remote address). Provider rate limits preserve `Retry-After`; no automatic retry loop runs. Each resource traversal is bounded to 1,000 pages and 50,000 identities. Exceeding limits fails without importing partial data; retry after a limit or select fewer boards. Durable cloud import jobs are not implemented because board saving remains local; `/api/pinterest-import-runs` remains a future contract.
+
+States include unavailable, signed out, disconnected, authorizing, denied/failed callback, connected, expired, empty library, loading, cancellation, forbidden/deleted board, rate limit, incomplete traversal, and provider failure. API responses use `Cache-Control: no-store`. Provider error bodies/secrets are not forwarded.
+
+## Data and AI separation
+
+`pinterest-service.js` owns authenticated HTTP, all-page traversal, OAuth URL validation, and live item conversion. `pinterest-import.js` owns fixtures and the async picker. `app.js` commits local canvas changes and preserves imports during refinement.
 
 ```js
 {
   id, type: 'image', title, description, url,
-  sourceUrl, sourceLabel, position: 'pinterest', pinned,
-  imported: true, provider: 'pinterest', sourceKind: 'pinterest-demo',
-  sourceKey: 'pinterest-demo:<sample-pin-id>',
-  externalPinId: '<sample-pin-id>',
-  sourceBoard: { id: '<sample-board-id>', title, url: null },
-  originalPinUrl: null,
-  isSample: true
+  sourceUrl, originalPinUrl, creatorSourceUrl, sourceLabel,
+  position: 'pinterest', pinned: false, imported: true,
+  provider: 'pinterest', sourceKind: 'pinterest-api',
+  sourceKey: 'pinterest:<provider-pin-id>', externalPinId,
+  sourceBoard: { id, title, url: null },
+  sourceBoards: [{ id, title, url: null }],
+  isSample: false, researchAllowed: false, license: 'unknown', importedAt
 }
 ```
 
-`sourceUrl` in the demo identifies the sample photography source, not a Pinterest pin. No fictitious live pin/board URL is generated. Production DTOs should distinguish original pin URL, source/creator URL, preview image URL, and source-board metadata, and carry truthful attribution. An imported reference is a copy into the Studio canvas, not a move/delete operation on Pinterest.
+The same pin across selected boards yields one item with all source associations. Reimport merges associations without duplicating items; removal permits reimport. Fixtures retain `pinterest-demo:<fixture-id>` identities and `isSample: true`, and also carry `researchAllowed: false`. Live board URLs are not fabricated from IDs.
 
-`DemoPinterestService.listBoards()` currently returns the complete local library synchronously, including its pins. A real adapter requires an async loading/error/cancellation integration pass; it is not a drop-in URL replacement. The import callback receives selected items, destination, new-board title, and source-board summaries.
-
-## Proposed ASP.NET Core boundary — not implemented
-
-| Method | Endpoint                                       | Purpose                                                                                         |
-| ------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| GET    | `/api/integrations/pinterest`                  | Authenticated user's actual connection/capability status; no tokens                             |
-| POST   | `/api/integrations/pinterest/authorize`        | Start supported authorization; return the authorization URL                                     |
-| GET    | `/api/integrations/pinterest/callback`         | Validate OAuth response/state and exchange credentials server-side                              |
-| DELETE | `/api/integrations/pinterest`                  | Disconnect/revoke as supported without deleting imported references                             |
-| GET    | `/api/integrations/pinterest/boards`           | Paginated authorized board summaries                                                            |
-| GET    | `/api/integrations/pinterest/boards/{id}/pins` | Paginated pin previews for review                                                               |
-| POST   | `/api/pinterest-import-runs`                   | Start an authorized import using board IDs, all-pins or selected-pin mode, destination ID/title |
-| GET    | `/api/pinterest-import-runs/{id}`              | Progress, added/skipped/failed counts, destination board ID, terminal status                    |
-| DELETE | `/api/pinterest-import-runs/{id}`              | Cancel a running import                                                                         |
-
-Before enabling this, verify Pinterest's current developer approval, available board/pin APIs, read permissions, access to the selected boards, limits, and media usage terms. Account/library access is not established by the preview. Do not ask for Pinterest passwords or put app secrets/access tokens into frontend files or browser storage.
-
-The backend must check ownership/access, validate selected pin/board IDs, handle OAuth state and token lifecycle, and fetch **all pages** for a whole-board import. Clearly report partial imports, inaccessible/unsupported pins, rate limits, failures, cancellation, and retry behavior. Never label the first page or a partial import “complete.” Preserve already imported items during retries; use provider pin identity as an idempotent deduplication key. If one pin belongs to several selected boards, retain all source-board associations in the production schema.
-
-Render real disconnected, authorizing, connected, expired, denied, empty-library, loading, partial-result, and failed states from actual responses when the adapter is implemented. Image caching/downloading and any provider-content processing need their own supported implementation and provenance; current local fixture URLs do not establish those capabilities. Respect source access and provider permissions, retain links/attribution, and do not assume that importing references grants image reuse rights.
+Imported items remain display references after refinement and are never research request input. Live board titles/descriptions never become research prompts; new live-import boards start with a blank brief. Both current sample research and the future HTTP adapter reject Pinterest/pin.it/pinimg domain inputs. `research-policy.js` also rejects Pinterest-tagged objects or `researchAllowed: false` references in structured inputs. The new backend exposes no research/search/crawl endpoint. Future AI workers must independently enforce exclusion server-side, including tools, redirects, media, derived content, and provider allowlists; client flags alone are not a server security boundary.
 
 ## Validation
 
-`node tests/studio.browser.cjs` includes board search/selection, whole-board counts, partial pin selection, empty selection, duplicates and reimport after removal, save/reload/reopen, pin persistence through refinement, new-board creation, stale-research protection, dialog focus, and imported-board layouts across five widths in light/dark and collage/grid modes. It also checks that these flows make no external provider requests.
+```sh
+dotnet test Scalable.sln
+node tests/pinterest-api.browser.cjs
+node tests/studio.browser.cjs
+node tests/video-account.browser.cjs
+node tests/navigation-theme.browser.cjs
+node tests/saved-boards.browser.cjs
+```
+
+Backend integration tests exercise actual routes with synthetic Supabase/Pinterest HTTP handlers, SQLite, encryption, browser cookies, replay/expiry, denial/scopes, ownership, scoped bookmarks, refresh/revocation, rate limits, and disconnect. Browser checks use actual modules with mocked APIs to verify pagination, atomic cancellation/failure, unsupported pins, source relationships, saving, research exclusion, disconnect, errors, and responsive dialogs. Existing preview behavior remains covered by Studio tests.
+
+Tests do not establish live account access, approval, real token exchange, library entitlement, media licensing, or production deployment. See [T001](T001.md) for decisions and results.

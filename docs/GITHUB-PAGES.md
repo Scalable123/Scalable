@@ -38,6 +38,6 @@ python3 -m http.server 8080
 
 Open `http://localhost:8080/`; it should lead straight to `/frontend/login.html`. The **Explore the demo account**, **Back to Studio**, and account service-preview links should stay under the same project path when hosted under `/Scalable/`.
 
-GitHub Pages hosts the static frontend only. Login, provider connections, and research remain previews; C#/.NET APIs and SQL must run on a separate backend when implemented. Published local-file imports still stay in the visitor's browser and need reattachment after reload.
+GitHub Pages hosts the static frontend only. Supabase sign-in remains external; research and music connections remain previews. The implemented Pinterest ASP.NET API and encrypted SQL credential store require backend hosting. Live Pinterest requests use a shared frontend/API origin; this release does not configure cross-origin API hosting. Pages alone offers the separate Pinterest sample preview. Never publish the backend data/key directory or server credentials. Published local-file imports stay in the browser and need reattachment after reload.
 
 No Pages settings, repository publishing source, or live deployment are changed by adding these files. Actual publication is a separate step through GitHub.

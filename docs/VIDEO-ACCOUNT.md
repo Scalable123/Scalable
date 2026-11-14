@@ -54,7 +54,7 @@ Previews: [create account](design-previews/studio-signup.png) · [validation con
 
 - **Profile:** Edit local demo display name/email. `scalable.profile.v1` stores these explicitly entered profile details in this browser. The Studio sidebar displays the saved name. This is not an identity change or an email-verification flow.
 - **Appearance:** Uses the same theme/accent/spacing/edges/typography/layout/canvas/reading preferences as the Studio. Changes persist through `appearance.js`.
-- **Connected services:** Pinterest, Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube all remain **Not connected**. Links open their appropriate Studio import previews. The `?import=` deep link is consumed after opening a known local dialog.
+- **Connected services:** Pinterest uses actual authenticated status when the approved API is configured; Manage Pinterest opens its account-link/board-import flow. Static-only hosting retains its sample-preview link. Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube remain **Not connected** previews. The `?import=` deep link is consumed after opening a known dialog. Pinterest is excluded from AI research. See [Pinterest setup](PINTEREST-INTEGRATION.md).
 - **Sign-in & security:** Explains the future identity boundary. Password settings are a message-only preview. Ending the demo clears its tab flag and returns to login without deleting boards, profile details, or appearance preferences.
 
 Local boards belong to the browser origin and are not partitioned by these demo profiles. Changing the profile or ending a demo session does not protect or switch their ownership. Real per-user authorization and SQL ownership checks belong in the backend.
