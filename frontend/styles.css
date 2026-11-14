@@ -3090,3 +3090,21 @@ html[data-theme="dark"] .danger-button {
     font-size: 27px;
   }
 }
+
+/* Provider attribution stays visible on narrow cards and in both themes. */
+.wikimedia-card figcaption strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wikimedia-card .photo-credit {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.wikimedia-card .photo-credit a {
+  display: inline;
+}
+#image-source-status {
+  margin: 0 0 12px;
+}

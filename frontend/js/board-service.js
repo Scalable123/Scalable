@@ -1,3 +1,4 @@
+import { assertResearchInputAllowed } from "./research-policy.js";
 /** UI boundary. Replace this instance with ApiBoardService when .NET is available.
  * DTOs are JSON-friendly: camelCase, string IDs, ISO dates. File uploads are separate.
  */
@@ -140,11 +141,12 @@ const image = (id, filename, title, description, sourceUrl, position) => ({
 });
 export class DemoBoardService {
   async research({ prompt, includeSongs = true, includeSounds = true }) {
+    assertResearchInputAllowed(prompt);
     // Deliberate preview delay; this is local sample selection, not AI research.
     await new Promise((resolve) => setTimeout(resolve, 650));
-    const key = /night|midnight|city|indigo/i.test(prompt)
+    const key = /night|midnight|city|indigo|navy|violet|purple|charcoal|black/i.test(prompt)
       ? "night"
-      : /earth|clay|sculptur|studio/i.test(prompt)
+      : /earth|clay|sculptur|studio|terracotta|brown|orange|amber|sand|beige|warm|ochre|red|rose|pink/i.test(prompt)
         ? "earth"
         : "coast";
     const collection = collections[key];
@@ -256,6 +258,7 @@ export class ApiBoardService {
     referenceFile,
     { includeSongs = true, includeSounds = true } = {},
   ) {
+    assertResearchInputAllowed(prompt);
     const form = new FormData();
     form.append("prompt", prompt);
     form.append("includeSongs", String(includeSongs));

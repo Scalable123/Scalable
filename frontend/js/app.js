@@ -1,3 +1,4 @@
+import { wikimediaSourceMessages, searchWikimediaImages } from "./wikimedia-source.js";
 import { iconify } from "./icons.js";
 import {
   setupVideoImporter,
@@ -55,6 +56,7 @@ function renderImage(item) {
     `board-card image-card ${item.imported ? "imported" : item.position}`,
   );
   const img = element("img");
+  if (item.imported) img.referrerPolicy = "no-referrer";
   img.src = item.url;
   img.alt = item.description;
   if (item.imagePosition) img.style.objectPosition = item.imagePosition;
@@ -64,7 +66,30 @@ function renderImage(item) {
   source.target = "_blank";
   source.rel = "noopener noreferrer";
   source.title = item.sourceLabel;
-  caption.append(element("strong", "", item.title), source);
+  caption.append(element("strong", "", item.title));
+  if (item.provider === "wikimedia") {
+    card.classList.add(`${item.provider}-card`);
+    const credit = element("span", "photo-credit", "By ");
+    const creator = element("a", "", item.creatorName);
+    creator.href = item.creatorUrl;
+    creator.target = "_blank";
+    creator.rel = "noopener noreferrer";
+    source.textContent = "Wikimedia Commons ↗";
+    credit.append(creator, document.createTextNode(` · ${item.licenseName} · `), source);
+    caption.append(credit);
+  } else {
+    caption.append(source);
+    if (item.imported && !item.isSample && item.creatorSourceUrl) {
+      try {
+        const url = new URL(item.creatorSourceUrl);
+        if (url.protocol === "https:" && !url.username && !url.password && !url.port) {
+          const creator = element("a", "", "Original source ↗");
+          creator.href = url.href; creator.target = "_blank"; creator.rel = "noopener noreferrer";
+          caption.append(creator);
+        }
+      } catch { /* Invalid restored attribution remains plain metadata. */ }
+    }
+  }
   const pin = element("button", "pin", item.pinned ? "✓" : "+");
   pin.type = "button";
   pin.setAttribute(
@@ -95,6 +120,18 @@ function renderImage(item) {
     card.append(remove);
   }
   return card;
+}
+function replaceSampleImages(boardValue, images) {
+  const slots = boardValue.items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.type === "image" && !item.provider && !item.pinned);
+  let replaced = 0;
+  for (const image of images) {
+    const slot = slots[replaced++];
+    if (!slot) break;
+    boardValue.items[slot.index] = { ...image, position: slot.item.position };
+  }
+  return replaced;
 }
 function renderPalette(item) {
   const card = element("section", "board-card palette-card");
@@ -223,11 +260,15 @@ function renderBoard() {
     element("span", "", "."),
   );
   $("#board-description").textContent = board.description;
+  const sourceStatus = $("#image-source-status");
+  sourceStatus.textContent = wikimediaSourceMessages[board.wikimediaSourceStatus] || "";
+  sourceStatus.hidden = !sourceStatus.textContent;
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
   grid.classList.toggle(
     "has-imported-images",
-    board.items.some((item) => item.type === "image" && item.imported),
+    board.items.some((item) => item.type === "image" && item.imported) ||
+      board.items.filter((item) => item.type === "image").length > 3,
   );
   $("#import-audio").disabled = false;
   $("#import-video").disabled = false;
@@ -478,7 +519,7 @@ $("#reference").addEventListener("change", async (event) => {
   $("#reference-name").textContent = file.name;
   $("#reference-preview").hidden = false;
   $("#upload-label").hidden = true;
-  notify("Reference added locally. Demo results do not analyze uploads yet.");
+  notify("Reference added locally. Explore will use it to guide the AI and Wikimedia search; it is not saved to your board.");
 });
 $("#remove-reference").addEventListener("click", removeReference);
 $("#prompt-form").addEventListener("submit", async (event) => {
@@ -493,7 +534,7 @@ $("#prompt-form").addEventListener("submit", async (event) => {
   const runVersion = ++boardVersion;
   const button = $("#generate");
   button.disabled = true;
-  button.firstElementChild.textContent = "Composing a sample…";
+  button.firstElementChild.textContent = "Finding your direction…";
   grid.setAttribute("aria-busy", "true");
   $("#input-error").textContent = "";
   try {
@@ -505,18 +546,21 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     try {
       const direction = await createCreativeDirection({
         prompt,
+        referenceFile,
         ...researchOptions(),
       });
       next.title = direction.title;
       next.description = direction.description;
       next.mode = "ai";
       next.items = next.items.map((item) =>
-        item.type === "palette"
-          ? { ...item, colors: direction.palette }
-          : item.type === "note"
+        item.type === "note"
             ? { ...item, text: direction.note }
             : item,
       );
+      const visualSearch = await searchWikimediaImages(direction.imageQueries || [prompt]);
+      next.wikimediaSourceStatus = visualSearch.status;
+      next.wikimediaImageCount = replaceSampleImages(next, visualSearch.images);
+      if (next.wikimediaImageCount) next.mode = "ai";
       next.items = next.items.filter(
         (item) =>
           (item.type !== "song" || researchOptions().includeSongs) &&
@@ -543,23 +587,52 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     } catch {
       notify("AI is unavailable, so a local sample direction is shown instead.");
     }
+    if (!next.wikimediaSourceStatus) {
+      const fallbackVisualSearch = await searchWikimediaImages([prompt]);
+      next.wikimediaSourceStatus = fallbackVisualSearch.status;
+      next.wikimediaImageCount = replaceSampleImages(next, fallbackVisualSearch.images);
+    }
     if (runVersion !== boardVersion) return;
     // Preserve explicitly pinned choices when refining this local exploration.
     const pinned = (board?.items || []).filter(
       (item) => item.type === "image" && item.pinned,
     );
-    next.items = next.items.map(
-      (item) => pinned.find((pin) => pin.id === item.id) || item,
-    );
-    next.items.push(...(board?.items || []).filter((item) => item.imported));
+    next.items = next.items.map((item) => {
+      const pin = pinned.find((candidate) => candidate.id === item.id);
+      return pin ? { ...pin, position: item.position } : item;
+    });
+    const preserved = [
+      ...pinned.filter((item) => item.provider === "wikimedia"),
+      ...(board?.items || []).filter((item) => item.imported),
+    ];
+    for (const item of preserved) {
+      if (!next.items.some((candidate) => candidate.id === item.id))
+        next.items.push(
+          item.provider === "wikimedia" ? { ...item, position: "reference" } : item,
+        );
+    }
+    // A repeated result retains its pin without adding a duplicate.
+    if (next.mode !== "ai")
+      next.mode = next.items.some((item) => item.provider === "wikimedia")
+        ? "sample-with-wikimedia"
+        : "demo";
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
-    notify(next.mode === "ai" ? "AI direction composed." : "Sample direction composed.");
-  } catch {
+    const sourceMessage = wikimediaSourceMessages[board.wikimediaSourceStatus];
+    notify(
+      sourceMessage
+        ? next.mode === "ai"
+          ? `${sourceMessage} AI direction composed.`
+          : sourceMessage
+        : next.mode === "ai"
+          ? "AI direction composed."
+          : "Sample direction composed.",
+    );
+  } catch (error) {
     if (runVersion === boardVersion)
       $("#input-error").textContent =
-        "We could not compose this board. Your current board is still here; please try again.";
+        error.message || "We could not compose this board. Your current board is still here; please try again.";
   } finally {
     if (runVersion === boardVersion) resetResearchUI();
   }
@@ -765,7 +838,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio and video can play in this browser. YouTube players load only when requested. Login and account pages are frontend previews, not authenticated accounts. Provider connections are demo previews; no live AI research, streaming service, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
+      "Customize appearance, collect image references, and import music links or local audio/video. Explore uses the prompt and optional submitted reference image for AI direction and can replace sample image slots with credited Wikimedia references; the palette remains local. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. Cloud board saving and music-service connections remain planned.",
     ),
   ),
 );

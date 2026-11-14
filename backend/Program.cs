@@ -1,0 +1,45 @@
+using Microsoft.Extensions.FileProviders;
+using Scalable.Api;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 16_384);
+var frontend = Path.GetFullPath(builder.Configuration["FrontendPath"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "../frontend"));
+var wikimediaBudgetPath = builder.Configuration["Wikimedia:BudgetPath"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "data/wikimedia-budget.json");
+builder.Services.AddSingleton(services => new WikimediaSource(
+    new HttpClient(new SocketsHttpHandler
+    {
+        AllowAutoRedirect = false,
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+    }) { Timeout = TimeSpan.FromSeconds(5) },
+    new RequestBudget(wikimediaBudgetPath, TimeProvider.System),
+    builder.Configuration["Wikimedia:UserAgent"] ?? "Scalable/1.0 (https://github.com/Scalable123/Scalable)"));
+var app = builder.Build();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api"))
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        var origin = context.Request.Headers.Origin.ToString();
+        if (context.Request.Headers["Sec-Fetch-Site"] == "cross-site" ||
+            origin.Length > 0 && origin != $"{context.Request.Scheme}://{context.Request.Host}")
+        {
+            context.Response.StatusCode = 403;
+            return;
+        }
+    }
+    await next(context);
+});
+app.MapPost("/api/image-sources/wikimedia", async (SearchInput input, WikimediaSource source, CancellationToken token) =>
+{
+    var prompt = input.Prompt?.Trim();
+    if (string.IsNullOrWhiteSpace(prompt) || prompt.Length > 2000)
+        return Results.BadRequest(new { error = "A prompt of 1–2000 characters is required." });
+    return Results.Ok(await source.Search(prompt, token));
+});
+var files = new PhysicalFileProvider(frontend);
+app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = files });
+app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
+app.Run();
+public sealed record SearchInput(string? Prompt);

@@ -1,8 +1,10 @@
 # Scalable — The Studio frontend documentation
 
-Source baseline: commit `0600d23` on `front-end-design`. Audited against the application source on November 14, 2026.
+Source baseline: `main` commit `68e573c` (PostgreSQL Identity migration). Audited against the application source on November 14, 2026.
 
 This document records the implemented pages, controls, state transitions, data structures, validation, persistence, styling, modules, deployment configuration, tests, and remaining service connections. Behavior described as **implemented** exists in this checkout. Routes described as **proposed** are backend contracts to implement; they are not running endpoints. GraphQL identity operations, the Node AI endpoint, and explicitly loaded YouTube embeds are identified separately from local provider previews.
+
+The frontend uses plain HTML, CSS, and native JavaScript modules; no frontend framework or build step is required. Wikimedia references use the hosted ASP.NET API; the Node AI endpoint remains a separate service.
 
 ## Contents
 
@@ -30,13 +32,13 @@ This document records the implemented pages, controls, state transitions, data s
 
 The selected frontend is **The Studio**. The other two initial design explorations and the design-switching interface have been removed. The interface uses warm paper backgrounds, forest green controls, terracotta accents, serif headings, an image collage, palettes, songs, ambient sound directions, and imported media references.
 
-The application consists of static HTML, one shared CSS file, and native JavaScript ES modules. There is no frontend framework, bundler, transpilation step, application server, or client-side route framework. Each account/authentication screen is a separate HTML page. Account sections use URL hashes. Studio import shortcuts use a query parameter.
+The application consists of static HTML, one shared CSS file, and native JavaScript ES modules. There is no frontend framework, bundler, transpilation step, or client-side route framework; Node and ASP.NET run the separate server functions described below. Each account/authentication screen is a separate HTML page. Account sections use URL hashes. Studio import shortcuts use a query parameter.
 
-The repository now contains a C# / ASP.NET Core GraphQL identity backend in `Scalable.Api/`, backed by ASP.NET Identity and SQLite for development. A separate Node server hosts the frontend and an OpenAI creative-direction endpoint. Board persistence, research/search jobs, cloud media storage, and media-provider OAuth remain unimplemented. The frontend itself remains plain static HTML/CSS/native modules without a bundler or framework.
+The repository now contains a C# / ASP.NET Core GraphQL identity API host in `Scalable.Api/`, backed by ASP.NET Identity with SQLite locally or configured Npgsql/PostgreSQL. GraphQL is the API layer instead of Supabase Auth/browser data access, not a database engine. See [BACKEND.md](BACKEND.md) and [T003](T003.md). A separate Node server hosts the frontend and an OpenAI creative-direction endpoint. Board persistence, research/search jobs, cloud media storage, and other media-provider OAuth remain unimplemented. The frontend itself remains plain static HTML/CSS/native modules without a bundler or framework.
 
 Initial Studio boards and provider previews work locally. Submitting Explore attempts a same-origin AI request after generating its local fallback. Identity operations call the configurable GraphQL API using a session cookie. YouTube is contacted only when an embedded player is explicitly loaded or an external source link is followed.
 
-The root `package.json` now sets `type: "module"` and defines `npm start` as `node server.js`; it has no declared runtime package dependencies. The Node server uses built-in modules and global fetch. The previous Supabase SDK/client/configuration were removed by the upstream authentication migration. Playwright remains separately installed development tooling. There is no npm build or test script.
+The root `package.json` now sets `type: "module"` and defines `npm start` as `node server.js`; it has no declared runtime package dependencies. The Node server uses built-in modules and global fetch. Playwright remains separately installed development tooling. There is no npm build or test script.
 
 ## 2. Page routes and navigation
 
@@ -83,7 +85,7 @@ The top bar identifies The Studio and contains Log in and Customize. The sidebar
 
 The profile link initially displays “Your creative space” with a `Y` avatar. At Studio startup, a valid locally saved profile name replaces that text, and the first Unicode character of the trimmed name becomes the uppercase avatar. This is local profile personalization, not a live identity lookup.
 
-About this prototype opens the general dialog. Its explanatory text covers customization, samples, imports, storage, and planned services. It still describes all account functionality as unauthenticated and no live AI as connected; sections 9 and 13 document the actual newer GraphQL/AI behavior.
+About this prototype opens the general dialog. Its explanatory text covers customization, samples, imports, storage, and planned services. It now acknowledges GraphQL sign-in, but still describes Explore as local collections and live AI research as planned. The Node AI flow generates creative metadata without deep research; sections 9 and 13 distinguish the implemented services.
 
 ### 3.2 Section 01 — The Starting Point
 
@@ -106,7 +108,7 @@ The fixed prompts are:
 | After hours  | A cinematic city after midnight. Deep indigo, warm amber light, grainy photography, and atmospheric electronic music. |
 | Earth & form | An earthy design studio. Sculptural forms, warm clay, natural textures, and quiet instrumental music.                 |
 
-The reference image remains a separate prompt input. It is not inserted into the board, persisted with the board, uploaded, or analyzed by the demo service. Image-only submission is not supported: the prompt must contain non-whitespace text. The upload interface is a file picker; drag-and-drop is not implemented.
+The reference image remains a separate prompt input. On Explore, the validated JPG/PNG/WebP is sent as a base64 image input to the server-side AI and is used to produce bounded Wikimedia visual-search phrases. It is not inserted into the board or persisted with the board; the provider request is not made until the user submits the prompt. Image-only submission is not supported: the prompt must contain non-whitespace text. The upload interface is a file picker; drag-and-drop is not implemented.
 
 ### 3.3 Section 02 — A World Taking Shape
 
@@ -115,7 +117,7 @@ This section contains the board title/description, Save board, the video import 
 | Filter     | Content shown                                              |
 | ---------- | ---------------------------------------------------------- |
 | Everything | All board item types; count equals `board.items.length`    |
-| Images     | Generated sample photographs and previously saved image references |
+| Images     | Sample photographs, image-search results, and previously saved image references |
 | Palette    | Palette items with named HEX swatches                      |
 | Songs      | Curated song picks and imported song references            |
 | Sounds     | Generated ambient concepts and imported ambient references |
@@ -127,7 +129,7 @@ Filters update their `aria-pressed` state. Selecting a filter does not edit or s
 
 Image cards show photography, a title, a source link, and a pin toggle. Source links open a new tab with `noopener noreferrer`. Pinning updates `pinned`, accessible pressed state, tooltip/label text, the save label, and a toast. Generated image pins survive a refinement when the next generated image has the same ID. Previously saved imported images retain an individual removal control.
 
-Generated images cannot currently be removed through the UI. Pinning is a preservation signal during refinement; it does not reorder or drag cards. Imported images can be removed and later reimported.
+Generated/source images cannot currently be removed through the UI. Prompt submissions can replace unpinned local sample image slots with up to three Wikimedia references selected from AI-derived visual-search phrases. Pinning is a preservation signal during refinement; it does not reorder or drag cards. Previously saved imported images can be removed.
 
 #### Palette cards
 
@@ -210,6 +212,9 @@ This action replaces the unsaved canvas without a confirmation dialog. It does n
 ### 4.4 Open and replacement behavior
 
 Opening a saved board invalidates in-flight research, restores its prompt/options/items, removes the separate uploaded reference image, resets the filter, and closes the saved-board dialog. Old saved boards without research options derive checkbox values from their item types. Local audio/video objects are retained only for item IDs belonging to the opened board. Reloading the page creates the default sample rather than automatically opening the last active board.
+
+
+Wikimedia Commons references are validated by `frontend/js/wikimedia-source.js`. A prompt can add at most one server-selected image from that source; the card keeps the Commons file URL, creator, and license text visible and never receives provider credentials.
 
 ## 5. Saved boards and deletion
 
@@ -302,7 +307,7 @@ Olive uses light accent `#576a36`, light button `#4b5d32`, and dark accent/butto
 
 ### 6.4 Layout behavior
 
-The desktop shell uses a sidebar, a prompt column, and a flexible board area. The default board has named placement hints for hero, detail, and water images plus palette, note, and ambient concept. Grid mode gives cards uniform grid treatment. Previously saved imported images use additional layout rules so arbitrary numbers of image references fit the board. Filtered grids have separate rules from the unfiltered collage.
+The desktop shell uses a sidebar, a prompt column, and a flexible board area. The default board has named placement hints for hero, detail, and water images plus palette, note, and ambient concept. Grid mode gives cards uniform grid treatment. Additional layout rules let arbitrary numbers of saved or discovered image references fit the board. Filtered grids have separate rules from the unfiltered collage.
 
 The stylesheet contains responsive groups at a minimum width of 1600px and maximum widths of 1150px, 1100px, 800px, 600px, and 500px, plus an 801–1150px range. At narrower widths, the workspace becomes a vertical flow, card arrangements adapt, import panels stack, auth split layouts become one column, account navigation reflows, and dialogs fit the viewport. Saved-board actions wrap below the title on small screens.
 
@@ -408,9 +413,9 @@ Sources: [`account.js`](../frontend/js/account.js), [`graphqlClient.js`](../fron
 
 ### 9.1 GraphQL client and session
 
-`graphqlRequest(query, variables = {})` POSTs JSON to `window.GRAPHQL_ENDPOINT` or, by default, `http://localhost:5078/graphql`. Set the global before modules initialize when deploying to a different API origin. Every call uses `credentials: "include"` and `Content-Type: application/json`. Non-OK HTTP responses throw a generic unavailable error; GraphQL error arrays throw the first message; success returns `payload.data`.
+`graphqlRequest(query, variables = {})` POSTs JSON to `window.GRAPHQL_ENDPOINT` when set; otherwise loopback hosts use `http://localhost:5078/graphql` and other hosts use `https://scalable-5rgd.onrender.com/graphql`. This is configured source behavior, not a verified live service. Set the global before modules initialize when deploying to a different API origin. Every call uses `credentials: "include"` and `Content-Type: application/json`. Non-OK HTTP responses throw a generic unavailable error; GraphQL error arrays throw the first message; success returns `payload.data`.
 
-Identity is now ASP.NET Identity with a cookie, not a browser auth SDK. The API uses SQLite and `EnsureCreated()` for development, unique normalized email, password hashing, and a failed-login lockout threshold of five. Password minimum length is eight; Identity's additional default digit/lowercase/uppercase/nonalphanumeric requirements apply and are surfaced through registration errors. Registration and login use `isPersistent: false`, so a permanent account is distinct from a persistent browser session. Browser cookie behavior determines session continuity; credentials are not stored in the local demo profile.
+Identity is now ASP.NET Identity with a cookie, not a browser auth SDK. The API selects SQLite locally or configured Npgsql/PostgreSQL. Startup now calls `Database.Migrate()` with a checked-in PostgreSQL Identity migration/model snapshot; provider compatibility needs validation. Identity enforces unique normalized email, password hashing, and a failed-login lockout threshold of five. Password minimum length is eight; Identity's additional default digit/lowercase/uppercase/nonalphanumeric requirements apply and are surfaced through registration errors. Registration and login use `isPersistent: false`, so a permanent account is distinct from a persistent browser session. Browser cookie behavior determines session continuity; credentials are not stored in the local demo profile.
 
 ### 9.2 Login
 
@@ -458,7 +463,7 @@ Saving trims the fields and writes `scalable.profile.v1`; it does not update the
 
 ### 9.8 Customize and connections
 
-The account Customize panel edits the same eight browser preferences as Studio. Connected services still shows Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube as Not connected, with links to Studio import previews. None establishes media-provider authorization. There is no authenticated profile/preference/provider-status backend service yet.
+The account Customize panel edits the same eight browser preferences as Studio. Music and video services remain Not connected previews. No profile/preference update API exists.
 
 ### 9.9 Security and logout
 
@@ -579,6 +584,8 @@ Video `fileInfo` contains `name`, `size`, `mimeType`, `lastModified`, `width`, `
 | [`config/graphqlClient.js`](../frontend/js/config/graphqlClient.js) | Credentialed GraphQL POST helper and configurable API endpoint                                                                                       |
 | [`ai-service.js`](../frontend/js/ai-service.js)                     | Same-origin JSON creative-direction POST helper                                                                                                      |
 
+The [`research-policy.js`](../frontend/js/research-policy.js) helper honors research exclusions on previously saved references.
+
 ### 12.2 Board-service exports
 
 | Export / method                                                                    | Implemented interface                                                                                                |
@@ -638,7 +645,7 @@ The `element` helper creates DOM nodes, applies class names, assigns user-visibl
 
 ### 13.1 .NET GraphQL identity — implemented
 
-The active identity endpoint is `/graphql`, default frontend URL `http://localhost:5078/graphql`. All operations travel as POST JSON with a query document and variables, using an ASP.NET Identity cookie. This is the current identity service; the previous Supabase connection has been removed.
+The active identity endpoint is `/graphql`; loopback and hosted defaults follow section 9.1. All operations travel as POST JSON with a query document and variables, using an ASP.NET Identity cookie.
 
 | Operation                       | Input / output                                                                          | Frontend caller                              |
 | ------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -651,9 +658,9 @@ The active identity endpoint is `/graphql`, default frontend URL `http://localho
 | `serviceStatus` query           | name, message, checkedAt                                                                | Available API diagnostic; not used by Studio |
 | `boards` query                  | Currently always an empty list of summaries                                             | Scaffold only; not used for saved boards     |
 
-The .NET 10 project uses Hot Chocolate GraphQL, ASP.NET Identity, EF Core, and SQLite. The data context extends IdentityDbContext with an additional unique normalized-email index. It does not contain board/media persistence entities. Development stores Data Protection keys in ignored `Scalable.Api/.keys`. Database initialization uses `EnsureCreated`, not a checked-in migration flow.
+The .NET 10 project uses Hot Chocolate GraphQL, ASP.NET Identity, EF Core SQLite, and selectable Npgsql/PostgreSQL. The data context extends IdentityDbContext with an additional unique normalized-email index. It does not contain board/media persistence entities. Data Protection keys use explicit `DataProtection:KeysPath`, otherwise `<DataPath>/keys` (default `Scalable.Api/data/keys`). Database initialization uses `Database.Migrate()`; `Scalable.Api/Data/Migrations/` contains a PostgreSQL initial migration/model snapshot. SQLite compatibility and migration of previously initialized databases are not verified here.
 
-CORS allows credentialed HTTP requests from loopback hosts localhost, 127.0.0.1, and ::1 on local development ports. It does not authorize a deployed GitHub Pages origin. Production needs explicit origin/session/HTTPS/CSRF configuration, protected persistent Data Protection keys, database migrations, rate limits, and email verification. The password-reset adapter currently delivers no mail and does not expose reset tokens in logs.
+CORS accepts the configured origin list (including `https://scalable123.github.io`), `App:FrontendOrigin`, and HTTP loopback ports in Development. Cross-site Identity cookies require `App:CrossSiteCookies=true` and HTTPS/browser support; the default is false. Production needs explicit origin/session/HTTPS/CSRF configuration, protected persistent Data Protection keys, validated migration application/upgrade paths, rate limits, and email verification. The password-reset adapter currently delivers no mail and does not expose reset tokens in logs.
 
 ### 13.2 Node creative-direction API and OpenAI — implemented wiring
 
@@ -682,13 +689,13 @@ Curated/AI songs open Spotify searches; imported links open their provider sourc
 
 ## 14. Required backend and API connections
 
-Existing GraphQL identity and Node AI operations are documented in section 13. All REST `/api/…` routes in sections 14.2–14.7 are **proposed contracts**, not implemented endpoints. They are a handoff retained from the frontend adapter design; the backend may implement equivalent authenticated GraphQL fields rather than introducing a second data interface. The existing `/api/ai/creative-direction` route is the explicit exception and already exists in `server.js`.
+Existing GraphQL identity and Node AI operations are documented in section 13. The board, profile, music, video, and cloud-upload REST routes below are historical proposals/scaffold mappings, not deployed contracts. New account-owned data should extend the selected GraphQL service; exact fields/schema remain to be agreed. The existing `/api/ai/creative-direction` route is implemented in `server.js`.
 
 ### 14.1 Complete deployment of the existing identity service
 
-Use the existing ASP.NET Identity cookie authority instead of adding a parallel Supabase or unrelated REST login system. Set `window.GRAPHQL_ENDPOINT` to the deployed API before modules initialize, configure exact credentialed frontend origins, and choose same-origin proxying or an explicit cross-origin secure-cookie strategy. The current default points at the visitor's localhost and will not reach a deployed API from GitHub Pages.
+Use the existing ASP.NET Identity cookie authority. Set `window.GRAPHQL_ENDPOINT` to the deployed API before modules initialize and configure the exact credentialed frontend origin. GraphQL defaults to the configured Render API off loopback. No live deployment health is inferred.
 
-Replace the no-delivery password-reset adapter with a production mail service. Configure `App:PublicBaseUrl` to the directory actually serving update-password.html, including any project path. Deploy protected persistent Data Protection keys and production schema migrations; add email verification, request limits, the chosen CSRF defense, and identity-expiry/error behavior. Registration already creates users and login accepts username/email; these are not future preview-only features.
+Replace the no-delivery password-reset adapter with a production mail service. Configure `App:PublicBaseUrl` to the directory actually serving update-password.html, including any project path. Deploy protected persistent Data Protection keys and validate the checked-in PostgreSQL migration against the intended database and existing data; add email verification, request limits, the chosen CSRF defense, and identity-expiry/error behavior. Registration already creates users and login accepts username/email; these are not future preview-only features.
 
 Boards/profile/preferences remain local and require owner-backed contracts below. UI disclaimer/security/signup/recovery wording must be aligned with actual service outcomes. Pending/duplicate-submit handling and password-reset completion coverage remain incomplete. Live deployment, credential use, and recovery mail were not exercised during this documentation-only update.
 
@@ -705,7 +712,7 @@ The saved-list renderer currently needs `items`, image URLs, title, timestamp, p
 
 The server must derive ownership from authenticated identity, enforce it on list/read/write/delete and related imports/media, validate item unions and lengths, and preserve JSON field meaning without exposing raw SQL entities. The client ID alone is not authorization. Add concurrency/version handling for saves, timestamps under the server's policy, and a defined already-deleted response policy. The current HTTP helper throws on a 404; it does not translate one into the local deletion service's false result.
 
-Map boards, typed items, research options, source/provider identities, imported relationships, colors, and media references into SQL entities or validated JSON according to the backend design. The existing SQLite Identity database stores users, not boards. No board/media schema, migrations, or row ownership model is implemented yet. Binary media belongs behind a media service/object store rather than embedded in board JSON.
+Map boards, typed items, research options, source/provider identities, imported relationships, colors, and media references into SQL entities or validated JSON according to the backend design. The configured Identity database stores users, not boards. No board/media schema, migrations, or row ownership model is implemented yet. Binary media belongs behind a media service/object store rather than embedded in board JSON.
 
 Local saved boards need an explicit migration/import decision before cloud storage replaces local persistence. They have no trustworthy authenticated owner. Signing in should not silently claim or erase browser-origin records; design a deliberate migration/deduplication path and preserve local-save feedback until a server save actually succeeds.
 
@@ -781,7 +788,7 @@ Keep frontend DTOs camelCase with string IDs and ISO timestamps. Validate reques
 
 Application auth and media-provider auth are separate. Backend services should hold provider secrets/refresh credentials, manage token refresh/revocation, state/PKCE where applicable, and return only safe statuses and permitted resource metadata. No SQL credentials, AI secrets, service-role keys, or provider client secrets should be added to served files.
 
-Same-origin ASP.NET hosting through `wwwroot` or a reverse proxy fits the inactive REST adapter's credential mode and can also consolidate the active GraphQL/AI origins. Hosting the static site on GitHub Pages with a separate API requires a configured API origin, CORS policy, HTTPS, and an explicit cross-origin auth strategy. Cookie-authenticated mutations require the chosen CSRF protection; bearer-token requests require token attachment/renewal and server validation. None of this is inferred from the existence of `/api` strings in source.
+The current deployment keeps the static frontend and Node AI server separate from the ASP.NET GraphQL API. The frontend resolves the GraphQL origin from `window.GRAPHQL_ENDPOINT`; cross-origin deployments require the configured frontend origin, credentialed CORS, and HTTPS. Authentication uses the ASP.NET Identity cookie session.
 
 Define service error bodies and frontend handling for validation failure, signed-out/expired sessions, forbidden resources, missing/deleted resources, stale updates, rate limits, provider outages, and server failure. Preserve the current draft on failed saves/research/deletes. Add pending/retry/cancel behavior at each async boundary and base success announcements on confirmed service outcomes.
 
@@ -803,7 +810,7 @@ The stylesheet provides visible focus treatments, touch-size adjustments, wrappi
 
 Run `npm start` from the repository root for the Node server on `http://localhost:3000/` (override with `PORT`). It serves `frontend/` directly, so its root opens Studio rather than the repository landing redirect. Configure `OPENAI_API_KEY` server-side through the host environment or ignored root `.env`; optional `OPENAI_MODEL` defaults to `gpt-4.1-mini`. Do not publish the key in frontend files. Node must support native ES modules and global fetch.
 
-Separately run `dotnet run --project Scalable.Api/Scalable.Api.csproj` with the .NET 10 SDK. The development launch profile uses `http://localhost:5078`, matching the client default `/graphql` URL. The API creates its development SQLite Identity database if absent. `npm start` does not launch this process; neither server proxies the other by default. No provider key or account credentials were used for this documentation push.
+Separately run `dotnet run --project Scalable.Api/Scalable.Api.csproj` with the .NET 10 SDK. The development launch profile uses `http://localhost:5078`, matching the loopback GraphQL default. The API selects SQLite locally and now applies EF migrations at startup; its checked-in migration targets PostgreSQL, so local/provider compatibility and existing SQLite upgrades require validation. `npm start` does not launch this process; neither server proxies the other by default. Set `App__PublicBaseUrl=http://localhost:3000` in the .NET environment for Node root hosting; the checked-in `/frontend` suffix does not match Node paths. For a repository-root Python server, set the actual `/frontend` directory URL instead. See [BACKEND.md](BACKEND.md). No provider key or real account credentials were used in this audit.
 
 Configure `App:PublicBaseUrl` to the actual directory hosting update-password.html. With the Node static root this directory is `http://localhost:3000`; serving the repository root instead puts the page under `/frontend`. The fallback reset URL in code includes `/frontend`, so verify configuration against the chosen server. The current email adapter will not deliver that link until replaced.
 
@@ -829,7 +836,7 @@ Serve over HTTP/HTTPS rather than `file://`, because the app uses ES modules. A 
 
 ### 16.3 Branch-based GitHub Pages
 
-In repository Settings → Pages, choose Deploy from a branch, `front-end-design`, and `/ (root)` to publish this branch directly. The root `.nojekyll` supports plain static hosting. The root landing page redirects to the relative login page under the project path. Branch publishing can expose repository-root files as static content; only public client configuration belongs in this branch.
+After human review/merge, choose the intended publishing branch (for example `main`) and `/ (root)` in Settings → Pages. This documentation review branch does not need to become the publishing source. The root `.nojekyll` supports plain static hosting. The root landing page redirects to the relative login page under the project path. Branch publishing can expose repository-root files as static content; only public client configuration belongs in this branch.
 
 Setting Pages source/publishing permissions is a repository operation separate from writing documentation. Subsequent pushes deploy according to the repository's configured Pages source. A push alone does not prove a completed live deployment.
 
@@ -845,48 +852,43 @@ Choose the intended single Pages publishing source in repository settings. Proje
 
 ## 17. Validation and test coverage
 
-The repository contains four standalone CommonJS Playwright browser scripts. Each starts a temporary static server and launches Chromium; they are not wired to npm test or the Pages workflow. They require Node, an installed `playwright` package, and Chromium (default `/usr/bin/chromium`, override `CHROMIUM_PATH`). The video suite also needs FFmpeg (`ffmpeg`, override `FFMPEG_PATH`) to make a local WebM fixture. These tools are not declared runtime dependencies.
-
-Run the individual suites from the repository root:
+There are five standalone CommonJS Playwright browser suites, Node request/adapter checks, and .NET image-source checks. Each browser script starts its own static server and Chromium. Playwright is installed separately; `CHROMIUM_PATH` overrides `/usr/bin/chromium`. Video checks also require FFmpeg (`FFMPEG_PATH` override). There is no npm test script or test step in the Pages workflow.
 
 ```sh
+dotnet build Scalable.sln
+dotnet run --project tests/backend/Scalable.Api.Checks.csproj
+node tests/ai-reference.node.cjs
+node tests/wikimedia-source.node.mjs
+node tests/demo-integrations.browser.cjs
 node tests/studio.browser.cjs
 node tests/video-account.browser.cjs
 node tests/navigation-theme.browser.cjs
 node tests/saved-boards.browser.cjs
 ```
 
-### 17.1 Studio/audio suite
+The focused demo integration suite passes image discovery and refinement, pinned-image preservation, extra-image layouts at four widths, saved legacy references, audio/video dialogs, the five account services, and query navigation. It uses synthetic AI/image/GraphQL responses, with zero unmocked external requests or browser errors. Backend compilation, the 14-assertion backend checks, the Node checks, and saved-board tests also pass. Backend compilation reports existing NuGet dependency advisories. The older Studio suite stops at its fixed Holocene expectation because the current sample selector chooses Bloom for the default brief; the same failure is reproducible on unchanged main. The authentication-suite results below are historical findings from [T003](T003.md).
 
-[`tests/studio.browser.cjs`](../tests/studio.browser.cjs) contains checks for design-switcher removal, theme/device preferences, customization persistence/reset, collage/grid layout, songs/sounds and inclusion options, filters, pins, save/reopen, legacy items, blocked storage, URL normalization/rejection, provider previews, local audio playback/reattachment, and removal. Layout loops include 1440, 1024, 768, 390, and 320 pixels in light/dark and selected layout combinations.
+### 17.1 Studio/audio
 
-The suite uses a static server with no real AI route, so Explore now attempts a same-origin POST that fails/falls back. Existing no-provider-network assertions are not live AI verification. No fixture mocks a successful AI direction response or validates its current merge behavior.
+The suite checks theme/customization/responsive behavior, song/sound flags and filters, pinning, save/reopen, legacy images, blocked storage, audio URLs/playback/reattachment, and sample music-provider libraries. Static serving makes AI requests fail and fall back; this is not AI success verification.
 
-### 17.2 Video/account suite
+### 17.2 Video/account
 
-[`tests/video-account.browser.cjs`](../tests/video-account.browser.cjs) contains YouTube parser/deduplication/embed-load checks, actual local WebM playback/reattachment/removal, refinement preservation, responsive video/login/account layouts, profile persistence, appearance, connection deep links, sign-out, and storage failure assertions. YouTube iframe content is intercepted. Authentication requests are intercepted by the GraphQL mock.
+The suite contains YouTube parser/embed mocks, real local WebM decode/playback/reattachment, persistence/removal/refinement, responsive pages, profile/appearance/service-link/sign-out/storage checks. **Failed** at `tests/video-account.browser.cjs:261`: username-style sign-in is valid now and navigation detaches the password-toggle element before the old email-only-flow assertion. GraphQL/YouTube are mocked, not live accounts or playback.
 
-Some expectations still predate username-or-email sign-in and guest navigation, and the final external-request allowlist still only allows YouTube embeds despite GraphQL requests. Its presence does not establish a passing regression suite for the migrated branch. No real credentials, recovery emails, or provider playback are exercised by these mocks.
+### 17.3 Navigation/theme/signup
 
-### 17.3 Navigation/theme/signup suite
+This suite serves under `/Scalable/` and contains branding, navigation, OS/override/cross-tab/cached-page/legacy themes, JavaScript-disabled fallbacks, responsive layouts, and signup validation/visibility/storage checks. **Failed** at `tests/navigation-theme.browser.cjs:101`: the mock matches `me` inside `message` and returns `{ me: null }` instead of recovery data. The expected recovery text also omits the current response's word “password.” Later tests still expect the old guest account destination and local signup result panel and omit the now-required username. Those paths need repair before the suite can establish current registration coverage.
 
-[`tests/navigation-theme.browser.cjs`](../tests/navigation-theme.browser.cjs) serves under `/Scalable/` for redirect/project-path tests. It includes branding, navigation, default/explicit/device themes, cross-tab/cached-page/legacy listeners, no-JavaScript fallbacks, responsive pages, signup validity/visibility/reset, and storage checks.
+### 17.4 Saved-board deletion
 
-The mock was changed to GraphQL, but parts of the suite still expect the removed demo-account flow and signup's old result panel. Registration submissions do not yet populate the new required username in all paths, and successful signup now navigates instead of revealing `#signup-result`. Those assertions need updating before claiming the suite passes against this baseline. It does not exercise update-password.html or an actual Identity token lifecycle.
+**Passed.** Checks safe titles/fallback thumbnails, Cancel focus, Cancel/Enter/Escape, storage failure, in-flight/duplicate protection, selective deletion/unchanged records, responsive dialogs, count/list/empty/focus/reload, retained active draft/audio, new draft identity, absent records, legacy preservation, stale-result protection, and mocked inactive REST DELETE. This does not verify cloud boards or live AI cancellation.
 
-### 17.4 Saved-board deletion suite
+### 17.5 Image-source and backend checks
 
-[`tests/saved-boards.browser.cjs`](../tests/saved-boards.browser.cjs) checks safe title rendering/fallback thumbnails, default Cancel focus, Cancel/Enter/Escape preservation, storage-write failure, pending/duplicate deletion protection, selective removal, unchanged records, responsive dark dialogs, counts/list/empty/focus behavior, reload persistence, active draft and audio retention, new draft IDs, already-deleted records, and the inactive REST adapter's encoded-ID DELETE with a mocked 204.
+Run `node tests/ai-reference.node.cjs` and `node tests/wikimedia-source.node.mjs` for the AI request boundary and Wikimedia adapter checks. With .NET 10 installed, run `dotnet build Scalable.sln` and `dotnet run --project tests/backend/Scalable.Api.Checks.csproj` for backend compilation and the image-source budget checks. These checks use synthetic data rather than live provider accounts.
 
-Its stale-research check now also encounters the static server's missing AI endpoint. It does not test cancellation of a live AI request or cloud-board deletion. This documentation push does not change or rerun the existing browser tests; no fresh passing result for the rebased source is asserted.
-
-### 17.5 Helpers and verification limits
-
-[`tests/helpers/customize.cjs`](../tests/helpers/customize.cjs) opens shared appearance controls. [`tests/helpers/mock-graphql.cjs`](../tests/helpers/mock-graphql.cjs) intercepts `/graphql` and returns fixed registration/login/recovery/logout results or null `me`. It does not persist users, set real Identity cookies, deliver email, verify passwords, or explicitly emulate the resetPassword completion mutation. Its query-substring dispatch is a lightweight stub, not a schema implementation.
-
-The [authentication worklog](../docs/AUTH-INTEGRATION.md) records earlier live Identity checks performed upstream and a browser-test tooling limitation at that point. Those are distinct from checks performed for this documentation change. New backend/AI behavior needs updated browser assertions and integration tests for authorized persistence, real recovery delivery, AI success/fallback, and error handling. Full accessibility/browser compatibility, actual provider libraries, deployment success, and production security are not established by the existing suites.
-
-For this documentation update, validate relative links/section anchors, source filenames, formatting, and `git diff --check`. Application/credential/provider requests are not needed for documentation-only changes.
+No fresh result establishes live Render/database health, real email delivery/token completion, media licensing, production CORS/cookies, or full browser/accessibility compatibility. Documentation validation checks links/anchors, source/configuration contracts, tables/fences, and whitespace. Focused local checks use synthetic data only; see T003 for exact scope.
 
 ## 18. Current implementation gaps
 
@@ -895,7 +897,7 @@ For this documentation update, validate relative links/section anchors, source f
 | Deep research       | Node AI metadata generation is wired; no web/image research, source verification, image analysis, or job/progress service            |
 | Reference pictures  | Local preview only; not saved, analyzed, uploaded, or accepted as the only brief                                                     |
 | AI merge            | Retains enabled curated songs/sounds alongside appended AI concepts; photos and some labels remain fixed samples                     |
-| Identity deployment | GraphQL/Identity/SQLite implemented; production origin/session/CSRF/rate-limit/migration/key storage/email verification still needed |
+| Identity deployment | GraphQL/Identity SQLite/PostgreSQL selection, hosted URL and Pages CORS configured; GraphQL CSRF/limits/mail/verification and migration/provider/upgrade validation remain unfinished |
 | Recovery delivery   | Token generation/reset wired; current email adapter sends nothing; reset page lacks shared appearance/navigation                     |
 | Auth copy           | Some account/Studio/registration helper text and labels still describe prior previews                                                |
 | Authorization       | Studio/account reachable directly; boards/profile/preferences remain browser-origin data, not owner-authorized records               |
@@ -909,10 +911,10 @@ For this documentation update, validate relative links/section anchors, source f
 | Media durability    | Local file metadata only; no cloud upload/store/authorized playback service                                                          |
 | Profile/preferences | Local edits/settings only; me supplies live identity display but no profile-update or cross-device preference API                    |
 | REST adapter        | Inactive; not equivalent to the current GraphQL identity/Node AI services; polling/auth/CSRF/cancel/detail wiring incomplete         |
-| Tests               | Some auth assertions still target the earlier preview; new AI flow lacks success mocking/integration coverage                        |
-| Hosting             | Pages is static; GraphQL and AI processes must be deployed/configured separately                                                     |
+| Tests               | Fresh run: four browser-suite failures, saved-board pass; backend tests blocked by SDK download HTTP 403                        |
+| Hosting             | Render GraphQL default and Docker configuration exist; Node AI remains separate                                                     |
 
-Existing focused documents and screenshots can predate current code. Static Studio About/account disclaimers still describe no live account/AI despite the newer service wiring. This reference describes the audited `0600d23` baseline and does not change that UI copy or fix application/test gaps.
+Focused handoffs are reconciled in [T003](T003.md); screenshots and prior task logs retain historical states. [BACKEND.md](BACKEND.md) records current GraphQL/SQL/storage/deployment boundaries. The audit changes documentation only; current failures and setup limitations remain explicit.
 
 ## 19. Source and asset reference
 
@@ -935,8 +937,7 @@ Existing focused documents and screenshots can predate current code. Static Stud
 | [`.nojekyll`](../.nojekyll)                                                    | Static-hosting marker for repository-root Pages publication                                           |
 | [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)                | Manual static Pages deployment                                                                        |
 | [`README.md`](../README.md)                                                    | Project vision, roadmap, and development entry point                                                  |
-| [`tests/`](../tests/)                                                          | Four browser suites and shared helpers                                                                |
-| [`documentation/FRONTEND.md`](FRONTEND.md)                                     | This complete audited frontend reference                                                              |
+| [`tests/`](../tests/)                                                          | Five browser suites and shared helpers                                                                |
 
 Additional service sources:
 
@@ -952,6 +953,8 @@ Additional service sources:
 | [`Scalable.Api/Identity/LoggingAccountEmailSender.cs`](../Scalable.Api/Identity/LoggingAccountEmailSender.cs) | No-delivery adapter that logs no reset credentials                         |
 | [`Scalable.Api/Scalable.Api.csproj`](../Scalable.Api/Scalable.Api.csproj)                                     | .NET 10/GraphQL/Identity/EF dependencies                                   |
 | [`Scalable.Api/Properties/launchSettings.json`](../Scalable.Api/Properties/launchSettings.json)               | Local API launch profile                                                   |
+| [`docs/BACKEND.md`](BACKEND.md) | Current GraphQL/Identity/storage/configuration/deployment reference |
+| [`docs/T003.md`](T003.md) | Latest-main audit decisions and fresh verification outcomes |
 | [`docs/AUTH-INTEGRATION.md`](../docs/AUTH-INTEGRATION.md)                                                     | Current identity decisions, upstream validation, remaining production work |
 | [`docs/AI-INTEGRATION.md`](../docs/AI-INTEGRATION.md)                                                         | Node/OpenAI request flow and configuration                                 |
 
@@ -963,7 +966,8 @@ Additional service sources:
 | [`coast.jpg`](../frontend/assets/coast.jpg)         | `demo-image-01.jpg` from the same Grayscale repository                                                                                           | Detail “The in-between”; filename is a sample identifier |
 | [`water.jpg`](../frontend/assets/water.jpg)         | `bg-masthead.jpg` from [Start Bootstrap Landing Page](https://github.com/StartBootstrap/startbootstrap-landing-page/tree/master/dist/assets/img) | Water “A moment of blue”, signup art                     |
 
-The photographs are local so initial boards/import previews do not need third-party image requests. They are fixed design content, not research results. The source projects license their templates under MIT and credit Unsplash for photography; this repository has not independently established complete photographer/license provenance for each photo. Production asset selection should carry verified source, creator, and usage information per result.
+
+The photographs are local so initial boards/import previews do not need third-party image requests. They are fixed design content, not research results. Their upstream sample repositories use MIT-licensed templates; this repository has not independently established complete photographer/license provenance for each local photo. Production asset selection should carry verified source, creator, and usage information per result.
 
 ### 19.3 Existing focused handoffs
 

@@ -2,7 +2,7 @@
 
 Turn a prompt, a reference picture, or both into a researched creative direction: images, color palettes, textures, typography ideas, and music that belong together.
 
-**Status:** The Studio is the selected frontend, built in HTML/CSS/JavaScript with dark mode and appearance customization. The planned backend is C# / ASP.NET Core with a SQL database and server-side AI/media APIs; it is not implemented yet.
+**Status:** The Studio uses HTML/CSS/JavaScript. The ASP.NET Core **GraphQL API and ASP.NET Identity replace Supabase authentication/browser data access**. GraphQL is the API layer: Identity uses SQLite locally or configured PostgreSQL. A Node endpoint can generate AI creative metadata and analyze submitted reference images. Wikimedia Commons supplies bounded, attributed visual references through the ASP.NET API. Boards remain in localStorage; cloud board storage and generated imagery are unimplemented. See the [backend guide](docs/BACKEND.md) and [T003 audit](docs/T003.md).
 
 ## Try the frontend
 
@@ -18,15 +18,17 @@ Boards include **song recommendations and ambient sound directions** as separate
 
 Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/design-previews/studio-dark.png) · [Customization](docs/design-previews/studio-customize.png).
 
-**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) use the .NET GraphQL identity service for permanent accounts, sessions, and password recovery. See the [authentication worklog](docs/AUTH-INTEGRATION.md) and [video/account handoff](docs/VIDEO-ACCOUNT.md).
+Run the GraphQL/Identity API with .NET 10 using `App__PublicBaseUrl=http://localhost:3000 dotnet run --project Scalable.Api` (POSIX shell); run the frontend/AI process separately with `npm start`, then open `http://localhost:3000`. Node serves `frontend/` at its URL root. The public-base override aligns password-reset links with that layout. Local GraphQL requests use `http://localhost:5078`. Node reads `OPENAI_API_KEY` from its environment or ignored root `.env`; without it AI attempts fall back to samples. See [setup/configuration](docs/BACKEND.md) and [AI behavior](docs/AI-INTEGRATION.md).
+
+**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) use the ASP.NET GraphQL Identity service for permanent accounts, sessions, and password recovery. See the [authentication worklog](docs/AUTH-INTEGRATION.md) and [video/account handoff](docs/VIDEO-ACCOUNT.md).
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
-The [complete frontend documentation](documentation/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests.
+The [complete frontend documentation](docs/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests. GitHub Pages serves the frontend only; Wikimedia requests require the hosted ASP.NET API origin.
 
 ## GitHub Pages
 
-The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; the .NET GraphQL backend must be deployed separately.
+The repository root redirects visitors to `frontend/login.html`. After human review/merge, publish the intended branch from **Settings → Pages → Deploy from a branch → / (root)** or use the manual workflow. See [deployment instructions](docs/GITHUB-PAGES.md) for the configured Render GraphQL default, endpoint overrides and cross-site cookies. Pages runs neither the .NET API nor Node AI. This audit changes no hosting settings.
 
 ## Product vision
 
@@ -87,19 +89,19 @@ These result counts are targets. The app should return fewer credible results wh
 
 Music discovery initially means recommendations and outbound links. In-app playback, audio downloads, and playlist writing require separate provider capabilities and permissions.
 
-## Proposed technical approach
+## Technical approach and remaining architecture
 
-Use HTML, CSS, and JavaScript for the frontend and C# / ASP.NET Core for the backend, connecting to a SQL database and external AI/media APIs. Confirm provider capabilities and pricing with a working research spike before committing to integrations.
+The implemented account service is C# / ASP.NET Core with Hot Chocolate GraphQL and ASP.NET Identity. GraphQL does not replace the underlying SQL database. The Supabase SDK/configuration/dependency is absent. Node hosts a separate OpenAI creative-direction REST endpoint. Full research, cloud boards, and most media integrations remain future work.
 
 | Area               | Proposed starting point                                                        | Purpose                                                                      |
 | ------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | Frontend           | HTML, CSS, JavaScript modules                                                  | Prompt entry, uploads, and board editor                                      |
-| Backend            | C# / ASP.NET Core                                                              | Authenticated endpoints, research orchestration, and external APIs           |
-| AI interpretation  | Multimodal model behind a provider adapter                                     | Understand prompts/images and produce validated structured briefs            |
+| Backend | .NET 10, Hot Chocolate GraphQL, ASP.NET Identity | Implemented registration/login/session/recovery; future cloud board data |
+| AI interpretation | Node/OpenAI Responses API for text creative metadata; image analysis future | Generate title/palette/note/song/sound concepts; no sourced image research |
 | Research           | Search and image-provider adapters                                             | Retrieve references with traceable metadata                                  |
 | Palette extraction | Image processing and color clustering                                          | Derive actual colors before AI naming and curation                           |
 | Music discovery    | Music catalog/search adapter                                                   | Verify tracks and links; add audio-feature matching where supported          |
-| Data and accounts  | SQL database via EF Core; database engine and identity provider to be selected | Store boards, users, uploads, and research records; object storage for media |
+| Data and accounts | Identity: EF Core SQLite or configured Npgsql/PostgreSQL | Real accounts; boards/profile/preferences still localStorage |
 | Background work    | Durable job runner, selected during the spike                                  | Run bounded research jobs with progress, retries, and cancellation           |
 | Validation         | Browser automation for the frontend; .NET tests for the backend                | Exercise research logic, integrations, and the main user journey             |
 
@@ -183,7 +185,11 @@ Each milestone ends with a demonstrable result. Sequence is more useful than cal
 
 Prioritize exports, sharing, playlists, typography, collaboration, and generated imagery based on beta feedback. Define acceptance criteria and provider requirements for each before implementation.
 
-## Validation plan
+## Current validation
+
+Run `dotnet build Scalable.sln`, `dotnet run --project tests/backend/Scalable.Api.Checks.csproj`, the Node checks, and the five browser scripts in [frontend validation](docs/FRONTEND.md#17-validation-and-test-coverage). Browser checks need separately installed Playwright/Chromium; video checks require FFmpeg. There is no npm test script. Backend compilation, image-source checks, the focused demo integration suite, and saved-board checks pass. The older Studio suite has a song-fixture expectation that also fails on unchanged main; the authentication-suite issues recorded in [T003](docs/T003.md) remain outside this cleanup.
+
+## Planned validation for remaining features
 
 - **Unit tests:** Brief validation, palette extraction, ranking, duplicate handling, and research budget limits.
 - **Integration tests:** Provider response parsing, source preservation, retry/cancellation behavior, and persistence. Use fixtures for routine CI and explicit live checks for provider verification.
@@ -198,4 +204,4 @@ Prioritize exports, sharing, playlists, typography, collaboration, and generated
 - **Research cost:** Fan-out searches and model calls need caps, caching where permitted, and measurable costs.
 - **Creative quality:** A coherent board requires curation and user feedback. Search relevance alone is insufficient.
 
-The first implementation task is **Milestone 0: prove a small, sourced prompt/image-to-board pipeline**, then scaffold the app around the validated integrations.
+The roadmap describes product targets; accounts and the application scaffold already exist. Next work includes repairing current regressions/deployment gaps, then proving the sourced prompt/image-to-board pipeline and owner-backed cloud persistence.
