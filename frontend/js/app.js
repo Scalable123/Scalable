@@ -1,4 +1,9 @@
 import { boardService, prompts } from "./board-service.js";
+import {
+  onAppearanceChange,
+  updateAppearance,
+  resetAppearance,
+} from "./appearance.js";
 
 // Inline vector symbols avoid platform-dependent emoji and missing arrow glyphs.
 function iconify(root) {
@@ -33,11 +38,6 @@ let filter = "all";
 let referenceFile = null;
 let referenceUrl = null;
 let toastTimeout;
-const designs = {
-  studio: "01 — Warm, tactile, editorial.",
-  nocturne: "02 — Immersive, atmospheric, after dark.",
-  gallery: "03 — Bold, spacious, gallery-inspired.",
-};
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -60,25 +60,6 @@ function showDialog(title, content) {
   $("#dialog-title").textContent = title;
   $("#dialog-content").replaceChildren(content);
   if (!$("#dialog").open) $("#dialog").showModal();
-}
-function setDesign(design) {
-  if (!designs[design]) return;
-  document.body.dataset.design = design;
-  $("#design-description").textContent = designs[design];
-  $(".version").textContent = `/ 0${Object.keys(designs).indexOf(design) + 1}`;
-  document
-    .querySelectorAll("[data-design-choice]")
-    .forEach((button) =>
-      button.setAttribute(
-        "aria-pressed",
-        String(button.dataset.designChoice === design),
-      ),
-    );
-  try {
-    localStorage.setItem("scalable.design", design);
-  } catch {
-    /* Theme still works with blocked storage. */
-  }
 }
 function renderImage(item) {
   const card = element("figure", `board-card image-card ${item.position}`);
@@ -107,7 +88,7 @@ function renderImage(item) {
       "aria-label",
       `${item.pinned ? "Unpin" : "Pin"} ${item.title}`,
     );
-    $("#save-board span").textContent = "Save board";
+    $("#save-label").textContent = "Save board";
     notify(
       item.pinned
         ? "Pinned to your direction. Save to keep your changes."
@@ -156,14 +137,11 @@ function renderPalette(item) {
   );
   return card;
 }
-function renderMusic(item) {
+function renderSound(item) {
   const card = element("section", "board-card music-card");
-  card.setAttribute("aria-label", "Sample soundtrack concept");
+  card.setAttribute("aria-label", "Ambient sound direction");
   const top = element("div", "music-top");
-  top.append(
-    element("span", "", "SET THE FREQUENCY"),
-    element("span", "", "↗"),
-  );
+  top.append(element("span", "", "AMBIENT SOUNDS"), element("span", "", "↗"));
   const wave = element("div", "waveform");
   wave.setAttribute("aria-hidden", "true");
   [
@@ -178,23 +156,66 @@ function renderMusic(item) {
   const copy = element("div");
   copy.append(
     element("strong", "", item.title),
-    element("span", "", "Soundtrack concept · no audio"),
+    element("span", "", "Sound concept · no audio"),
   );
   const info = element("button", "music-info", "↗");
-  info.setAttribute("aria-label", "About this soundtrack concept");
+  info.setAttribute("aria-label", "About this ambient sound");
   info.addEventListener("click", () =>
     showDialog(
       item.title,
       element(
         "p",
         "dialog-copy",
-        `${item.artist}. ${item.description}. This is a visual concept, not a playable track. Real artist recommendations, verified catalog links, and any licensed previews will come from the future music API.`,
+        `${item.description}. This is an ambient sound direction, separate from the song recommendations below. No recording is attached. A future sound provider will supply licensed recordings and any permitted previews.`,
       ),
     ),
   );
   bottom.append(copy, info);
   card.append(top, wave, bottom);
   return card;
+}
+function renderSong(item, index) {
+  const card = element("article", "song-card");
+  card.append(
+    element("span", "song-number", String(index + 1).padStart(2, "0")),
+  );
+  const copy = element("div", "song-copy");
+  copy.append(
+    element("h4", "", item.title),
+    element("p", "song-artist", item.artist),
+    element("p", "song-reason", item.explanation),
+    element("span", "song-tags", item.tags),
+  );
+  card.append(copy);
+  // Only allow outbound HTTPS catalog searches, including for browser-restored DTOs.
+  let url;
+  try {
+    url = new URL(item.discoveryUrl);
+  } catch {
+    /* No link for absent/invalid catalog data. */
+  }
+  if (
+    url?.protocol === "https:" &&
+    url.hostname === "open.spotify.com" &&
+    url.pathname.startsWith("/search/")
+  ) {
+    const link = element("a", "song-link", "Find on Spotify ↗");
+    link.href = url.href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute(
+      "aria-label",
+      `Find ${item.title} by ${item.artist} on Spotify (opens a catalog search)`,
+    );
+    card.append(link);
+  }
+  return card;
+}
+function researchOptions() {
+  return {
+    includeSongs: $("#include-songs").checked,
+    includeSounds: $("#include-sounds").checked,
+  };
 }
 function renderBoard() {
   $("#board-title").replaceChildren(
@@ -204,19 +225,44 @@ function renderBoard() {
   $("#board-description").textContent = board.description;
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
+  grid.classList.toggle(
+    "no-sound",
+    !board.items.some((item) => item.type === "sound"),
+  );
   grid.replaceChildren();
+  const songs = board.items.filter((item) => item.type === "song");
+  $("#song-list").replaceChildren(...songs.map(renderSong));
+  $("#song-section").hidden =
+    !(filter === "all" || filter === "song") || songs.length === 0;
+  grid.hidden = filter === "song" && songs.length > 0;
   board.items
-    .filter((item) => filter === "all" || item.type === filter)
+    .filter(
+      (item) =>
+        item.type !== "song" && (filter === "all" || item.type === filter),
+    )
     .forEach((item) => {
       if (item.type === "image") grid.append(renderImage(item));
       if (item.type === "palette") grid.append(renderPalette(item));
-      if (item.type === "music") grid.append(renderMusic(item));
+      if (item.type === "sound") grid.append(renderSound(item));
       if (item.type === "note") {
         const note = element("div", "board-card note-card");
         note.append(element("span", "", "✳"), element("p", "", item.text));
         grid.append(note);
       }
     });
+  if (!grid.hidden && !grid.children.length) {
+    grid.append(
+      element(
+        "p",
+        "empty-state",
+        filter === "song"
+          ? "No song picks in this board yet. Enable song recommendations and explore your brief again."
+          : filter === "sound"
+            ? "No ambient sounds in this board. Enable ambient sounds and explore your brief again."
+            : "No items in this view yet.",
+      ),
+    );
+  }
 }
 function selectFilter(next) {
   filter = next;
@@ -249,13 +295,47 @@ function removeReference() {
   $("#reference-preview").hidden = true;
   $("#upload-label").hidden = false;
 }
-document
-  .querySelectorAll("[data-design-choice]")
-  .forEach((button) =>
-    button.addEventListener("click", () =>
-      setDesign(button.dataset.designChoice),
-    ),
+onAppearanceChange((preferences) => {
+  const dark = document.documentElement.dataset.theme === "dark";
+  $("#theme-toggle").setAttribute("aria-pressed", String(dark));
+  $("#theme-toggle").textContent = dark ? "Light mode" : "Dark mode";
+  $("#theme-toggle").setAttribute(
+    "aria-label",
+    dark ? "Switch to light mode" : "Switch to dark mode",
   );
+  for (const field of ["theme", "density", "corners"])
+    $("#appearance-form").elements[field].value = preferences[field];
+  $("#appearance-form").elements.accent.value = preferences.accent;
+});
+function appearanceStatus(saved) {
+  $("#appearance-status").textContent = saved
+    ? "Preferences saved in this browser."
+    : "Applied for this visit. Browser storage is unavailable, so preferences could not be saved.";
+}
+$("#theme-toggle").addEventListener("click", () => {
+  const saved = updateAppearance({
+    theme: document.documentElement.dataset.theme === "dark" ? "light" : "dark",
+  });
+  appearanceStatus(saved);
+  if (!saved)
+    notify("Theme applied for this visit. Browser storage is unavailable.");
+});
+$("#customize").addEventListener("click", () =>
+  $("#appearance-dialog").showModal(),
+);
+for (const id of ["close-appearance", "done-appearance"])
+  $("#" + id).addEventListener("click", () => $("#appearance-dialog").close());
+$("#appearance-form").addEventListener("submit", (event) =>
+  event.preventDefault(),
+);
+$("#appearance-form").addEventListener("change", (event) => {
+  appearanceStatus(
+    updateAppearance({ [event.target.name]: event.target.value }),
+  );
+});
+$("#reset-appearance").addEventListener("click", () =>
+  appearanceStatus(resetAppearance()),
+);
 document
   .querySelectorAll("[data-filter]")
   .forEach((button) =>
@@ -319,7 +399,11 @@ $("#prompt-form").addEventListener("submit", async (event) => {
   grid.setAttribute("aria-busy", "true");
   $("#input-error").textContent = "";
   try {
-    const next = await boardService.research({ prompt, referenceFile });
+    const next = await boardService.research({
+      prompt,
+      referenceFile,
+      ...researchOptions(),
+    });
     // Preserve explicitly pinned choices when refining this local exploration.
     const pinned = (board?.items || []).filter(
       (item) => item.type === "image" && item.pinned,
@@ -329,7 +413,7 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     );
     board = next;
     selectFilter("all");
-    $("#save-board span").textContent = "Save board";
+    $("#save-label").textContent = "Save board";
     notify(
       "Sample direction composed. Live research will connect through .NET.",
     );
@@ -346,7 +430,7 @@ $("#save-board").addEventListener("click", async () => {
   if (!board) return;
   try {
     await boardService.saveBoard(board);
-    $("#save-board span").textContent = "Saved locally";
+    $("#save-label").textContent = "Saved locally";
     await updateSavedCount();
     notify("Saved in this browser. Reference uploads are not saved.");
   } catch {
@@ -382,11 +466,17 @@ $("#saved-boards").addEventListener("click", async () => {
       const open = element("button", "", "Open ↗");
       open.addEventListener("click", () => {
         board = saved;
+        $("#include-songs").checked =
+          saved.researchOptions?.includeSongs ??
+          saved.items.some((item) => item.type === "song");
+        $("#include-sounds").checked =
+          saved.researchOptions?.includeSounds ??
+          saved.items.some((item) => item.type === "sound");
         $("#prompt").value = saved.prompt;
         updateCharacters();
         removeReference();
         selectFilter("all");
-        $("#save-board span").textContent = "Saved locally";
+        $("#save-label").textContent = "Saved locally";
         $("#dialog").close();
       });
       row.append(img, copy, open);
@@ -405,9 +495,11 @@ $("#new-board").addEventListener("click", async () => {
     board.items.forEach((item) => {
       if (item.type === "image") item.pinned = false;
     });
-  board = await boardService.research({ prompt: "" });
+  $("#include-songs").checked = true;
+  $("#include-sounds").checked = true;
+  board = await boardService.research({ prompt: "", ...researchOptions() });
   selectFilter("all");
-  $("#save-board span").textContent = "Save board";
+  $("#save-label").textContent = "Save board";
   $("#prompt").focus();
   notify(
     "A fresh start. The canvas shows a sample until you explore your own brief.",
@@ -416,11 +508,11 @@ $("#new-board").addEventListener("click", async () => {
 $("#explore").addEventListener("click", () => $("#prompt").focus());
 $("#about").addEventListener("click", () =>
   showDialog(
-    "Three ways to follow a feeling",
+    "Welcome to The Studio",
     element(
       "p",
       "dialog-copy",
-      "Use the top switcher to compare The Studio, Nocturne, and The Gallery. All three use the same interactive workspace. This frontend-only prototype uses local, curated sample photography and palettes. Briefs select sample collections; uploads are previewed only. No AI research, music playback, account, SQL database, or backend is connected. Saved boards live in browser storage.",
+      "Make The Studio yours with light or dark mode, accent colors, canvas spacing, and card edges. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. No live AI research, playback, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
     ),
   ),
 );
@@ -435,12 +527,10 @@ $("#dialog").addEventListener("click", (event) => {
   )
     $("#dialog").close();
 });
-try {
-  setDesign(localStorage.getItem("scalable.design") || "studio");
-} catch {
-  setDesign("studio");
-}
 updateCharacters();
 await updateSavedCount();
-board = await boardService.research({ prompt: $("#prompt").value });
+board = await boardService.research({
+  prompt: $("#prompt").value,
+  ...researchOptions(),
+});
 renderBoard();
