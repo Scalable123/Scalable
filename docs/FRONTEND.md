@@ -33,7 +33,7 @@ These are distinct content types and can both be part of a board:
 
 Use the two checkboxes before exploring to request songs, sounds, both, or neither. Separate Songs and Sounds filters make each easy to browse. Research options are saved with the board and restored when reopening it. Empty filters explain how to add the missing content.
 
-No external catalog lookup, AI recommendation, audio streaming, or playback is implemented. Sample songs are hand-picked; they are not claimed to be researched or licensed for use. The future backend should retrieve verified catalog IDs/links and licensed sound sources, return provenance and explanations, and provide previews only when allowed by the provider.
+No external catalog lookup, live AI recommendation, or streaming-service playback is implemented. Imported local audio can play in the browser. Sample songs are hand-picked; they are not claimed to be researched or licensed for use. The future backend should retrieve verified catalog IDs/links and licensed sound sources, return provenance and explanations, and provide previews only when allowed by the provider.
 
 ## Other working interactions
 
@@ -54,6 +54,7 @@ frontend/
   styles.css             Responsive Studio layout and appearance tokens
   js/appearance.js       Validated local preferences and device theme handling
   js/app.js              DOM rendering, filters, interactions
+  js/audio-library.js    Link imports, provider previews, local audio registry
   js/board-service.js    Demo service, saved-board compatibility, future HTTP adapter
   assets/                Local sample photography and source notes
 ```
@@ -104,3 +105,34 @@ ASP.NET Core owns authorization, validation, upload verification/storage, resear
 Run `node tests/studio.browser.cjs` in a development environment with Playwright and Chromium installed. The script starts its own temporary static server. Set `CHROMIUM_PATH` if Chromium is installed somewhere other than `/usr/bin/chromium`.
 
 The checks cover desktop/mobile layouts, theme/device changes, persisted customization, keyboard dismissal, songs and sounds filters and inclusion options, sample selection, saved-board reopening, legacy board compatibility, and storage failures. This tests the frontend only; no backend/provider integration is claimed.
+
+## Personalization and imported audio
+
+The Studio now also supports editorial/modern typography, collage/even-grid arrangement, plain/dotted canvas, and standard/larger reading text. Defaults and validation live in `appearance.js`; older saved preferences gain the new defaults without a migration or loss of existing choices. Reset restores all appearance settings without changing boards or imported media.
+
+Use **Import audio** above the canvas:
+
+- **Paste a link:** Add a Spotify, Amazon Music, Apple Music, SoundCloud, or YouTube reference as a song or ambient sound. Supply a title and optional creator. This saves the reference, not a streamed recording or extracted metadata. Album/playlist links remain one reference. Shortened share links must be opened in a browser and replaced with the destination URL.
+- **Local audio:** Import a browser-decodable MP3, WAV, OGG, or M4A up to 20 MB. Native controls play the local file. Only metadata persists when saving a board; the file must be reattached after a page reload/new visit. Reattaching is available directly on the card. File bytes and temporary blob URLs never enter localStorage or a board DTO.
+- **Music services:** Preview candidate library experiences for Spotify, Amazon Music, Apple Music, and SoundCloud. Each provider stays labeled **not connected**. Choose hand-picked demo tracks and add them as sample references. Nothing opens OAuth, reads a real library, or contacts a provider.
+
+Imported references can be removed and survive brief refinement, even if new song/sound recommendations are turned off. Duplicate imported links are skipped after tracking-parameter normalization. Supported external references use HTTPS and an explicit host allowlist. These checks validate URL shape, not the existence of a track or its availability. Only explicit outbound clicks leave the app. Imported links are not embedded or fetched.
+
+`js/audio-library.js` owns URL validation, provider preview fixtures, import interactions, and the in-memory local-audio URL registry. The renderer receives plain song/sound DTOs, and the existing board service persists their metadata. When a board is replaced or references are removed, unused object URLs are revoked. UI rerenders pause playback, and playing one local clip pauses the others.
+
+Additional imported item fields:
+
+```js
+{
+  id, type: 'song' /* or 'sound' */, title, artist,
+  imported: true,
+  sourceKind: 'link' /* or 'local-file' or 'demo-provider' */,
+  provider, resourceType, discoveryUrl, linkKind, // linked references only
+  fileInfo: { name, size, mimeType, lastModified }, // local file references only
+  sourceKey, explanation, tags, isSample
+}
+```
+
+The importer never stores account credentials or marks a provider connected. See [music integration handoff](MUSIC-INTEGRATION.md) for the future backend boundary.
+
+The browser suite also exercises new preference persistence/reset, import dialogs across five widths, validated/duplicate links, all four provider previews, real local WAV decoding/playback, save/reopen/reattach, imported-reference preservation/removal, and absence of external provider requests during these flows.

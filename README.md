@@ -10,9 +10,9 @@ Turn a prompt, a reference picture, or both into a researched creative direction
 python3 -m http.server 8080 --directory frontend
 ```
 
-Open `http://localhost:8080` to use **The Studio**. Explore sample directions, preview reference images, pin images, copy colors, and save/reopen boards in this browser. Use **Customize** for theme, accent, spacing, and card-edge preferences.
+Open `http://localhost:8080` to use **The Studio**. Explore sample directions, preview reference images, pin images, copy colors, and save/reopen boards in this browser. Use **Customize** for theme, accents, spacing, card edges, typography, board arrangement, canvas background, and reading size.
 
-Boards include **song recommendations and ambient sound directions** as separate content types. Sample songs show real titles/artists, fit explanations, and Spotify catalog-search links. Select songs, sounds, both, or neither before exploring. These are curated examples, not live AI research; playback is not connected.
+Boards include **song recommendations and ambient sound directions** as separate content types. Sample songs show real titles/artists, fit explanations, and Spotify catalog-search links. Select songs, sounds, both, or neither before exploring. These are curated examples, not live AI research. **Import audio** adds music links, browser-playable local recordings, or sample references from provider library previews. Local files stay on the device and must be reattached after reloading; saved boards keep metadata only. Spotify, Amazon Music, Apple Music, and SoundCloud connection previews do not sign in or access real accounts. Streaming-service playback is not connected.
 
 Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/design-previews/studio-dark.png) · [Customization](docs/design-previews/studio-customize.png).
 

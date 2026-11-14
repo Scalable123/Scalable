@@ -260,6 +260,272 @@ const path = require("node:path");
       ),
     );
 
+    // New Studio preferences remain independent from board content.
+    await page.locator("#new-board").click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector("#prompt").value === "" &&
+        document.querySelectorAll(".song-card").length === 3,
+    );
+    await appearance();
+    for (const [name, value] of [
+      ["typography", "modern"],
+      ["layout", "grid"],
+      ["canvas", "dotted"],
+      ["textSize", "large"],
+    ]) {
+      await page
+        .locator(`#appearance-form [name="${name}"]`)
+        .selectOption(value);
+    }
+    await closeAppearance();
+    await page.reload();
+    await page.locator(".song-card").first().waitFor();
+    for (const [field, value] of [
+      ["typography", "modern"],
+      ["layout", "grid"],
+      ["canvas", "dotted"],
+      ["text-size", "large"],
+    ])
+      assert.equal(
+        await page.locator("html").getAttribute(`data-${field}`),
+        value,
+      );
+    for (const width of [1440, 1024, 768, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert(
+        !(await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        )),
+        `Customized Studio overflows at ${width}`,
+      );
+      assert.equal(await page.locator(".board-card:visible").count(), 6);
+      await page.locator("#import-audio").click();
+      for (const tab of ["link", "file", "services"]) {
+        await page.locator(`[data-import-tab="${tab}"]`).click();
+        assert(
+          !(await page
+            .locator("#audio-dialog")
+            .evaluate((e) => e.scrollWidth > e.clientWidth)),
+          `Audio ${tab} panel overflow at ${width}`,
+        );
+      }
+      await page.keyboard.press("Escape");
+    }
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    await appearance();
+    await page.locator("#reset-appearance").click();
+    await closeAppearance();
+    assert.equal(
+      await page.locator("html").getAttribute("data-layout"),
+      "collage",
+    );
+    const externalRequests = [];
+    page.on("request", (request) => {
+      if (
+        /^https?:/.test(request.url()) &&
+        new URL(request.url()).origin !== url
+      )
+        externalRequests.push(request.url());
+    });
+    const openImporter = async (tab) => {
+      await page.locator("#import-audio").click();
+      await page.locator(`[data-import-tab="${tab}"]`).click();
+    };
+    await openImporter("link");
+    await page
+      .locator("#audio-link")
+      .fill("https://open.spotify.com.evil.example/track/123");
+    await page.locator("#link-title").fill("Not a supported source");
+    await page.locator("#audio-link-form [type=submit]").click();
+    await page
+      .getByText(
+        "Use a Spotify, Amazon Music, Apple Music, SoundCloud, or YouTube link.",
+        { exact: false },
+      )
+      .waitFor();
+    await page
+      .locator("#audio-link")
+      .fill(
+        "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b?si=tracking",
+      );
+    await page.locator("#link-title").fill("My neon reference");
+    await page.locator("#link-artist").fill("My artist");
+    await page.locator("#audio-link-form [type=submit]").click();
+    await page
+      .getByText("Reference added. Save your board to keep it.", {
+        exact: true,
+      })
+      .waitFor();
+    await page
+      .locator("#audio-link")
+      .fill("https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b");
+    await page.locator("#link-title").fill("Same song");
+    await page.locator("#audio-link-form [type=submit]").click();
+    await page
+      .getByText("That link is already on this board.", { exact: true })
+      .waitFor();
+    await page
+      .locator("#audio-link")
+      .fill("https://soundcloud.com/field-recordings/soft-rain");
+    await page.locator("#link-title").fill("Personal rain");
+    await page.locator("#link-kind").selectOption("sound");
+    await page.locator("#audio-link-form [type=submit]").click();
+    await page
+      .getByText("Reference added. Save your board to keep it.", {
+        exact: true,
+      })
+      .waitFor();
+    await page.locator("#services-tab").click();
+    await page.locator("#services-tab").press("ArrowLeft");
+    assert.equal(
+      await page.locator("#file-tab").getAttribute("aria-selected"),
+      "true",
+    );
+    await page.locator("#services-tab").click();
+    for (const provider of [
+      "Spotify",
+      "Amazon Music",
+      "Apple Music",
+      "SoundCloud",
+    ]) {
+      await page
+        .getByRole("button", {
+          name: `Preview ${provider} connection`,
+          exact: true,
+        })
+        .click();
+      await page.locator("#provider-import-form [type=submit]").click();
+      await page
+        .getByText("Choose at least one demo reference to add.")
+        .waitFor();
+      if (provider === "Amazon Music") {
+        await page.locator("#provider-tracks input").first().check();
+        await page.locator("#provider-import-form [type=submit]").click();
+        await page
+          .getByText("1 demo reference added.", { exact: false })
+          .waitFor();
+      }
+      await page.locator("#leave-provider").click();
+    }
+    await page.locator("#file-tab").click();
+    await page
+      .locator("#audio-file")
+      .setInputFiles({
+        name: "broken.mp3",
+        mimeType: "audio/mpeg",
+        buffer: Buffer.from("This is not audio"),
+      });
+    await page.locator("#add-file").click();
+    await page
+      .getByText("This file could not be decoded as audio.", { exact: false })
+      .waitFor();
+    // A tiny generated PCM WAV exercises actual browser decoding and local playback.
+    const sampleCount = 8000;
+    const wav = Buffer.alloc(44 + sampleCount * 2);
+    wav.write("RIFF", 0);
+    wav.writeUInt32LE(wav.length - 8, 4);
+    wav.write("WAVEfmt ", 8);
+    wav.writeUInt32LE(16, 16);
+    wav.writeUInt16LE(1, 20);
+    wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(8000, 24);
+    wav.writeUInt32LE(16000, 28);
+    wav.writeUInt16LE(2, 32);
+    wav.writeUInt16LE(16, 34);
+    wav.write("data", 36);
+    wav.writeUInt32LE(sampleCount * 2, 40);
+    await page
+      .locator("#audio-file")
+      .setInputFiles({
+        name: "studio-tone.wav",
+        mimeType: "audio/wav",
+        buffer: wav,
+      });
+    await page.locator("#file-title").fill("My local recording");
+    await page.locator("#add-file").click();
+    await page.getByText("Local audio added.", { exact: false }).waitFor();
+    await page.locator("#close-audio").click();
+    assert.equal(await page.locator(".imported-audio-card").count(), 4);
+    const localAudio = page.locator("audio");
+    await localAudio.evaluate((audio) => audio.play());
+    assert((await localAudio.evaluate((audio) => audio.duration)) > 0);
+    await filter("song");
+    assert.equal(await page.locator(".imported-audio-card:visible").count(), 2);
+    await filter("sound");
+    assert.equal(await page.locator(".imported-audio-card:visible").count(), 2);
+    await filter("all");
+    await page.locator("#prompt").fill("A warm earthy room");
+    await explore();
+    assert.equal(await page.locator(".imported-audio-card").count(), 4);
+    await page.evaluate(() => localStorage.removeItem("scalable.boards.v1"));
+    await page.locator("#save-board").click();
+    await page.getByText("Saved locally", { exact: true }).waitFor();
+    const stored = await page.evaluate(() =>
+      localStorage.getItem("scalable.boards.v1"),
+    );
+    assert(!stored.includes("blob:"));
+    assert(!stored.includes("data:audio"));
+    assert.match(stored, /studio-tone.wav/);
+    await page.reload();
+    await page.locator(".song-card").first().waitFor();
+    await page.locator("#saved-boards").click();
+    await page.getByRole("button", { name: "Open", exact: true }).click();
+    assert.equal(await page.locator(".imported-audio-card").count(), 4);
+    assert.equal(await page.locator("audio").count(), 0);
+    await page
+      .getByText("Reattach studio-tone.wav to play.", { exact: false })
+      .waitFor();
+    await page
+      .getByLabel("Reattach audio for My local recording", { exact: true })
+      .setInputFiles({
+        name: "studio-tone.wav",
+        mimeType: "audio/wav",
+        buffer: wav,
+      });
+    await page.locator("audio").waitFor();
+    await page
+      .getByRole("button", {
+        name: "Remove Personal rain from board",
+        exact: true,
+      })
+      .click();
+    assert.equal(await page.locator(".imported-audio-card").count(), 3);
+    assert.equal(
+      await page
+        .getByRole("heading", { name: "Personal rain", exact: true })
+        .count(),
+      0,
+    );
+    const parsed = await page.evaluate(async () => {
+      const { parseMediaLink } = await import("/js/audio-library.js");
+      if (parseMediaLink("https://open.spotify.com/intl-de/track/EXAMPLE?si=abc").url !== "https://open.spotify.com/track/EXAMPLE") throw new Error("Localized Spotify link did not normalize");
+      const accepted = [
+        "https://music.amazon.co.uk/albums/EXAMPLE",
+        "https://music.apple.com/us/album/example/123",
+        "https://youtu.be/example",
+      ].map((link) => parseMediaLink(link).provider);
+      const rejected = [
+        "javascript:alert(1)",
+        "https://user:pass@open.spotify.com/track/abc",
+        "https://open.spotify.com:444/track/abc",
+        "http://soundcloud.com/a/b",
+      ].every((link) => {
+        try {
+          parseMediaLink(link);
+          return false;
+        } catch {
+          return true;
+        }
+      });
+      return { accepted, rejected };
+    });
+    assert.deepEqual(parsed, {
+      accepted: ["amazon", "apple", "youtube"],
+      rejected: true,
+    });
+    assert.deepEqual(externalRequests, []);
+
     const blocked = await browser.newContext();
     await blocked.addInitScript(() => {
       Storage.prototype.setItem = () => {
@@ -281,7 +547,7 @@ const path = require("node:path");
       .waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "Passed: Studio themes, customization persistence/reset, OS theme changes, 20 responsive combinations, songs/sounds and inclusion options, catalog-search links, pins, saved-board reopening, legacy compatibility, and blocked storage. Zero browser errors.",
+      "Passed: Studio themes, customization persistence/reset, OS theme changes, 20 responsive combinations, songs/sounds and inclusion options, catalog-search links, pins, saved-board reopening, legacy compatibility, and blocked storage. Plus extended appearance settings, link imports, provider library previews, local audio decoding/playback, reattachment, persistence, safe URLs, duplicate prevention, and removal. No provider requests. Zero browser errors.",
     );
   } finally {
     await browser?.close();
