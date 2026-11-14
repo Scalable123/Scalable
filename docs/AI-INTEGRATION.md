@@ -1,6 +1,6 @@
 # AI integration
 
-This document describes the isolated AI prompt flow added to the Studio. It does not change the existing Pinterest, music, video, account, or appearance integrations.
+This document describes the isolated AI prompt flow added to the Studio. It does not change the existing music, video, account, or appearance integrations.
 
 ## Local setup
 

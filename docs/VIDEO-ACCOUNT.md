@@ -54,7 +54,7 @@ Previews: [create account](design-previews/studio-signup.png) · [validation con
 
 - **Profile:** Edit local demo display name/email. `scalable.profile.v1` stores these explicitly entered profile details in this browser. The Studio sidebar displays the saved name. This is not an identity change or an email-verification flow.
 - **Appearance:** Uses the same theme/accent/spacing/edges/typography/layout/canvas/reading preferences as the Studio. Changes persist through `appearance.js`.
-- **Connected services:** Pinterest, Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube all remain **Not connected**. Links open their appropriate Studio import previews. The `?import=` deep link is consumed after opening a known local dialog.
+- **Connected services:** Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube all remain **Not connected**. Links open their appropriate Studio import previews. The `?import=` deep link is consumed after opening a known local dialog.
 - **Sign-in & security:** Explains the future identity boundary. Password settings are a message-only preview. Ending the demo clears its tab flag and returns to login without deleting boards, profile details, or appearance preferences.
 
 Local boards belong to the browser origin and are not partitioned by these demo profiles. Changing the profile or ending a demo session does not protect or switch their ownership. Real per-user authorization and SQL ownership checks belong in the backend.
@@ -78,7 +78,7 @@ Use the application's supported identity service, secure session handling, appro
 
 ## Validation
 
-Run `node tests/studio.browser.cjs` for the existing Studio/audio/Pinterest regression suite and `node tests/video-account.browser.cjs` for these additions. Both require Playwright and Chromium; the new suite also uses FFmpeg (`FFMPEG_PATH` override) to generate a tiny local WebM fixture.
+Run `node tests/studio.browser.cjs` for the existing Studio/audio regression suite and `node tests/video-account.browser.cjs` for these additions. Both require Playwright and Chromium; the new suite also uses FFmpeg (`FFMPEG_PATH` override) to generate a tiny local WebM fixture.
 
 The new suite checks URL rejection/normalization, duplicate moments, explicit embed load/unload, local video decoding/playback and reattachment after reload, removal, refinement preservation, mobile layouts, login validation, lack of credential persistence/transmission, local profile persistence, shared preferences, service deep links, preview sign-out, and blocked storage. The YouTube iframe route is intercepted by the test; live YouTube playback, identity APIs, provider APIs, SQL, and cloud uploads are not verified or implemented.
 

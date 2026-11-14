@@ -13,19 +13,18 @@ This document records the implemented pages, controls, state transitions, data s
 5. [Saved boards and deletion](#5-saved-boards-and-deletion)
 6. [Appearance and responsive design](#6-appearance-and-responsive-design)
 7. [Audio imports and music-service previews](#7-audio-imports-and-music-service-previews)
-8. [Pinterest board import](#8-pinterest-board-import)
-9. [Video imports and playback](#9-video-imports-and-playback)
-10. [Login, signup, recovery, and account pages](#10-login-signup-recovery-and-account-pages)
-11. [Browser storage and media lifetime](#11-browser-storage-and-media-lifetime)
-12. [Board and reference data fields](#12-board-and-reference-data-fields)
-13. [JavaScript module interfaces](#13-javascript-module-interfaces)
-14. [Existing external connections](#14-existing-external-connections)
-15. [Required backend and API connections](#15-required-backend-and-api-connections)
-16. [Accessibility and interaction conventions](#16-accessibility-and-interaction-conventions)
-17. [Local development and GitHub Pages](#17-local-development-and-github-pages)
-18. [Validation and test coverage](#18-validation-and-test-coverage)
-19. [Current implementation gaps](#19-current-implementation-gaps)
-20. [Source and asset reference](#20-source-and-asset-reference)
+8. [Video imports and playback](#8-video-imports-and-playback)
+9. [Login, signup, recovery, and account pages](#9-login-signup-recovery-and-account-pages)
+10. [Browser storage and media lifetime](#10-browser-storage-and-media-lifetime)
+11. [Board and reference data fields](#11-board-and-reference-data-fields)
+12. [JavaScript module interfaces](#12-javascript-module-interfaces)
+13. [Existing external connections](#13-existing-external-connections)
+14. [Required backend and API connections](#14-required-backend-and-api-connections)
+15. [Accessibility and interaction conventions](#15-accessibility-and-interaction-conventions)
+16. [Local development and GitHub Pages](#16-local-development-and-github-pages)
+17. [Validation and test coverage](#17-validation-and-test-coverage)
+18. [Current implementation gaps](#18-current-implementation-gaps)
+19. [Source and asset reference](#19-source-and-asset-reference)
 
 ## 1. Application structure and runtime
 
@@ -63,14 +62,14 @@ The static Studio logo combines the letter `s`, an inline SVG star, `scalable`, 
 | -------------- | ------------------------------------------------------------------ | ------------------------------------- |
 | `#profile`     | Display name/email, local avatar, saved-board count                | `#profile-title`                      |
 | `#appearance`  | Shared Customize settings                                          | `#account-appearance-title`           |
-| `#connections` | Pinterest, music services, and YouTube preview links               | `#connections-title`                  |
+| `#connections` | Music services and YouTube preview links               | `#connections-title`                  |
 | `#security`    | Login/signup links, password-settings preview, end-session control | `#security-title`                     |
 
 An absent or unknown hash shows Profile. Active navigation gets `aria-current="page"`. Nonselected panels are hidden. Initial panel selection does not force focus; later hash changes focus the selected heading.
 
 ### 2.2 Studio import links
 
-The account connection cards link to `index.html?import=pinterest`, `index.html?import=audio`, or `index.html?import=video`. After the initial Studio board is ready, `app.js` opens the matching dialog and removes only the recognized `import` parameter with `history.replaceState`. Other query parameters and the hash are preserved. Unknown import values are not opened.
+The account connection cards link to `index.html?import=audio` or `index.html?import=video`. After the initial Studio board is ready, `app.js` opens the matching dialog and removes only the recognized `import` parameter with `history.replaceState`. Other query parameters and the hash are preserved. Unknown import values are not opened.
 
 Music-service cards all open the general audio importer; they do not automatically select or authorize the named provider. The YouTube card opens the video importer. None of these links establish a provider connection.
 
@@ -84,7 +83,7 @@ The top bar identifies The Studio and contains Log in and Customize. The sidebar
 
 The profile link initially displays “Your creative space” with a `Y` avatar. At Studio startup, a valid locally saved profile name replaces that text, and the first Unicode character of the trimmed name becomes the uppercase avatar. This is local profile personalization, not a live identity lookup.
 
-About this prototype opens the general dialog. Its explanatory text covers customization, samples, imports, storage, and planned services. It still describes all account functionality as unauthenticated and no live AI as connected; sections 10 and 14 document the actual newer GraphQL/AI behavior.
+About this prototype opens the general dialog. Its explanatory text covers customization, samples, imports, storage, and planned services. It still describes all account functionality as unauthenticated and no live AI as connected; sections 9 and 13 document the actual newer GraphQL/AI behavior.
 
 ### 3.2 Section 01 — The Starting Point
 
@@ -93,8 +92,6 @@ About this prototype opens the general dialog. Its explanatory text covers custo
 | Creative brief `#prompt`                  | Required textarea; maximum 2,000 characters; initially populated with the coastal brief; live character counter                      |
 | Reference image `#reference`              | Single JPG/JPEG, PNG, or WebP selected through a file input; up to `10 × 1024 × 1024` bytes; MIME allowlist and browser decode check |
 | Reference preview                         | Filename and decoded image; Remove reference image revokes its object URL and clears the input                                       |
-| Import Pinterest board                    | Opens the Pinterest import workflow; disabled until a board is available                                                             |
-| Imported-pin status                       | Shows the current number of sample pins and distinct source-board IDs, with a reminder to save                                       |
 | Coastal calm / After hours / Earth & form | Replace the brief with the corresponding fixed prompt; update the character count and focus the textarea                             |
 | Song recommendations                      | Independent checkbox controlling generated song picks; checked by default                                                            |
 | Ambient sounds                            | Independent checkbox controlling the generated sound concept; checked by default                                                     |
@@ -118,7 +115,7 @@ This section contains the board title/description, Save board, the video import 
 | Filter     | Content shown                                              |
 | ---------- | ---------------------------------------------------------- |
 | Everything | All board item types; count equals `board.items.length`    |
-| Images     | Generated sample photographs and imported Pinterest images |
+| Images     | Generated sample photographs and previously saved image references |
 | Palette    | Palette items with named HEX swatches                      |
 | Songs      | Curated song picks and imported song references            |
 | Sounds     | Generated ambient concepts and imported ambient references |
@@ -128,7 +125,7 @@ Filters update their `aria-pressed` state. Selecting a filter does not edit or s
 
 #### Image cards
 
-Image cards show photography, a title, a source link, and a pin toggle. Source links open a new tab with `noopener noreferrer`. Pinning updates `pinned`, accessible pressed state, tooltip/label text, the save label, and a toast. Generated image pins survive a refinement when the next generated image has the same ID. Imported Pinterest cards also show their sample/source-board badge and an individual removal control.
+Image cards show photography, a title, a source link, and a pin toggle. Source links open a new tab with `noopener noreferrer`. Pinning updates `pinned`, accessible pressed state, tooltip/label text, the save label, and a toast. Generated image pins survive a refinement when the next generated image has the same ID. Previously saved imported images retain an individual removal control.
 
 Generated images cannot currently be removed through the UI. Pinning is a preservation signal during refinement; it does not reorder or drag cards. Imported images can be removed and later reimported.
 
@@ -146,7 +143,7 @@ The generated sound card, including AI-added concepts, displays a title, decorat
 
 ### 3.4 Section 03 — Find Your Soundtrack
 
-The soundtrack section contains Import audio, curated/imported songs, and imported ambient references. Music/audio import is located here; Pinterest import stays in section 01 and video import in section 02.
+The soundtrack section contains Import audio, curated/imported songs, and imported ambient references. Music/audio import is located here; video import stays in section 02.
 
 Curated song cards show title, artist, fit explanation, genre/vocal tags, and a “Find on Spotify” catalog-search link. The renderer only displays a curated link when it parses as HTTPS on `open.spotify.com` with a `/search/` path. These are catalog searches; they are not verified track IDs, embedded players, API results, or proof of streaming availability.
 
@@ -200,7 +197,7 @@ After the local sample is built, `createCreativeDirection()` posts the prompt/op
 
 An unavailable AI endpoint, provider failure, or missing key falls back to the local board. An availability toast is attempted, then the final sample-composed toast can replace it. The final version check prevents a stale result from replacing a newer board, but it does not cancel the AI HTTP request or suppress every earlier notification. Audio options are read again during response merging rather than frozen across the entire request.
 
-Before replacement, matching pinned generated images are carried into the next board. All items with `imported: true` are appended to the new generated items, so imported audio, Pinterest images, and videos survive refinement. A new generated board has a new UUID; exploring a previously saved board creates a new direction to save rather than updating the old saved identity automatically. The filter returns to Everything and Save board becomes available as an unsaved action.
+Before replacement, matching pinned generated images are carried into the next board. All items with `imported: true` are appended to the new generated items, so imported audio, saved image references, and videos survive refinement. A new generated board has a new UUID; exploring a previously saved board creates a new direction to save rather than updating the old saved identity automatically. The filter returns to Everything and Save board becomes available as an unsaved action.
 
 On a research error, the current board stays visible and the input error invites retry. The matching request's completion restores the button and busy state. A stale response cannot reset the interface for a newer board operation. This version guard prevents stale board replacement; it does not abort HTTP/provider requests or cancel a server job. Initial-load and New mood board samples do not call the AI endpoint; prompt submission does.
 
@@ -213,8 +210,6 @@ This action replaces the unsaved canvas without a confirmation dialog. It does n
 ### 4.4 Open and replacement behavior
 
 Opening a saved board invalidates in-flight research, restores its prompt/options/items, removes the separate uploaded reference image, resets the filter, and closes the saved-board dialog. Old saved boards without research options derive checkbox values from their item types. Local audio/video objects are retained only for item IDs belonging to the opened board. Reloading the page creates the default sample rather than automatically opening the last active board.
-
-Creating a new board through Pinterest similarly invalidates older research and discards the previous unsaved canvas and media registry entries. Its initial items are only the imported pins; further exploration supplies generated palette/song/sound content.
 
 ## 5. Saved boards and deletion
 
@@ -307,7 +302,7 @@ Olive uses light accent `#576a36`, light button `#4b5d32`, and dark accent/butto
 
 ### 6.4 Layout behavior
 
-The desktop shell uses a sidebar, a prompt column, and a flexible board area. The default board has named placement hints for hero, detail, and water images plus palette, note, and ambient concept. Grid mode gives cards uniform grid treatment. Pinterest content introduces additional layout rules so arbitrary numbers of imported pins fit the board. Filtered grids have separate rules from the unfiltered collage.
+The desktop shell uses a sidebar, a prompt column, and a flexible board area. The default board has named placement hints for hero, detail, and water images plus palette, note, and ambient concept. Grid mode gives cards uniform grid treatment. Previously saved imported images use additional layout rules so arbitrary numbers of image references fit the board. Filtered grids have separate rules from the unfiltered collage.
 
 The stylesheet contains responsive groups at a minimum width of 1600px and maximum widths of 1150px, 1100px, 800px, 600px, and 500px, plus an 801–1150px range. At narrower widths, the workspace becomes a vertical flow, card arrangements adapt, import panels stack, auth split layouts become one column, account navigation reflows, and dialogs fit the viewport. Saved-board actions wrap below the title on small screens.
 
@@ -366,73 +361,11 @@ Imported audio is deduplicated against imported item source keys in the current 
 
 Nonlocal references render a validated outbound link with provider name and a new-tab announcement. Unsupported restored links show a message instead of a link. Each imported audio card has Remove. Removing a reference only edits the current canvas until it is saved. Imported references survive prompt refinement.
 
-## 8. Pinterest board import
-
-Source: [`frontend/js/pinterest-import.js`](../frontend/js/pinterest-import.js). Entry point: Import Pinterest board in section 01, or the account Pinterest deep link.
-
-The dialog is a four-step connection preview: Connect, Boards, Review, Done. The library is local, no account is connected, and every imported pin is labeled as demo content. `DemoPinterestService.listBoards()` synchronously returns a structured clone of the complete fixture library.
-
-### 8.1 Local board library
-
-| Board ID          | Title              | Description                                                | Pin count |
-| ----------------- | ------------------ | ---------------------------------------------------------- | --------- |
-| `demo-slow-coast` | The slow coast     | Misty mornings, quiet water, and a little room to breathe. | 6         |
-| `demo-earth`      | Earth & atmosphere | Natural forms and soft, grounded landscapes.               | 4         |
-| `demo-after-rain` | After the rain     | Moody silhouettes, softer edges, and reflective moments.   | 5         |
-
-| Source board       | Pin ID           | Pin title                  | Local photograph |
-| ------------------ | ---------------- | -------------------------- | ---------------- |
-| The slow coast     | `coast-mist`     | Mornings in the mist       | `mountains.jpg`  |
-| The slow coast     | `coast-tides`    | Follow the tide            | `water.jpg`      |
-| The slow coast     | `coast-ridges`   | A slower perspective       | `coast.jpg`      |
-| The slow coast     | `coast-still`    | The art of standing still  | `water.jpg`      |
-| The slow coast     | `coast-horizon`  | Leave a little space       | `mountains.jpg`  |
-| The slow coast     | `coast-fog`      | Between sky and earth      | `coast.jpg`      |
-| Earth & atmosphere | `earth-layers`   | Layers of the landscape    | `coast.jpg`      |
-| Earth & atmosphere | `earth-forest`   | In the folds of the forest | `mountains.jpg`  |
-| Earth & atmosphere | `earth-water`    | An organic rhythm          | `water.jpg`      |
-| Earth & atmosphere | `earth-distance` | A sense of distance        | `coast.jpg`      |
-| After the rain     | `rain-clouds`    | Let the clouds settle      | `mountains.jpg`  |
-| After the rain     | `rain-ridges`    | Silhouettes at dusk        | `coast.jpg`      |
-| After the rain     | `rain-surface`   | A reflective mood          | `water.jpg`      |
-| After the rain     | `rain-air`       | A change in the air        | `mountains.jpg`  |
-| After the rain     | `rain-blue`      | The last of the blue       | `water.jpg`      |
-
-The 15 fixture pins reuse three photographs. The pin descriptions provide alt text during review and become board item descriptions. These are not Pinterest downloads or distinct images obtained from a user's account.
-
-### 8.2 Connect step
-
-Preview Pinterest connection opens the local Boards step. It does not redirect to Pinterest or ask for credentials. End preview clears selected board IDs, pin choices, search, destination form, and required new-title state, then returns to Connect. It does not remove references already imported onto the canvas. Connection/selection state is held in memory and resets on page reload.
-
-### 8.3 Boards step
-
-Search matches board title and description case-insensitively; the input is limited to 100 characters. Rows show three preview thumbnails, title, full fixture pin count, and description. A no-match state appears when the search has no results.
-
-Board checkboxes support multiple selections. Selection persists while search changes. Select all boards selects the entire local library, including search-hidden boards. Clear selection clears all board selections. The chosen-board count updates, and Review selected boards remains disabled until at least one is chosen.
-
-### 8.4 Review step
-
-Review displays every pin in each chosen board, grouped by source board. Pins are selected unless individually deselected. Select every pin supports checked, unchecked, and indeterminate states. Counts update with each change. Import is disabled with zero chosen pins; its label includes the selected count.
-
-Destination choices are Add to my current mood board or Start a new mood board. Current is the default. New reveals a required title, maximum 120 characters, with a warning that it replaces the unsaved canvas. A single selected board supplies its title by default; multiple boards use “A Pinterest-inspired direction.” Whitespace-only new titles are rejected.
-
-Back to boards retains selection choices. Pin selections are remembered independently of board checkbox selection for the duration of the preview.
-
-### 8.5 Conversion and import
-
-`toBoardItems(boards, selectedPinIds)` converts selected fixture pins into image items. Each receives a new item UUID and stable `pinterest-demo:<pinId>` source key, external pin ID, source-board ID/title, `position: "pinterest"`, `imported: true`, `provider: "pinterest"`, `sourceKind: "pinterest-demo"`, and `isSample: true`. Source URLs identify the sample photography repositories. Original Pinterest pin URL and source-board URL are null; no live URLs are fabricated.
-
-For the current destination, stable source keys skip pins already present. For a new destination, the application creates a new UUID/timestamp, selected title, description identifying the source board titles and sample import, starter prompt derived from the source board titles, both audio options enabled, and only the selected imported image items. It resets local media and the old prompt reference. Saved boards are retained.
-
-Done reports added/skipped counts and destination. View mood board closes the importer; Import more boards returns to selection. A save is required to persist the resulting references.
-
-Imported pins appear in Everything/Images, retain their source-board badges, can be pinned or removed, survive research refinement, and save/reopen with their metadata. Removing one permits a later reimport. Import copies references into the Studio; it does not move, edit, or delete any external board or pin.
-
-## 9. Video imports and playback
+## 8. Video imports and playback
 
 Source: [`frontend/js/video-library.js`](../frontend/js/video-library.js). The section 02 Import video button opens `#video-dialog` with YouTube link and Local video tabs. Both support Close, native Escape, status feedback, and repeated imports.
 
-### 9.1 YouTube link import
+### 8.1 YouTube link import
 
 The form requires an HTTPS video URL up to 2,048 characters and a nonblank title up to 160 characters. The user provides the title; no thumbnail, title, or other metadata lookup occurs.
 
@@ -449,7 +382,7 @@ Start time comes from `t`, otherwise `start`, otherwise zero. Integer seconds an
 
 The parser produces a canonical HTTPS `www.youtube.com/watch` source URL and a `www.youtube-nocookie.com/embed` URL, carrying a positive start time where applicable. The persisted item stores the canonical source, video ID, numeric start time, and source key `youtube:<videoId>:<startSeconds>`. Equivalent links to the same video/start are duplicates; different starts are separate references.
 
-### 9.2 On-demand embedded players
+### 8.2 On-demand embedded players
 
 Adding or restoring a YouTube reference does not create a network player or load a remote thumbnail. The card initially shows a local placeholder and Load YouTube player. Pressing it creates a titled iframe using the reparsed canonical source and privacy-enhanced embed host. The iframe allows encrypted media, picture-in-picture, and fullscreen; it sets `strict-origin-when-cross-origin` referrer policy.
 
@@ -457,7 +390,7 @@ Unload player removes the iframe and restores the placeholder. Open on YouTube r
 
 Rerendering the board, changing filters, or replacing the board removes iframe elements and requires an explicit player load again. Local media coordination does not control YouTube playback inside an iframe. There is no YouTube download, audio extraction, or file persistence feature.
 
-### 9.3 Local video
+### 8.3 Local video
 
 Local video accepts `.mp4`, `.webm`, or `.mov`, requires nonzero size, and caps size at `100 × 1024 × 1024` bytes. A video element probes metadata for up to ten seconds and requires positive video width and height, rejecting audio-only files masquerading as video. Decode support depends on browser/container/codec support.
 
@@ -469,17 +402,17 @@ Native video controls play the in-memory recording inline. Playing pauses other 
 
 Remove video edits the canvas, releases its object URL, and returns focus to Import video. Video imports survive refinement and save as metadata/references; file bytes and blob URLs are not persisted.
 
-## 10. Login, signup, recovery, and account pages
+## 9. Login, signup, recovery, and account pages
 
 Sources: [`account.js`](../frontend/js/account.js), [`graphqlClient.js`](../frontend/js/config/graphqlClient.js), [`update-password.js`](../frontend/js/update-password.js), the corresponding HTML pages, and [`AccountMutations.cs`](../Scalable.Api/GraphQL/AccountMutations.cs).
 
-### 10.1 GraphQL client and session
+### 9.1 GraphQL client and session
 
 `graphqlRequest(query, variables = {})` POSTs JSON to `window.GRAPHQL_ENDPOINT` or, by default, `http://localhost:5078/graphql`. Set the global before modules initialize when deploying to a different API origin. Every call uses `credentials: "include"` and `Content-Type: application/json`. Non-OK HTTP responses throw a generic unavailable error; GraphQL error arrays throw the first message; success returns `payload.data`.
 
 Identity is now ASP.NET Identity with a cookie, not a browser auth SDK. The API uses SQLite and `EnsureCreated()` for development, unique normalized email, password hashing, and a failed-login lockout threshold of five. Password minimum length is eight; Identity's additional default digit/lowercase/uppercase/nonalphanumeric requirements apply and are surfaced through registration errors. Registration and login use `isPersistent: false`, so a permanent account is distinct from a persistent browser session. Browser cookie behavior determines session continuity; credentials are not stored in the local demo profile.
 
-### 10.2 Login
+### 9.2 Login
 
 The `#login-email` control is now a text input labeled Username or email, required and capped at 254 characters, with `autocomplete="username"`. Password is required, 8–128 characters. Show/Hide changes masking, pressed state, and accessible labels after JavaScript initializes.
 
@@ -487,19 +420,19 @@ Submit trims the identifier and sends the `login(input: LoginInput!)` mutation w
 
 Create an account opens signup; Customize opens shared appearance settings; Back to Studio opens the workspace. Continue without an account writes the tab-scoped preview flag when possible and opens Studio directly. It does not sign in or clear a real session. The fallback form action goes to account via GET; inputs have no names, so values are not serialized into that fallback URL. Navigation without JavaScript does not authenticate.
 
-### 10.3 Recovery requested from login
+### 9.3 Recovery requested from login
 
 Forgot password uses the entered identifier as an email value. If empty it asks for an email and focuses the input; otherwise it calls `requestPasswordReset(input: PasswordResetRequestInput!)` with `email` and displays the returned message. Users who entered a username must enter their account email for recovery. This path does not construct a client-side callback URL; the backend uses `App:PublicBaseUrl`.
 
 The API returns a neutral response whether the account exists. For an existing user it generates an Identity reset token and calls the email adapter with an escaped email/token URL. The current `LoggingAccountEmailSender` only logs that instructions were generated: it neither sends mail nor logs the reset URL/token. A successful request response therefore does not establish delivery. Configure a trusted email provider to make recovery usable end to end.
 
-### 10.4 Standalone recovery page
+### 9.4 Standalone recovery page
 
 `recover.html` now makes the same GraphQL recovery request using a required email input capped at 254 characters. On a resolved request it resets the form, reveals/focuses the result, and displays the server message. A thrown failure reports temporary unavailability. Customize, Back to Studio, and Return to login remain available. Some button/fallback wording still says Preview, but this handler is no longer a local-only confirmation.
 
 The no-JavaScript form fallback returns to `recover.html#recovery-info` and sends no named email field. It cannot perform the GraphQL request. The result's Check your email wording does not override the undelivered-mail limitation of the current backend adapter.
 
-### 10.5 Password update after recovery
+### 9.5 Password update after recovery
 
 `update-password.html` has required 8–128 character password/confirmation inputs. The module reads `email` and `token` query parameters; missing either hides the form and shows invalid/expired-link guidance. It does not require an existing login cookie as proof of recovery authorization. The API validates the token.
 
@@ -507,7 +440,7 @@ Submit checks matching passwords and calls `resetPassword(input: PasswordResetIn
 
 The page does not redirect/link to login, clear the token from the address bar, disable duplicate submissions, or call logout after success. It still lacks the shared branded header, skip link, theme initialization, theme-color meta, and Customize control. Existing browser suites do not cover this completion page or live token use.
 
-### 10.6 Account registration
+### 9.6 Account registration
 
 Signup now collects required display name (maximum 80), username (3–32, ASCII letters/digits/dots/underscores/hyphens), email (maximum 254), password (8–128), and matching confirmation (8–128). Whitespace-only display names are rejected. Password inputs have independent Show/Hide controls; matching validation updates custom validity, `aria-invalid`, and inline feedback. Submit is enabled after handlers initialize.
 
@@ -515,7 +448,7 @@ After native/custom validation, the handler sends `register(input: RegisterInput
 
 The hidden result section and Try the form again handler remain from the earlier preview but are not the current successful registration destination. The guest link now goes directly to Studio. Without JavaScript the submit remains disabled; ordinary login/guest links still navigate. Registration depends on the running GraphQL service; client validity alone does not create an account. Email verification is not implemented.
 
-### 10.7 Account profile
+### 9.7 Account profile
 
 Profile editing remains local despite live identity. Defaults are “Your creative space” and `you@example.com`. A saved name is accepted only as a nonblank string of at most 80 characters, email as a string of at most 254. Malformed/blocked storage falls back to defaults. The panel displays avatar/name, editable local metadata, a local save action, and browser-origin board count.
 
@@ -523,17 +456,17 @@ The page calls authorized `me { id username email displayName }`. When present, 
 
 Saving trims the fields and writes `scalable.profile.v1`; it does not update the Identity user's name/email or verify an email change. A blank name is rejected; storage failure applies changes for the visit and reports lack of persistence. Reopening account with a live identity can replace locally edited display values again via `me`. Saved-board count is read at page load only. Studio reads the local name at startup, not through live identity or a profile subscription.
 
-### 10.8 Customize and connections
+### 9.8 Customize and connections
 
-The account Customize panel edits the same eight browser preferences as Studio. Connected services still shows Pinterest, Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube as Not connected, with links to Studio import previews. None establishes media-provider authorization. There is no authenticated profile/preference/provider-status backend service yet.
+The account Customize panel edits the same eight browser preferences as Studio. Connected services still shows Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube as Not connected, with links to Studio import previews. None establishes media-provider authorization. There is no authenticated profile/preference/provider-status backend service yet.
 
-### 10.9 Security and logout
+### 9.9 Security and logout
 
 Password-settings preview only displays a message. End demo session now calls the GraphQL `logout` mutation. On a thrown HTTP/GraphQL error it shows failure and stays on the page; on resolution it clears the tab-scoped preview flag and navigates to login. It does not inspect the returned boolean. It clears the actual Identity cookie through the API as well as the local preview flag, without deleting local boards/profile/preferences or media in another Studio page.
 
 Some account disclaimer/security copy still describes no active account and a future identity service, even when the heading reports an authenticated session. The label End demo session also predates the live logout behavior. Updating those labels is separate from this documentation change.
 
-## 11. Browser storage and media lifetime
+## 10. Browser storage and media lifetime
 
 | Storage location / key                | Contents                                      | Lifetime and partitioning                                              |
 | ------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
@@ -545,7 +478,6 @@ Some account disclaimer/security copy still describes no active account and a fu
 | `audio-library.js` Map                | Item ID to local audio object URL             | Current document memory only                                           |
 | `video-library.js` Map                | Item ID to local video object URL             | Current document memory only                                           |
 | `app.js` reference variables          | Prompt reference `File` and preview URL       | Current Studio document; cleared when removed/replaced                 |
-| Pinterest importer sets/maps          | Selected board IDs, pin choices, current step | Current Studio document; cleared by End preview or reload              |
 
 Local boards and profiles are not keyed by the authenticated Identity user ID. Signing in as a different user or changing a demo profile does not switch, restrict, or delete them. Browser-origin storage is not SQL ownership enforcement. Two site paths on the same origin share these keys; differing local ports or hostnames use different origins.
 
@@ -557,11 +489,11 @@ Board list parsing requires a JSON array. Legacy items with `type: "music"` norm
 
 Appearance has field-level validation; profile has limited type/length checks. Storage exceptions are caught for board count/list/save/delete, profile load/save, preferences, and the demo flag as described in the relevant sections. There is no automatic backup, local-to-cloud migration, or recovery of browser-cleared data. Board writes are whole-array read/modify/write operations without cross-tab transactions or conflict resolution.
 
-## 12. Board and reference data fields
+## 11. Board and reference data fields
 
 These are the actual JSON-compatible frontend fields, not a SQL schema. String identifiers are UUIDs for new boards/imported items unless otherwise stated. Generated item IDs are stable fixture identifiers. Optional fields differ by item type; the current frontend does not enforce a complete runtime schema for restored board data.
 
-### 12.1 Board record
+### 11.1 Board record
 
 | Field                           | Type                 | Meaning                                                                         |
 | ------------------------------- | -------------------- | ------------------------------------------------------------------------------- |
@@ -576,7 +508,7 @@ These are the actual JSON-compatible frontend fields, not a SQL schema. String i
 | `researchOptions.includeSounds` | boolean              | Whether generated ambient concepts were requested                               |
 | `items`                         | array                | Ordered union of image, palette, note, sound, song, and video records           |
 
-### 12.2 Generated image, palette, note, sound, and song records
+### 11.2 Generated image, palette, note, sound, and song records
 
 | Item type                 | Fields                                                                           | Meaning                                                                                                                            |
 | ------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -590,9 +522,9 @@ These are the actual JSON-compatible frontend fields, not a SQL schema. String i
 
 `position` for generated images is `hero`, `detail`, or `water`. These are current layout hints; production result counts/layouts need a broader integration pass.
 
-AI direction results use `mode: "ai"`; AI songs have IDs `ai-song-<index>`, catalog-search links, and `isSample: false`. AI sounds have IDs `ai-sound-<index>` and `isSample: false` but still contain no recording. Their other fields use the song/sound structures above. The current merge retains enabled curated items alongside these new items. The AI response schema itself is detailed in section 14.2.
+AI direction results use `mode: "ai"`; AI songs have IDs `ai-song-<index>`, catalog-search links, and `isSample: false`. AI sounds have IDs `ai-sound-<index>` and `isSample: false` but still contain no recording. Their other fields use the song/sound structures above. The current merge retains enabled curated items alongside these new items. The AI response schema itself is detailed in section 13.2.
 
-### 12.3 Imported audio record
+### 11.3 Imported audio record
 
 | Field                 | Type / current values                                            | Meaning                                                             |
 | --------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
@@ -611,26 +543,7 @@ AI direction results use `mode: "ai"`; AI songs have IDs `ai-song-<index>`, cata
 
 Audio `fileInfo` contains `name` (string), `size` (bytes), `mimeType` (string), and `lastModified` (numeric file timestamp). Local audio has no serialized playback URL or provider token. Classification as a song/sound does not change its source resource type.
 
-### 12.4 Imported Pinterest image record
-
-In addition to the image fields, each Pinterest fixture import has:
-
-| Field            | Current value / type             | Meaning                                                      |
-| ---------------- | -------------------------------- | ------------------------------------------------------------ |
-| `position`       | `pinterest`                      | Imported-image layout                                        |
-| `imported`       | true                             | Preserve during refinement                                   |
-| `provider`       | `pinterest`                      | Source family                                                |
-| `sourceKind`     | `pinterest-demo`                 | Local fixture rather than an authenticated pin               |
-| `sourceKey`      | `pinterest-demo:<pinId>`         | Stable deduplication identity                                |
-| `externalPinId`  | string                           | Fixture pin ID                                               |
-| `sourceBoard`    | object with `id`, `title`, `url` | Fixture board metadata; URL is null                          |
-| `originalPinUrl` | null                             | No live pin URL exists for the fixture                       |
-| `isSample`       | true                             | Demo provenance                                              |
-| `sourceLabel`    | string                           | Identifies local sample photography, not Pinterest retrieval |
-
-`sourceUrl` is the image's sample-photography repository source. Future live imports need separate original pin, creator/source, preview, and board URLs. A singular current `sourceBoard` does not represent every association when one real pin belongs to multiple selected boards.
-
-### 12.5 Video records
+### 11.4 Video records
 
 | Field                  | YouTube record                   | Local-video record                        |
 | ---------------------- | -------------------------------- | ----------------------------------------- |
@@ -647,9 +560,9 @@ In addition to the image fields, each Pinterest fixture import has:
 
 Video `fileInfo` contains `name`, `size`, `mimeType`, `lastModified`, `width`, `height`, and `duration`. Dimensions are positive numeric pixels. Duration is finite seconds or null. The embed URL is derived during parsing/rendering rather than stored as a playback credential or object URL.
 
-## 13. JavaScript module interfaces
+## 12. JavaScript module interfaces
 
-### 13.1 Module responsibilities
+### 12.1 Module responsibilities
 
 | Module                                                              | Responsibility                                                                                                                                       |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -659,7 +572,6 @@ Video `fileInfo` contains `name`, `size`, `mimeType`, `lastModified`, `width`, `
 | [`theme-init.js`](../frontend/js/theme-init.js)                     | Early independent theme resolution before stylesheet paint                                                                                           |
 | [`customize.js`](../frontend/js/customize.js)                       | Shared setting bindings and auth-page dialog construction                                                                                            |
 | [`audio-library.js`](../frontend/js/audio-library.js)               | Supported URL parser, provider fixtures, audio import UI, local-audio registry/probe, imported audio cards                                           |
-| [`pinterest-import.js`](../frontend/js/pinterest-import.js)         | Local board/pin fixture library, conversion, four-step picker/review/import UI                                                                       |
 | [`video-library.js`](../frontend/js/video-library.js)               | YouTube URL parser, video import UI, local-video registry/probe, explicit iframe loading, video cards                                                |
 | [`account.js`](../frontend/js/account.js)                           | GraphQL login/registration/recovery/session/logout, local profile, connection-card generation                                                        |
 | [`update-password.js`](../frontend/js/update-password.js)           | Email/token query parsing and GraphQL password-reset flow                                                                                            |
@@ -667,7 +579,7 @@ Video `fileInfo` contains `name`, `size`, `mimeType`, `lastModified`, `width`, `
 | [`config/graphqlClient.js`](../frontend/js/config/graphqlClient.js) | Credentialed GraphQL POST helper and configurable API endpoint                                                                                       |
 | [`ai-service.js`](../frontend/js/ai-service.js)                     | Same-origin JSON creative-direction POST helper                                                                                                      |
 
-### 13.2 Board-service exports
+### 12.2 Board-service exports
 
 | Export / method                                                                    | Implemented interface                                                                                                |
 | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -687,11 +599,11 @@ Video `fileInfo` contains `name`, `size`, `mimeType`, `lastModified`, `width`, `
 
 The current app calls `research()`, while the HTTP adapter exposes `startResearch()`/`getResearchRun()`. Replacing the singleton alone is not sufficient to enable backend research. The API adapter has no polling, cancel, token attachment, CSRF-header handling, retry policy, schema validation, or 404-as-already-deleted mapping. Non-204 success responses must contain valid JSON under its current request helper.
 
-### 13.3 Network helper exports
+### 12.3 Network helper exports
 
 `graphqlRequest(query, variables = {})` returns the GraphQL `data` object or throws on non-OK HTTP/GraphQL errors. Its endpoint is captured when the module initializes. `createCreativeDirection({ prompt, includeSongs = true, includeSounds = true })` POSTs JSON to `/api/ai/creative-direction` with same-origin credentials. It returns parsed response JSON or throws a response error/default message. Neither helper adds cancellation, retries, a CSRF token, or schema validation.
 
-### 13.4 Appearance and icon exports
+### 12.4 Appearance and icon exports
 
 | Export                         | Implemented contract                                                                                            |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
@@ -702,7 +614,7 @@ The current app calls `research()`, while the HTTP adapter exposes `startResearc
 | `setupCustomization()`         | Binds an existing appearance form; creates an auth-page dialog when a trigger exists without a dialog           |
 | `iconify(root)`                | Walks text nodes and replaces `✳`, `↗`, `↘`, `↥`, and `▶` with decorative spans using shared symbol classes |
 
-### 13.5 Importer exports and callbacks
+### 12.5 Importer exports and callbacks
 
 | Export                                                      | Implemented contract                                                                                                          |
 | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -714,20 +626,17 @@ The current app calls `research()`, while the HTTP adapter exposes `startResearc
 | `releaseLocalAudio(id)` / `retainLocalAudio(items)`         | Revoke one URL or all URLs whose IDs are absent from the supplied item list                                                   |
 | `setupAudioImporter({ onImport, getBoardId, element })`     | Binds dialog; invokes `onImport(items, targetBoardId?)` and expects an added count                                            |
 | `renderAudioReference(item, index, handlers)`               | Creates a card using `element`, `onRemove`, and `onReattach` handlers                                                         |
-| `DemoPinterestService.listBoards()`                         | Synchronous complete fixture library clone                                                                                    |
-| `DemoPinterestService.toBoardItems(boards, selectedPinIds)` | Pure selection-to-item mapping with new item IDs and stable source keys                                                       |
-| `setupPinterestImporter({ element, onImport, service })`    | Optional service defaults to demo; invokes `onImport({ items, destination, title, boards })` and expects `{ added, skipped }` |
 | `parseYouTubeLink(value)`                                   | Returns `videoId`, `startSeconds`, canonical `sourceUrl`, and derived `embedUrl`, or throws                                   |
 | `attachLocalVideo(id, file)`                                | Async validation/registration; resolves video metadata                                                                        |
 | `releaseLocalVideo(id)` / `retainLocalVideos(items)`        | Revoke unused local video URLs                                                                                                |
 | `setupVideoImporter({ element, getBoardId, onImport })`     | Invokes `onImport(item, targetBoardId?)` and expects an added count                                                           |
 | `renderVideoReference(item, handlers)`                      | Creates a card using `element`, `onRemove`, and `onReattach`                                                                  |
 
-The `element` helper creates DOM nodes, applies class names, assigns user-visible strings via `textContent`, and iconifies selected symbols. Import callbacks own mutations of the active board; importer modules do not access SQL or save boards themselves. A real async Pinterest service requires a workflow refactor because the current library is read synchronously during setup.
+The `element` helper creates DOM nodes, applies class names, assigns user-visible strings via `textContent`, and iconifies selected symbols. Import callbacks own mutations of the active board; importer modules do not access SQL or save boards themselves.
 
-## 14. Existing external connections
+## 13. Existing external connections
 
-### 14.1 .NET GraphQL identity — implemented
+### 13.1 .NET GraphQL identity — implemented
 
 The active identity endpoint is `/graphql`, default frontend URL `http://localhost:5078/graphql`. All operations travel as POST JSON with a query document and variables, using an ASP.NET Identity cookie. This is the current identity service; the previous Supabase connection has been removed.
 
@@ -746,7 +655,7 @@ The .NET 10 project uses Hot Chocolate GraphQL, ASP.NET Identity, EF Core, and S
 
 CORS allows credentialed HTTP requests from loopback hosts localhost, 127.0.0.1, and ::1 on local development ports. It does not authorize a deployed GitHub Pages origin. Production needs explicit origin/session/HTTPS/CSRF configuration, protected persistent Data Protection keys, database migrations, rate limits, and email verification. The password-reset adapter currently delivers no mail and does not expose reset tokens in logs.
 
-### 14.2 Node creative-direction API and OpenAI — implemented wiring
+### 13.2 Node creative-direction API and OpenAI — implemented wiring
 
 [`server.js`](../server.js) serves `frontend/` and implements **POST `/api/ai/creative-direction`**. [`ai-service.js`](../frontend/js/ai-service.js) sends prompt, includeSongs, and includeSounds as JSON. Prompt must be a nonblank string of no more than 2,000 characters and is trimmed server-side. The request reader limits its accumulated body string to 20,000 characters. Invalid prompts return HTTP 400; parsing/size/provider failures are caught as 502 JSON errors. Non-GET requests outside the implemented POST route return 405.
 
@@ -763,19 +672,19 @@ Schema objects disallow extra properties. The server extracts output_text from t
 
 The endpoint currently lacks authentication, rate limiting, request cancellation/timeouts, and a research job lifecycle. A static-only host has no route implementation and falls back to curated samples. The Node endpoint is separate from the .NET GraphQL server; `npm start` does not start Identity, and `dotnet run` does not start this AI endpoint.
 
-### 14.3 YouTube embeds — explicit network access
+### 13.3 YouTube embeds — explicit network access
 
 The video renderer creates a `https://www.youtube-nocookie.com/embed/` iframe only after Load YouTube player. This is embed hosting, not a Data API or account connection. Adding/restoring a reference does not load remote thumbnails or players. Tests intercept iframe responses; they do not verify live playback or provider restrictions.
 
-### 14.4 Outbound links and absent services
+### 13.4 Outbound links and absent services
 
-Curated/AI songs open Spotify searches; imported links open their provider source/search; image sources link to sample-photo repositories. These links do not fetch catalog metadata or grant application library access. Live image research, licensed sound search, music OAuth/library APIs, Pinterest OAuth/boards/pins, YouTube libraries, SQL-backed board storage, and cloud media uploads remain unconnected. The REST `ApiBoardService` remains inactive.
+Curated/AI songs open Spotify searches; imported links open their provider source/search; image sources link to sample-photo repositories. These links do not fetch catalog metadata or grant application library access. Live image research, licensed sound search, music OAuth/library APIs, YouTube libraries, SQL-backed board storage, and cloud media uploads remain unconnected. The REST `ApiBoardService` remains inactive.
 
-## 15. Required backend and API connections
+## 14. Required backend and API connections
 
-Existing GraphQL identity and Node AI operations are documented in section 14. All REST `/api/…` routes in sections 15.2–15.8 are **proposed contracts**, not implemented endpoints. They are a handoff retained from the frontend adapter design; the backend may implement equivalent authenticated GraphQL fields rather than introducing a second data interface. The existing `/api/ai/creative-direction` route is the explicit exception and already exists in `server.js`.
+Existing GraphQL identity and Node AI operations are documented in section 13. All REST `/api/…` routes in sections 14.2–14.7 are **proposed contracts**, not implemented endpoints. They are a handoff retained from the frontend adapter design; the backend may implement equivalent authenticated GraphQL fields rather than introducing a second data interface. The existing `/api/ai/creative-direction` route is the explicit exception and already exists in `server.js`.
 
-### 15.1 Complete deployment of the existing identity service
+### 14.1 Complete deployment of the existing identity service
 
 Use the existing ASP.NET Identity cookie authority instead of adding a parallel Supabase or unrelated REST login system. Set `window.GRAPHQL_ENDPOINT` to the deployed API before modules initialize, configure exact credentialed frontend origins, and choose same-origin proxying or an explicit cross-origin secure-cookie strategy. The current default points at the visitor's localhost and will not reach a deployed API from GitHub Pages.
 
@@ -783,7 +692,7 @@ Replace the no-delivery password-reset adapter with a production mail service. C
 
 Boards/profile/preferences remain local and require owner-backed contracts below. UI disclaimer/security/signup/recovery wording must be aligned with actual service outcomes. Pending/duplicate-submit handling and password-reset completion coverage remain incomplete. Live deployment, credential use, and recovery mail were not exercised during this documentation-only update.
 
-### 15.2 Board persistence and SQL ownership
+### 14.2 Board persistence and SQL ownership
 
 | Method | Proposed route     | Contract                                                                                   | Existing frontend adapter coverage                                          |
 | ------ | ------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
@@ -802,7 +711,7 @@ Local saved boards need an explicit migration/import decision before cloud stora
 
 Deleting a cloud board must keep the confirmation/failure/draft semantics while awaiting the authoritative response. Define separately whether cloud media is unreferenced, retained, or removed. Do not delete shared provider originals just because a board reference is deleted.
 
-### 15.3 AI research, image search, palette, song, and sound results
+### 14.3 AI research, image search, palette, song, and sound results
 
 | Method | Proposed route            | Request / response contract                                                                                                                                         |
 | ------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -818,7 +727,7 @@ Production image/media results need source/creator links, provider/resource IDs,
 
 The backend owns AI/provider credentials, job execution, provider rate limits, upload validation, retry/cancellation, progress, and authoritative result provenance. The frontend must render returned content safely and support variable result counts; current generated image IDs/placement and fixed fixture content are insufficient for arbitrary production research output. Typography and texture research have no dedicated frontend DTO/renderers yet.
 
-### 15.4 Profile, preferences, and connection status
+### 14.4 Profile, preferences, and connection status
 
 | Method | Proposed route             | Required connection                                                                                      |
 | ------ | -------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -830,27 +739,7 @@ The backend owns AI/provider credentials, job execution, provider rate limits, u
 
 The current profile Save handler writes localStorage only. It needs pending/success/error/version behavior from the profile service. Resolve whether local preferences remain device-specific, synchronize by account, or merge on sign-in; currently no account preference request occurs. Connected-service cards must display real disconnected/authorizing/connected/expired/denied/unavailable states only after their backing services exist.
 
-### 15.5 Pinterest authorization and whole-board import
-
-| Method | Proposed route                                 | Required responsibility                                                                                            |
-| ------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| GET    | `/api/integrations/pinterest`                  | Authenticated user's actual connection/capability state                                                            |
-| POST   | `/api/integrations/pinterest/authorize`        | Begin supported authorization and return an authorization URL                                                      |
-| GET    | `/api/integrations/pinterest/callback`         | Validate authorization response/state and exchange credentials server-side                                         |
-| DELETE | `/api/integrations/pinterest`                  | Disconnect/revoke as supported while preserving imported board references                                          |
-| GET    | `/api/integrations/pinterest/boards`           | Paginated authorized board summaries                                                                               |
-| GET    | `/api/integrations/pinterest/boards/{id}/pins` | Paginated authorized pin previews for review                                                                       |
-| POST   | `/api/pinterest-import-runs`                   | Start authorized import with source board IDs, all-pins/selected-pin choice, and destination board ID or new title |
-| GET    | `/api/pinterest-import-runs/{id}`              | Return progress, added/skipped/failed counts, destination board ID, and terminal status                            |
-| DELETE | `/api/pinterest-import-runs/{id}`              | Cancel an active import                                                                                            |
-
-Before connecting, confirm Pinterest developer approval, supported board/pin APIs and read permissions, authorized board visibility, pagination, request limits, and permitted media usage. The preview proves none of these provider entitlements.
-
-Replace synchronous fixture loading with async authorized board and pin retrieval. Implement loading/empty/error/expired/denied states, cancellation when leaving a request, and stable selection across fetched pages. Select all/full-board import must mean all authorized pins across every page, not only loaded thumbnails or the first API page.
-
-The backend must validate source/destination access and pin IDs, deduplicate idempotently by provider pin identity, preserve complete source relationships/provenance, and report partial imports, unsupported/inaccessible pins, retryable failures, and cancellation. A production schema should retain multiple source-board associations when needed. Fetching/caching/downloading images needs a supported provider implementation; imported references do not transfer ownership or reuse rights.
-
-### 15.6 Music-provider authorization, library import, and licensed sound
+### 14.5 Music-provider authorization, library import, and licensed sound
 
 | Method | Proposed route                                | Required responsibility                                                                              |
 | ------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -870,13 +759,13 @@ Streaming-service playback is a separate integration from catalog/library reads.
 
 Licensed ambient-sound retrieval also requires a selected sound catalog/provider and a defined search/preview/provenance contract. No licensed sound-provider route or adapter exists yet; AI ambient entries remain text concepts. Preserve the distinction between a text sound direction, an imported local recording, a linked reference, and a licensed playable result.
 
-### 15.7 YouTube metadata and optional account connection
+### 14.6 YouTube metadata and optional account connection
 
 Manual YouTube references and user-loaded embeds already work without an API key. If automatic titles/thumbnails, search, playlists, or an authorized library are added, connect the appropriate YouTube metadata/data and authorization services through a defined backend boundary. No routes for those capabilities are currently implemented or defined by `ApiBoardService`.
 
 Validate the supported video ID/source and permissions server-side, retain canonical identity/start times, and render unavailable/private/deleted/embed-restricted states appropriately. Provider quota and cached metadata handling belong in that integration. Keep source-link fallback. Downloading videos or extracting their soundtrack is outside current implemented functionality.
 
-### 15.8 Optional cloud media uploads
+### 14.7 Optional cloud media uploads
 
 | Method | Proposed route       | Required responsibility                                                                                       |
 | ------ | -------------------- | ------------------------------------------------------------------------------------------------------------- |
@@ -886,7 +775,7 @@ The local importers currently validate through browser decoding and use in-memor
 
 Preserve local-only import behavior unless cloud upload is explicitly part of the user flow. Do not serialize blob URLs or base64 recordings into SQL board JSON. Prompt research uploads and user-owned board media need clear association/lifetime rules, including what happens when a board is deleted but another board references the same asset.
 
-### 15.9 Cross-service contracts and deployment
+### 14.8 Cross-service contracts and deployment
 
 Keep frontend DTOs camelCase with string IDs and ISO timestamps. Validate request fields, URLs, nested item types, and ownership on the server regardless of client-side checks. For remote metadata/media resolution, independently validate destinations and redirects; browser hostname allowlists do not secure a server fetch.
 
@@ -896,21 +785,21 @@ Same-origin ASP.NET hosting through `wwwroot` or a reverse proxy fits the inacti
 
 Define service error bodies and frontend handling for validation failure, signed-out/expired sessions, forbidden resources, missing/deleted resources, stale updates, rate limits, provider outages, and server failure. Preserve the current draft on failed saves/research/deletes. Add pending/retry/cancel behavior at each async boundary and base success announcements on confirmed service outcomes.
 
-## 16. Accessibility and interaction conventions
+## 15. Accessibility and interaction conventions
 
 Studio, login, signup, recovery, and account pages have skip links to their main content. Controls use native buttons/inputs, associated labels, fieldsets/legends, and named sections. Filters and pin toggles use `aria-pressed`; selected account navigation uses `aria-current`. Decorative brand/icon/waveform elements are hidden from assistive technology where designated. Image descriptions supply alt text; decorative thumbnails use empty alt text.
 
 Audio and video importer tabs use `tablist`, `tab`, `tabpanel`, selected state, and roving tab index. Left/Right arrows move among tabs; Home/End select the first/last tab. Audio cycles across three tabs; video switches between its two. Native dialogs provide modal focus behavior and Escape dismissal. Close buttons have accessible labels. The general information/saved-list dialog also dismisses on clicks outside its rectangle; specialized import dialogs do not define that extra backdrop-dismiss handler.
 
-Pinterest steps move focus to the selected screen heading and expose `aria-current="step"`. Counts and statuses announce selection/import results. Pin select-all supports indeterminate state. Recovery request results move focus to their result panel; successful registration navigates to account. Removal focuses the matching importer. Delete confirmation uses `role="alertdialog"`, labeled title/description, safe initial Cancel focus, pending-write Escape protection, and explicit focus after removal.
+Recovery request results move focus to their result panel; successful registration navigates to account. Removal focuses the matching importer. Delete confirmation uses `role="alertdialog"`, labeled title/description, safe initial Cancel focus, pending-write Escape protection, and explicit focus after removal.
 
 Status areas use `role="status"` or polite live regions. Prompt/deletion errors use alert regions. Studio toasts stay visible for approximately four seconds; a later toast resets the timeout. The research grid uses `aria-busy`. Password visibility buttons maintain pressed state and accessible labels. External media/source links use new-tab protections, and imported media actions include descriptive labels.
 
 The stylesheet provides visible focus treatments, touch-size adjustments, wrapping for long saved-board titles/actions, responsive dialog sizes, and reduced-motion behavior. Browser tests cover selected keyboard/focus/responsive flows. No full assistive-technology audit or formal WCAG conformance is established by these tests. The password-update page currently lacks the shared skip link/header/customization structure.
 
-## 17. Local development and GitHub Pages
+## 16. Local development and GitHub Pages
 
-### 17.1 Run AI and identity services
+### 16.1 Run AI and identity services
 
 Run `npm start` from the repository root for the Node server on `http://localhost:3000/` (override with `PORT`). It serves `frontend/` directly, so its root opens Studio rather than the repository landing redirect. Configure `OPENAI_API_KEY` server-side through the host environment or ignored root `.env`; optional `OPENAI_MODEL` defaults to `gpt-4.1-mini`. Do not publish the key in frontend files. Node must support native ES modules and global fetch.
 
@@ -918,7 +807,7 @@ Separately run `dotnet run --project Scalable.Api/Scalable.Api.csproj` with the 
 
 Configure `App:PublicBaseUrl` to the actual directory hosting update-password.html. With the Node static root this directory is `http://localhost:3000`; serving the repository root instead puts the page under `/frontend`. The fallback reset URL in code includes `/frontend`, so verify configuration against the chosen server. The current email adapter will not deliver that link until replaced.
 
-### 17.2 Static-only preview
+### 16.2 Static-only preview
 
 From the repository root, run:
 
@@ -938,13 +827,13 @@ Open `http://localhost:8080/`. This mode omits the repository-root landing page 
 
 Serve over HTTP/HTTPS rather than `file://`, because the app uses ES modules. A current browser must support modules, native dialogs, structured cloning, UUID generation, object URLs, CSS grid/custom properties, and the relevant media codecs. Clipboard features depend on browser permission/context and include a manual fallback. No exact oldest supported browser version is established. There is no service worker, PWA manifest, offline cache, or production bundle.
 
-### 17.3 Branch-based GitHub Pages
+### 16.3 Branch-based GitHub Pages
 
 In repository Settings → Pages, choose Deploy from a branch, `front-end-design`, and `/ (root)` to publish this branch directly. The root `.nojekyll` supports plain static hosting. The root landing page redirects to the relative login page under the project path. Branch publishing can expose repository-root files as static content; only public client configuration belongs in this branch.
 
 Setting Pages source/publishing permissions is a repository operation separate from writing documentation. Subsequent pushes deploy according to the repository's configured Pages source. A push alone does not prove a completed live deployment.
 
-### 17.4 Manual Actions deployment
+### 16.4 Manual Actions deployment
 
 [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) defines **Deploy Studio to GitHub Pages** with only a `workflow_dispatch` trigger. It has no push trigger. GitHub requires the workflow to be available on the default branch for its Run workflow UI. Set the repository Pages source to GitHub Actions and run the workflow with the intended ref. The `github-pages` environment's branch permissions must permit that ref.
 
@@ -954,7 +843,7 @@ Workflow actions are `actions/checkout@v4`, `actions/configure-pages@v5`, `actio
 
 Choose the intended single Pages publishing source in repository settings. Project-relative URLs support a `/Scalable/` deployment path as well as a custom-domain root. Configure the deployed GraphQL endpoint, allowed frontend origin/cookie policy, and backend recovery public base URL for the actual published path. The absolute-root AI URL also needs an explicitly hosted/proxied endpoint; Pages cannot execute server.js. GitHub Pages serves the frontend only; application APIs, SQL, workers, provider credentials, and uploads need separate backend hosting.
 
-## 18. Validation and test coverage
+## 17. Validation and test coverage
 
 The repository contains four standalone CommonJS Playwright browser scripts. Each starts a temporary static server and launches Chromium; they are not wired to npm test or the Pages workflow. They require Node, an installed `playwright` package, and Chromium (default `/usr/bin/chromium`, override `CHROMIUM_PATH`). The video suite also needs FFmpeg (`ffmpeg`, override `FFMPEG_PATH`) to make a local WebM fixture. These tools are not declared runtime dependencies.
 
@@ -967,31 +856,31 @@ node tests/navigation-theme.browser.cjs
 node tests/saved-boards.browser.cjs
 ```
 
-### 18.1 Studio/audio/Pinterest suite
+### 17.1 Studio/audio suite
 
-[`tests/studio.browser.cjs`](../tests/studio.browser.cjs) contains checks for design-switcher removal, theme/device preferences, customization persistence/reset, collage/grid layout, songs/sounds and inclusion options, filters, pins, save/reopen, legacy items, blocked storage, URL normalization/rejection, provider previews, local audio playback/reattachment, and removal. Pinterest assertions cover search, full-board/selected-pin imports, deduplication/reimport, save/reload, refinement preservation, new destinations, stale results, and focus. Layout loops include 1440, 1024, 768, 390, and 320 pixels in light/dark and selected layout combinations.
+[`tests/studio.browser.cjs`](../tests/studio.browser.cjs) contains checks for design-switcher removal, theme/device preferences, customization persistence/reset, collage/grid layout, songs/sounds and inclusion options, filters, pins, save/reopen, legacy items, blocked storage, URL normalization/rejection, provider previews, local audio playback/reattachment, and removal. Layout loops include 1440, 1024, 768, 390, and 320 pixels in light/dark and selected layout combinations.
 
 The suite uses a static server with no real AI route, so Explore now attempts a same-origin POST that fails/falls back. Existing no-provider-network assertions are not live AI verification. No fixture mocks a successful AI direction response or validates its current merge behavior.
 
-### 18.2 Video/account suite
+### 17.2 Video/account suite
 
 [`tests/video-account.browser.cjs`](../tests/video-account.browser.cjs) contains YouTube parser/deduplication/embed-load checks, actual local WebM playback/reattachment/removal, refinement preservation, responsive video/login/account layouts, profile persistence, appearance, connection deep links, sign-out, and storage failure assertions. YouTube iframe content is intercepted. Authentication requests are intercepted by the GraphQL mock.
 
 Some expectations still predate username-or-email sign-in and guest navigation, and the final external-request allowlist still only allows YouTube embeds despite GraphQL requests. Its presence does not establish a passing regression suite for the migrated branch. No real credentials, recovery emails, or provider playback are exercised by these mocks.
 
-### 18.3 Navigation/theme/signup suite
+### 17.3 Navigation/theme/signup suite
 
 [`tests/navigation-theme.browser.cjs`](../tests/navigation-theme.browser.cjs) serves under `/Scalable/` for redirect/project-path tests. It includes branding, navigation, default/explicit/device themes, cross-tab/cached-page/legacy listeners, no-JavaScript fallbacks, responsive pages, signup validity/visibility/reset, and storage checks.
 
 The mock was changed to GraphQL, but parts of the suite still expect the removed demo-account flow and signup's old result panel. Registration submissions do not yet populate the new required username in all paths, and successful signup now navigates instead of revealing `#signup-result`. Those assertions need updating before claiming the suite passes against this baseline. It does not exercise update-password.html or an actual Identity token lifecycle.
 
-### 18.4 Saved-board deletion suite
+### 17.4 Saved-board deletion suite
 
 [`tests/saved-boards.browser.cjs`](../tests/saved-boards.browser.cjs) checks safe title rendering/fallback thumbnails, default Cancel focus, Cancel/Enter/Escape preservation, storage-write failure, pending/duplicate deletion protection, selective removal, unchanged records, responsive dark dialogs, counts/list/empty/focus behavior, reload persistence, active draft and audio retention, new draft IDs, already-deleted records, and the inactive REST adapter's encoded-ID DELETE with a mocked 204.
 
 Its stale-research check now also encounters the static server's missing AI endpoint. It does not test cancellation of a live AI request or cloud-board deletion. This documentation push does not change or rerun the existing browser tests; no fresh passing result for the rebased source is asserted.
 
-### 18.5 Helpers and verification limits
+### 17.5 Helpers and verification limits
 
 [`tests/helpers/customize.cjs`](../tests/helpers/customize.cjs) opens shared appearance controls. [`tests/helpers/mock-graphql.cjs`](../tests/helpers/mock-graphql.cjs) intercepts `/graphql` and returns fixed registration/login/recovery/logout results or null `me`. It does not persist users, set real Identity cookies, deliver email, verify passwords, or explicitly emulate the resetPassword completion mutation. Its query-substring dispatch is a lightweight stub, not a schema implementation.
 
@@ -999,7 +888,7 @@ The [authentication worklog](../docs/AUTH-INTEGRATION.md) records earlier live I
 
 For this documentation update, validate relative links/section anchors, source filenames, formatting, and `git diff --check`. Application/credential/provider requests are not needed for documentation-only changes.
 
-## 19. Current implementation gaps
+## 18. Current implementation gaps
 
 | Area                | Current limitation / remaining work                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -1012,11 +901,10 @@ For this documentation update, validate relative links/section anchors, source f
 | Authorization       | Studio/account reachable directly; boards/profile/preferences remain browser-origin data, not owner-authorized records               |
 | Board storage       | No SQL board schema, cloud save, autosave, migration, version conflict resolution, transactional multi-tab writes, backup, or sync   |
 | Saved management    | Open/confirmed single deletion exist; no rename, search, folders, bulk operations, undo, export, or sharing                          |
-| Unsaved work        | New board/Pinterest new destination replaces unsaved canvas; no general dirty-state leave confirmation                               |
+| Unsaved work        | New board replaces unsaved canvas; no general dirty-state leave confirmation                               |
 | Layout              | Generated photos retain fixed placement hints; arbitrary research results need layout/schema integration                             |
 | Music providers     | Manual links and library previews only; no OAuth, authorized libraries, verified catalog metadata, streaming, or playlist expansion  |
 | Ambient recordings  | Local files play; generated/AI ambient concepts have no recording or licensed sound catalog                                          |
-| Pinterest           | Fixture boards only; no live account, paginated board/pin retrieval, or external import jobs                                         |
 | YouTube             | Manual single-video references and optional embeds; no metadata/search/playlist/account-library API                                  |
 | Media durability    | Local file metadata only; no cloud upload/store/authorized playback service                                                          |
 | Profile/preferences | Local edits/settings only; me supplies live identity display but no profile-update or cross-device preference API                    |
@@ -1026,21 +914,21 @@ For this documentation update, validate relative links/section anchors, source f
 
 Existing focused documents and screenshots can predate current code. Static Studio About/account disclaimers still describe no live account/AI despite the newer service wiring. This reference describes the audited `0600d23` baseline and does not change that UI copy or fix application/test gaps.
 
-## 20. Source and asset reference
+## 19. Source and asset reference
 
-### 20.1 HTML, styling, configuration, and repository files
+### 19.1 HTML, styling, configuration, and repository files
 
 | Path                                                                           | Role                                                                                                  |
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | [`../index.html`](../index.html)                                               | Hosted root login redirect/fallback                                                                   |
-| [`frontend/index.html`](../frontend/index.html)                                | Studio shell and appearance/audio/video/Pinterest/delete/general dialogs                              |
+| [`frontend/index.html`](../frontend/index.html)                                | Studio shell and appearance/audio/video/delete/general dialogs                              |
 | [`frontend/login.html`](../frontend/login.html)                                | Sign-in and recovery request form                                                                     |
 | [`frontend/signup.html`](../frontend/signup.html)                              | Create-account validation/result UI                                                                   |
 | [`frontend/recover.html`](../frontend/recover.html)                            | GraphQL recovery request UI                                                                           |
 | [`frontend/update-password.html`](../frontend/update-password.html)            | GraphQL token-based password-reset form                                                               |
 | [`frontend/account.html`](../frontend/account.html)                            | Four account panels                                                                                   |
 | [`frontend/styles.css`](../frontend/styles.css)                                | Shared design tokens, layouts, components, states, responsive and reduced-motion rules                |
-| [`frontend/js/`](../frontend/js/)                                              | ES modules detailed in section 13                                                                     |
+| [`frontend/js/`](../frontend/js/)                                              | ES modules detailed in section 12                                                                     |
 | [`frontend/assets/README.md`](../frontend/assets/README.md)                    | Sample-photo sources and provenance limitations                                                       |
 | [`package.json`](../package.json), [`package-lock.json`](../package-lock.json) | ES module package and npm start command; no declared runtime dependencies                             |
 | [`.gitignore`](../.gitignore)                                                  | Ignores .env, node_modules, .NET bin/obj, SQLite database files, and development Data Protection keys |
@@ -1067,27 +955,26 @@ Additional service sources:
 | [`docs/AUTH-INTEGRATION.md`](../docs/AUTH-INTEGRATION.md)                                                     | Current identity decisions, upstream validation, remaining production work |
 | [`docs/AI-INTEGRATION.md`](../docs/AI-INTEGRATION.md)                                                         | Node/OpenAI request flow and configuration                                 |
 
-### 20.2 Local photography
+### 19.2 Local photography
 
 | Local asset                                         | Source                                                                                                                                           | Current usage                                                                    |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| [`mountains.jpg`](../frontend/assets/mountains.jpg) | `bg-masthead.jpg` from [Start Bootstrap Grayscale](https://github.com/StartBootstrap/startbootstrap-grayscale/tree/master/dist/assets/img)       | Hero “Into the quiet”, login art, Pinterest fixture pins                         |
-| [`coast.jpg`](../frontend/assets/coast.jpg)         | `demo-image-01.jpg` from the same Grayscale repository                                                                                           | Detail “The in-between”, Pinterest fixture pins; filename is a sample identifier |
-| [`water.jpg`](../frontend/assets/water.jpg)         | `bg-masthead.jpg` from [Start Bootstrap Landing Page](https://github.com/StartBootstrap/startbootstrap-landing-page/tree/master/dist/assets/img) | Water “A moment of blue”, signup art, Pinterest fixture pins                     |
+| [`mountains.jpg`](../frontend/assets/mountains.jpg) | `bg-masthead.jpg` from [Start Bootstrap Grayscale](https://github.com/StartBootstrap/startbootstrap-grayscale/tree/master/dist/assets/img)       | Hero “Into the quiet”, login art                         |
+| [`coast.jpg`](../frontend/assets/coast.jpg)         | `demo-image-01.jpg` from the same Grayscale repository                                                                                           | Detail “The in-between”; filename is a sample identifier |
+| [`water.jpg`](../frontend/assets/water.jpg)         | `bg-masthead.jpg` from [Start Bootstrap Landing Page](https://github.com/StartBootstrap/startbootstrap-landing-page/tree/master/dist/assets/img) | Water “A moment of blue”, signup art                     |
 
 The photographs are local so initial boards/import previews do not need third-party image requests. They are fixed design content, not research results. The source projects license their templates under MIT and credit Unsplash for photography; this repository has not independently established complete photographer/license provenance for each photo. Production asset selection should carry verified source, creator, and usage information per result.
 
-### 20.3 Existing focused handoffs
+### 19.3 Existing focused handoffs
 
 | Document                                                            | Subject                                                                 |
 | ------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | [`docs/FRONTEND.md`](../docs/FRONTEND.md)                           | Original Studio interactions, customization, and proposed .NET boundary |
 | [`docs/MUSIC-INTEGRATION.md`](../docs/MUSIC-INTEGRATION.md)         | Music-provider capabilities and proposed connections                    |
-| [`docs/PINTEREST-INTEGRATION.md`](../docs/PINTEREST-INTEGRATION.md) | Pinterest workflow, item fields, and import-service handoff             |
 | [`docs/VIDEO-ACCOUNT.md`](../docs/VIDEO-ACCOUNT.md)                 | Video, signup/account/auth integration, and browser validation          |
 | [`docs/GITHUB-PAGES.md`](../docs/GITHUB-PAGES.md)                   | Static deployment setup                                                 |
 
-### 20.4 Design captures
+### 19.4 Design captures
 
 These committed PNG files record earlier reviewed frontend states. They are visual references, not live service evidence, and may predate later navigation/copy cleanup.
 
@@ -1099,10 +986,6 @@ These committed PNG files record earlier reviewed frontend states. They are visu
 | Audio import        | [studio-import-audio.png](../docs/design-previews/studio-import-audio.png)               |
 | Music services      | [studio-music-services.png](../docs/design-previews/studio-music-services.png)           |
 | Provider library    | [studio-library-preview.png](../docs/design-previews/studio-library-preview.png)         |
-| Pinterest Connect   | [studio-pinterest-connect.png](../docs/design-previews/studio-pinterest-connect.png)     |
-| Pinterest Boards    | [studio-pinterest-boards.png](../docs/design-previews/studio-pinterest-boards.png)       |
-| Pinterest Review    | [studio-pinterest-review.png](../docs/design-previews/studio-pinterest-review.png)       |
-| Imported canvas     | [studio-pinterest-canvas.png](../docs/design-previews/studio-pinterest-canvas.png)       |
 | Video import        | [studio-video-import.png](../docs/design-previews/studio-video-import.png)               |
 | Video reference     | [studio-video-reference.png](../docs/design-previews/studio-video-reference.png)         |
 | Login               | [studio-login.png](../docs/design-previews/studio-login.png)                             |

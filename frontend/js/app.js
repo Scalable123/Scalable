@@ -5,7 +5,6 @@ import {
   retainLocalVideos,
   releaseLocalVideo,
 } from "./video-library.js";
-import { setupPinterestImporter } from "./pinterest-import.js";
 import {
   setupAudioImporter,
   renderAudioReference,
@@ -51,19 +50,16 @@ function showDialog(title, content) {
   if (!$("#dialog").open) $("#dialog").showModal();
 }
 function renderImage(item) {
-  const card = element("figure", `board-card image-card ${item.position}`);
+  const card = element(
+    "figure",
+    `board-card image-card ${item.imported ? "imported" : item.position}`,
+  );
   const img = element("img");
   img.src = item.url;
   img.alt = item.description;
   if (item.imagePosition) img.style.objectPosition = item.imagePosition;
   const caption = element("figcaption");
-  const source = element(
-    "a",
-    "",
-    item.provider === "pinterest" && item.isSample
-      ? "Sample photo source ↗"
-      : "View image source ↗",
-  );
+  const source = element("a", "", "View image source ↗");
   source.href = item.sourceUrl;
   source.target = "_blank";
   source.rel = "noopener noreferrer";
@@ -92,17 +88,11 @@ function renderImage(item) {
     );
   });
   card.append(img, caption, pin);
-  if (item.provider === "pinterest") {
-    const badge = element(
-      "span",
-      "imported-pin-badge",
-      `${item.isSample ? "DEMO PIN" : "PINTEREST"} · ${item.sourceBoard?.title || "Imported board"}`,
-    );
-    badge.title = `${item.isSample ? "Sample pin" : "Pinterest pin"} from ${item.sourceBoard?.title || "an imported board"}`;
-    const remove = element("button", "remove-imported-pin", "×");
-    remove.setAttribute("aria-label", `Remove imported pin ${item.title}`);
+  if (item.imported) {
+    const remove = element("button", "remove-imported-image", "×");
+    remove.setAttribute("aria-label", `Remove imported image ${item.title}`);
     remove.addEventListener("click", () => referenceHandlers.onRemove(item.id));
-    card.append(badge, remove);
+    card.append(remove);
   }
   return card;
 }
@@ -235,17 +225,10 @@ function renderBoard() {
   $("#board-description").textContent = board.description;
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
-  const pinterestPins = board.items.filter(
-    (item) => item.provider === "pinterest",
+  grid.classList.toggle(
+    "has-imported-images",
+    board.items.some((item) => item.type === "image" && item.imported),
   );
-  grid.classList.toggle("has-pinterest", pinterestPins.length > 0);
-  $("#pinterest-import-summary").hidden = pinterestPins.length === 0;
-  const sourceBoardCount = new Set(
-    pinterestPins.map((item) => item.sourceBoard?.id),
-  ).size;
-  $("#pinterest-import-summary").textContent =
-    `${pinterestPins.length} imported sample pin${pinterestPins.length === 1 ? "" : "s"} · ${sourceBoardCount} source board${sourceBoardCount === 1 ? "" : "s"} · save this mood board to keep the references`;
-  $("#import-pinterest").disabled = false;
   $("#import-audio").disabled = false;
   $("#import-video").disabled = false;
   grid.classList.toggle(
@@ -363,8 +346,8 @@ const referenceHandlers = {
     $(
       removed?.type === "video"
         ? "#import-video"
-        : removed?.provider === "pinterest"
-          ? "#import-pinterest"
+        : removed?.type === "image"
+          ? "#prompt"
           : "#import-audio",
     ).focus();
   },
@@ -449,55 +432,6 @@ function resetResearchUI() {
   $("#generate").firstElementChild.textContent = "Explore this feeling";
   grid.setAttribute("aria-busy", "false");
 }
-setupPinterestImporter({
-  element,
-  onImport({ items, destination, title, boards }) {
-    if (!board)
-      throw new Error(
-        "Wait for the current board to finish loading, then try again.",
-      );
-    let added = 0;
-    if (destination === "new") {
-      boardVersion += 1;
-      resetResearchUI();
-      document
-        .querySelectorAll("audio,video")
-        .forEach((audio) => audio.pause());
-      retainLocalAudio([]);
-      retainLocalVideos([]);
-      removeReference();
-      board = {
-        id: crypto.randomUUID(),
-        title,
-        description: `Inspired by ${boards.map((board) => board.title).join(", ")}. Sample Pinterest import.`,
-        prompt: `Develop a creative direction inspired by ${boards.map((board) => board.title).join(", ")}.`,
-        createdAt: new Date().toISOString(),
-        mode: "demo",
-        researchOptions: { includeSongs: true, includeSounds: true },
-        items,
-      };
-      $("#prompt").value = board.prompt;
-      updateCharacters();
-      $("#include-songs").checked = true;
-      $("#include-sounds").checked = true;
-      added = items.length;
-    } else {
-      const existing = new Set(
-        board.items.map((item) => item.sourceKey).filter(Boolean),
-      );
-      const fresh = items.filter((item) => {
-        if (existing.has(item.sourceKey)) return false;
-        existing.add(item.sourceKey);
-        return true;
-      });
-      board.items.push(...fresh);
-      added = fresh.length;
-    }
-    selectFilter("all");
-    if (added) $("#save-label").textContent = "Save board";
-    return { added, skipped: items.length - added };
-  },
-});
 setupCustomization();
 document
   .querySelectorAll("[data-filter]")
@@ -637,7 +571,7 @@ $("#save-board").addEventListener("click", async () => {
     $("#save-label").textContent = "Saved locally";
     await updateSavedCount();
     notify(
-      "Board saved locally, including imported pin references. Uploaded images are not saved; local audio/video files need reattaching in a new visit.",
+      "Board saved locally, including imported media references. Uploaded images are not saved; local audio/video files need reattaching in a new visit.",
     );
   } catch {
     notify("Could not save. Browser storage may be disabled or full.");
@@ -831,7 +765,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Import Pinterest board previews selecting full boards or individual pins; no Pinterest account is connected. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio and video can play in this browser. YouTube players load only when requested. Login and account pages are frontend previews, not authenticated accounts. Provider connections are demo previews; no live AI research, streaming service, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
+      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio and video can play in this browser. YouTube players load only when requested. Login and account pages are frontend previews, not authenticated accounts. Provider connections are demo previews; no live AI research, streaming service, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
     ),
   ),
 );
@@ -879,7 +813,6 @@ if (initialVersion === boardVersion) {
 // Account connection cards can deep-link to the appropriate local import preview.
 const importTarget = new URL(location.href).searchParams.get("import");
 const importButtons = {
-  pinterest: "#import-pinterest",
   audio: "#import-audio",
   video: "#import-video",
 };

@@ -288,7 +288,6 @@ if (document.body.dataset.page === "login") {
     }
   });
   for (const [name, target, description] of [
-    ["Pinterest", "pinterest", "Import full sample boards or individual pins."],
     ["Spotify", "audio", "Preview music library selection or paste a link."],
     ["Amazon Music", "audio", "Explore a candidate music integration."],
     ["Apple Music", "audio", "Collect links or preview a sample library."],
