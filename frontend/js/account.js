@@ -5,7 +5,18 @@ import {
   resetAppearance,
   setupThemeControls,
 } from "./appearance.js";
-import { supabase } from "./config/supabaseClient.js";
+// Keep standalone preview pages usable even when the auth SDK is unavailable.
+let supabasePromise;
+async function getSupabase() {
+  if (!supabasePromise)
+    supabasePromise = import("./config/supabaseClient.js")
+      .then((module) => module.supabase)
+      .catch((error) => {
+        supabasePromise = null;
+        throw error;
+      });
+  return supabasePromise;
+}
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
 const sessionKey = "scalable.demoSession";
@@ -28,7 +39,10 @@ onAppearanceChange((preferences) => {
 setupThemeControls((saved) => {
   if (!saved) {
     const status =
-      $("#login-status") || $("#profile-status") || $("#recovery-status");
+      $("#login-status") ||
+      $("#profile-status") ||
+      $("#recovery-status") ||
+      $("#signup-status");
     status.textContent =
       "Theme applied for this visit. Browser storage is unavailable.";
   }
@@ -41,6 +55,18 @@ function startDemo() {
   }
   location.assign("account.html");
 }
+function setupPasswordToggle(inputSelector, buttonSelector, label) {
+  const input = $(inputSelector);
+  const button = $(buttonSelector);
+  button.hidden = false;
+  button.addEventListener("click", () => {
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    button.textContent = show ? "Hide" : "Show";
+    button.setAttribute("aria-pressed", String(show));
+    button.setAttribute("aria-label", `${show ? "Hide" : "Show"} ${label}`);
+  });
+}
 if (document.body.dataset.page === "login") {
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -49,7 +75,15 @@ if (document.body.dataset.page === "login") {
     const status = $("#login-status");
     if (!email || !password) return;
     status.textContent = "Signing in…";
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    let error;
+    try {
+      const supabase = await getSupabase();
+      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+    } catch {
+      status.textContent =
+        "Sign-in is temporarily unavailable. Please try again later, or explore the demo account.";
+      return;
+    }
     if (error) {
       status.textContent =
         "We could not sign you in. Check your email and password and try again.";
@@ -62,31 +96,109 @@ if (document.body.dataset.page === "login") {
     event.preventDefault();
     startDemo();
   });
-  $("#show-password").hidden = false;
-  $("#show-password").addEventListener("click", () => {
-    const show = $("#login-password").type === "password";
-    $("#login-password").type = show ? "text" : "password";
-    $("#show-password").textContent = show ? "Hide" : "Show";
-    $("#show-password").setAttribute("aria-pressed", String(show));
-    $("#show-password").setAttribute(
-      "aria-label",
-      show ? "Hide sample password" : "Show sample password",
-    );
-  });
-  $("#forgot-password").addEventListener("click", async () => {
+  setupPasswordToggle("#login-password", "#show-password", "password");
+  $("#forgot-password").addEventListener("click", async (event) => {
+    event.preventDefault();
     const email = $("#login-email").value.trim();
     const status = $("#login-status");
     if (!email) {
-      status.textContent = "Enter your email address, then choose Forgot password.";
+      status.textContent =
+        "Enter your email address, then choose Forgot password.";
       $("#login-email").focus();
       return;
     }
     status.textContent = "Sending recovery instructions…";
-    const redirectTo = new URL("update-password.html", window.location.href).href;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    const redirectTo = new URL("update-password.html", window.location.href)
+      .href;
+    let error;
+    try {
+      const supabase = await getSupabase();
+      ({ error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      }));
+    } catch {
+      status.textContent =
+        "Recovery is temporarily unavailable. Please try again later.";
+      return;
+    }
     status.textContent = error
       ? "We could not send recovery instructions. Please try again later."
       : "If an account exists for that email, recovery instructions are on the way.";
+  });
+} else if (document.body.dataset.page === "signup") {
+  const form = $("#signup-form");
+  const password = $("#signup-password");
+  const confirmation = $("#signup-confirm");
+  setupPasswordToggle(
+    "#signup-password",
+    "#show-signup-password",
+    "sample password",
+  );
+  setupPasswordToggle(
+    "#signup-confirm",
+    "#show-signup-confirm",
+    "sample password confirmation",
+  );
+  function validateConfirmation() {
+    const mismatch =
+      Boolean(confirmation.value) && confirmation.value !== password.value;
+    const message = mismatch ? "Your passwords do not match yet." : "";
+    confirmation.setCustomValidity(message);
+    confirmation.setAttribute("aria-invalid", String(mismatch));
+    $("#signup-match-error").textContent = message;
+  }
+  for (const input of [password, confirmation])
+    input.addEventListener("input", validateConfirmation);
+  $("#signup-name").addEventListener("input", () => {
+    const input = $("#signup-name");
+    input.setCustomValidity(
+      input.value && !input.value.trim()
+        ? "Add a display name with at least one non-space character."
+        : "",
+    );
+  });
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    validateConfirmation();
+    if (!$("#signup-name").value.trim()) {
+      $("#signup-name").setCustomValidity("Add a display name.");
+    }
+    if (!form.reportValidity()) return;
+    // Validation preview only: credentials and profile details never leave this form.
+    form.reset();
+    password.type = "password";
+    confirmation.type = "password";
+    for (const id of ["show-signup-password", "show-signup-confirm"]) {
+      const button = $("#" + id);
+      button.textContent = "Show";
+      button.setAttribute("aria-pressed", "false");
+    }
+    $("#show-signup-password").setAttribute(
+      "aria-label",
+      "Show sample password",
+    );
+    $("#show-signup-confirm").setAttribute(
+      "aria-label",
+      "Show sample password confirmation",
+    );
+    validateConfirmation();
+    form.hidden = true;
+    $("#signup-result").hidden = false;
+    $("#signup-result").focus();
+  });
+  $("#signup-again").addEventListener("click", () => {
+    $("#signup-result").hidden = true;
+    form.hidden = false;
+    $("#signup-name").focus();
+  });
+  $("#signup-submit").disabled = false;
+} else if (document.body.dataset.page === "recovery") {
+  $("#recovery-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!$("#recovery-email").value.trim()) return;
+    event.target.reset();
+    $("#recovery-result").hidden = false;
+    $("#recovery-result").focus();
   });
 } else {
   const defaults = { name: "Your creative space", email: "you@example.com" };
@@ -122,13 +234,19 @@ if (document.body.dataset.page === "login") {
   } catch {
     $("#account-board-count").textContent = "—";
   }
-  supabase.auth.getSession().then(({ data }) => {
-    if (data.session) {
-      $("#account-session").textContent = "Authenticated session";
-      if (data.session.user.email) profile.email = data.session.user.email;
-      showProfile();
-    }
-  });
+  getSupabase()
+    .then((supabase) => supabase.auth.getSession())
+    .then(({ data }) => {
+      if (data.session) {
+        $("#account-session").textContent = "Authenticated session";
+        if (data.session.user.email) profile.email = data.session.user.email;
+        showProfile();
+      }
+    })
+    .catch(() => {
+      $("#account-session").textContent =
+        "Local preview · authentication unavailable";
+    });
   const titles = {
     profile: "profile-title",
     appearance: "account-appearance-title",
@@ -221,7 +339,14 @@ if (document.body.dataset.page === "login") {
       "Password changes are not active in this preview. No password or account settings were changed.";
   });
   $("#demo-signout").addEventListener("click", async () => {
-    await supabase.auth.signOut();
+    try {
+      const supabase = await getSupabase();
+      await supabase.auth.signOut();
+    } catch {
+      $("#security-status").textContent =
+        "Could not sign out of the authenticated session. Check your connection and try again.";
+      return;
+    }
     try {
       sessionStorage.removeItem(sessionKey);
     } catch {

@@ -18,13 +18,13 @@ Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/
 
 **Start from Pinterest:** Use **Import Pinterest board** to preview connecting an account, select full sample boards or individual pins, and import them into the current canvas or a new mood board. Pin sources and saved choices are preserved locally. This is a demo library; Pinterest sign-in and real board retrieval need the backend. See the [Pinterest integration handoff](docs/PINTEREST-INTEGRATION.md).
 
-**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The new [login page](frontend/login.html) and [account page](frontend/account.html) preview local profiles, shared preferences, and service connections. No real authentication is connected and login credentials are not sent or stored. See the [video/account handoff](docs/VIDEO-ACCOUNT.md).
+**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) preview local profiles, shared preferences, and service connections. Supabase sign-in, session lookup, sign-out, and password recovery are integrated on this branch. Signup remains a frontend validation preview and does not register users or send/store its form details. See the [video/account handoff](docs/VIDEO-ACCOUNT.md).
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
 ## GitHub Pages
 
-The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. This hosts the frontend preview; real authentication and the .NET backend are not deployed by Pages.
+The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; Supabase Auth remains an external service, and the planned .NET backend is not hosted by Pages.
 
 ## Product vision
 
@@ -89,17 +89,17 @@ Music discovery initially means recommendations and outbound links. In-app playb
 
 Use HTML, CSS, and JavaScript for the frontend and C# / ASP.NET Core for the backend, connecting to a SQL database and external AI/media APIs. Confirm provider capabilities and pricing with a working research spike before committing to integrations.
 
-| Area | Proposed starting point | Purpose |
-| --- | --- | --- |
-| Frontend | HTML, CSS, JavaScript modules | Prompt entry, uploads, and board editor |
-| Backend | C# / ASP.NET Core | Authenticated endpoints, research orchestration, and external APIs |
-| AI interpretation | Multimodal model behind a provider adapter | Understand prompts/images and produce validated structured briefs |
-| Research | Search and image-provider adapters | Retrieve references with traceable metadata |
-| Palette extraction | Image processing and color clustering | Derive actual colors before AI naming and curation |
-| Music discovery | Music catalog/search adapter | Verify tracks and links; add audio-feature matching where supported |
-| Data and accounts | SQL database via EF Core; database engine and identity provider to be selected | Store boards, users, uploads, and research records; object storage for media |
-| Background work | Durable job runner, selected during the spike | Run bounded research jobs with progress, retries, and cancellation |
-| Validation | Browser automation for the frontend; .NET tests for the backend | Exercise research logic, integrations, and the main user journey |
+| Area               | Proposed starting point                                                        | Purpose                                                                      |
+| ------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Frontend           | HTML, CSS, JavaScript modules                                                  | Prompt entry, uploads, and board editor                                      |
+| Backend            | C# / ASP.NET Core                                                              | Authenticated endpoints, research orchestration, and external APIs           |
+| AI interpretation  | Multimodal model behind a provider adapter                                     | Understand prompts/images and produce validated structured briefs            |
+| Research           | Search and image-provider adapters                                             | Retrieve references with traceable metadata                                  |
+| Palette extraction | Image processing and color clustering                                          | Derive actual colors before AI naming and curation                           |
+| Music discovery    | Music catalog/search adapter                                                   | Verify tracks and links; add audio-feature matching where supported          |
+| Data and accounts  | SQL database via EF Core; database engine and identity provider to be selected | Store boards, users, uploads, and research records; object storage for media |
+| Background work    | Durable job runner, selected during the spike                                  | Run bounded research jobs with progress, retries, and cancellation           |
+| Validation         | Browser automation for the frontend; .NET tests for the backend                | Exercise research logic, integrations, and the main user journey             |
 
 Provider credentials stay on the server. Use model outputs as structured proposals and validate them before storing or rendering them. Treat retrieved pages and uploaded content as data, never as instructions for tools.
 
