@@ -2,30 +2,20 @@
 
 This catalog records provider candidates for future source adapters. A listed API is not automatically an authorization to copy, cache, redistribute, or use its content for AI training. New adapters must preserve the source URL, creator/artist attribution, license or terms metadata, provider ID, retrieval time, rate limits, and failure state.
 
-## Quotes and public-domain texts
+## Quotes
 
 - [Wikiquote](https://en.wikiquote.org/) — sourced quotations
   - API: `https://en.wikiquote.org/w/api.php`
-- [Wikisource](https://en.wikisource.org/) — public-domain and freely licensed texts
-  - API: `https://en.wikisource.org/w/api.php`
-- [Project Gutenberg](https://www.gutenberg.org/) — public-domain books
-  - Catalog: [Machine-readable catalogs](https://www.gutenberg.org/ebooks/offline_catalogs.html)
-- [Gutendex](https://gutendex.com/) — searchable Project Gutenberg catalog API
-  - Example: `https://gutendex.com/books/?search=wisdom`
 
-Quote/text integration should begin with short, attributed excerpts or links. Verify the individual work's public-domain or license status; a public catalog does not make every edition, translation, annotation, or cover image public domain.
+Quote integration uses short, attributed Wikiquote page excerpts or links. Wikiquote content and individual quotations still require attribution and source verification.
 
 ## Music discovery
 
-- iTunes Search API — catalog discovery and outbound music links
-  - Example: `GET https://itunes.apple.com/search?term=lofi+study&media=music&entity=song&limit=10`
-- [MusicBrainz](https://musicbrainz.org/) — open music metadata and recording identity
-  - Example: `GET https://musicbrainz.org/ws/2/recording/?query=recording:Imagine%20AND%20artist:John%20Lennon&fmt=json`
 - [Jamendo Developer API](https://developer.jamendo.com/v3.0) — independent-music catalog and search
 - [SoundCloud Developers](https://developers.soundcloud.com/docs) — public-resource search and provider-supported playback/linking
 - [Spotify Web API](https://developer.spotify.com/documentation/web-api) — catalog metadata and search subject to Spotify developer terms
 
-The current branch has server-side catalog search adapters for Jamendo, SoundCloud, and Spotify, plus a bounded Wikiquote page-excerpt adapter for sourced quote references. iTunes and MusicBrainz remain documented candidates; adding them requires a response DTO, attribution behavior, rate-limit handling, tests, and a confirmed terms/licensing review.
+The current branch has server-side catalog search adapters for Jamendo, SoundCloud, and Spotify, plus a bounded Wikiquote page-excerpt adapter for sourced quote references.
 
 ## Adapter rules
 

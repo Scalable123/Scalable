@@ -13,7 +13,7 @@ The implemented application account authority is ASP.NET GraphQL/Identity instea
 
 ## Future integration
 
-Choose providers only after checking their current developer programs, API access/approval, supported regions, library capabilities, scopes, and playback terms. In particular, do not assume Amazon Music offers the same self-service account/library access as Spotify. iTunes and MusicBrainz are documented discovery/metadata candidates; they are not yet wired into the running adapter. Some candidates may remain manual-link-only integrations.
+Choose providers only after checking their current developer programs, API access/approval, supported regions, library capabilities, scopes, and playback terms. In particular, do not assume Amazon Music offers the same self-service account/library access as Spotify. Some providers may remain manual-link-only integrations.
 
 The historical REST proposals below describe required capabilities, not implemented routes or the selected application data transport. New account-owned data should extend the GraphQL service; exact music fields/schema are not implemented. Protocol callbacks may remain HTTP routes. A future provider service needs equivalents of:
 
