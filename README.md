@@ -2,7 +2,7 @@
 
 Turn a prompt, a reference picture, or both into a researched creative direction: images, color palettes, textures, typography ideas, and music that belong together.
 
-**Status:** Frontend design exploration. Three interactive HTML/CSS/JavaScript prototypes share a single workspace. The planned backend is C# / ASP.NET Core with a SQL database and server-side AI/media APIs; it is not implemented yet.
+**Status:** The Studio is the selected frontend, built in HTML/CSS/JavaScript with dark mode and appearance customization. The planned backend is C# / ASP.NET Core with a SQL database and server-side AI/media APIs; it is not implemented yet.
 
 ## Try the frontend
 
@@ -10,11 +10,13 @@ Turn a prompt, a reference picture, or both into a researched creative direction
 python3 -m http.server 8080 --directory frontend
 ```
 
-Open `http://localhost:8080` and use the top switcher to compare **The Studio**, **Nocturne**, and **The Gallery**. Explore sample directions, upload a local reference preview, pin images, copy colors, and save/reopen boards in this browser. Results are curated demo content, not live AI research. Music cards are visual concepts without playback.
+Open `http://localhost:8080` to use **The Studio**. Explore sample directions, preview reference images, pin images, copy colors, and save/reopen boards in this browser. Use **Customize** for theme, accent, spacing, and card-edge preferences.
 
-Preview screenshots: [The Studio](docs/design-previews/studio.png) · [Nocturne](docs/design-previews/nocturne.png) · [The Gallery](docs/design-previews/gallery.png).
+Boards include **song recommendations and ambient sound directions** as separate content types. Sample songs show real titles/artists, fit explanations, and Spotify catalog-search links. Select songs, sounds, both, or neither before exploring. These are curated examples, not live AI research; playback is not connected.
 
-See [frontend design and integration notes](docs/FRONTEND.md) for the design comparison, limitations, file structure, and proposed .NET API contract.
+Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/design-previews/studio-dark.png) · [Customization](docs/design-previews/studio-customize.png).
+
+See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
 ## Product vision
 
@@ -55,7 +57,7 @@ Research depth will grow after the first end-to-end workflow works. Missing evid
 - An editable structured creative brief.
 - One researched direction per board with approximately 8–12 curated images.
 - A palette of 5–7 colors, extracted from reference or selected images and adjusted for cohesion.
-- Approximately 5 music recommendations, with artist/title, a short fit explanation, and verified provider links.
+- Approximately 5 song recommendations, with artist/title, a short fit explanation, and verified provider links, plus separate ambient sound recommendations. Allow songs, sounds, both, or neither.
 - Source links and available attribution for every external item; explicit unknown license status where needed.
 - A responsive board editor with pin, remove, replace, and refinement actions.
 - Account-based private board saving and reopening.
