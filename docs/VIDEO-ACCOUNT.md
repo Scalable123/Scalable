@@ -1,6 +1,6 @@
 # Video imports and account screens
 
-These additions use plain HTML/CSS/JavaScript and the Studio's shared appearance preferences. The planned backend remains C# / ASP.NET Core with SQL storage.
+These additions use plain HTML/CSS/JavaScript and the Studio's shared appearance preferences. The account backend is implemented in C# / ASP.NET Core with GraphQL/ASP.NET Identity; video files still have no cloud storage.
 
 ## Video references
 
@@ -26,68 +26,47 @@ Use **Import video** in **02 / A World Taking Shape**, above the canvas, or open
   sourceKey, isSample: false }
 ```
 
-A future upload service should use authenticated media IDs and object storage with validation, permissions, and retention/deletion rules. Do not store recordings in SQL board JSON. Revalidate YouTube URLs server-side if later resolving metadata or fetching content. The current frontend does neither. Downloading YouTube videos or authenticated YouTube library access is not implemented.
+A future upload service should use authenticated media IDs and object storage with validation, permissions, and retention/deletion rules. Do not store recordings in persisted board JSON. Revalidate YouTube URLs server-side if later resolving metadata or fetching content. The current frontend does neither. Downloading YouTube videos or authenticated YouTube library access is not implemented.
 
-## Login page
+## Login, registration, and recovery
 
-`frontend/login.html` sends credentials to the .NET GraphQL identity service; passwords are not copied into the local profile. Recovery requests a neutral GraphQL response and uses a single-use ASP.NET Identity token at `update-password.html`. The development email adapter logs the reset URL until a production mail provider is configured.
+The implemented account service is ASP.NET Core GraphQL with ASP.NET Identity instead of Supabase Auth. GraphQL is the API layer over SQLite locally or configured PostgreSQL. The browser has no Supabase SDK/configuration/dependency. See [BACKEND.md](BACKEND.md), [authentication setup](AUTH-INTEGRATION.md), and [the detailed frontend account flow](FRONTEND.md#10-login-signup-recovery-and-account-pages).
 
-The account pages depend only on the GraphQL client for identity operations. Login/recovery failures report an unavailable state rather than preventing all page controls from loading. GraphQL cookies are included on requests; reset tokens are accepted only by the server's Identity token provider.
+- Login sends `login(input: { identifier, password })`; identifier accepts username or email. Success establishes an Identity session cookie and opens account. Requests include cookies; credentials are not copied to local board/profile records.
+- Signup collects display name, a required 3–32-character username, email, password, and confirmation. After client validation, it sends `register` and waits for `succeeded`. The backend hashes passwords, rejects duplicates, enforces Identity password requirements, and signs in. Success navigates to account; it no longer reveals the old local-preview result panel. Registration sends credentials to the configured API.
+- Login and standalone recovery call `requestPasswordReset`. The response is neutral. The current email adapter neither sends mail nor logs reset URLs/tokens, so acceptance is not delivery.
+- `update-password.html` reads email/token from the URL, checks matching passwords, and sends `resetPassword`. Identity validates the token. The page lacks shared appearance/navigation and leaves query tokens in the address bar; existing browser suites do not cover completion.
+- Guest navigation opens Studio without authenticating. Both login and registration use session cookies (`isPersistent: false`); persistent database accounts are separate from persistent browser sessions. Email verification is unfinished.
 
-Guest Studio access remains available, but it is not authentication. `recover.html` calls the GraphQL reset-request mutation and returns an enumeration-safe message. Local board/profile data is still browser-origin storage and is not automatically secured or partitioned by a server session.
-
-## Create-account page
-
-`frontend/signup.html` is linked from login and the account page's security section. It shares the static logo, device-following theme, and split-screen Studio layout. Its form validates a nonblank display name, email format, an 8-character minimum sample password, and matching confirmation. Both password fields have independent show/hide controls.
-
-Successful validation clears all fields, hides the form, and shows an explicit preview confirmation with links to the account preview and login. **No account is registered, no email is sent, and no signup name, email, password, or session is saved or transmitted.** Existing local profiles, boards, and appearance preferences are preserved. The retry action starts with an empty form.
-
-The form's submit button is enabled only after its validation handlers are ready. With JavaScript unavailable, its notice explains the limit and ordinary login/demo links still work. Inputs have no form names, and the fallback action points to the local preview page, so form values cannot enter fallback GET parameters. Signup is not an authentication or ownership boundary.
-
-Real registration should call a future `POST /api/auth/register` through the .NET identity service, with authoritative validation, account creation, secure password handling, verified-email workflow, and actual success/error responses. Client-side confirmation is a convenience, not proof of account creation.
-
-Previews: [create account](design-previews/studio-signup.png) · [validation confirmation](design-previews/studio-signup-success.png).
+For Node's root-hosted frontend, set `App__PublicBaseUrl=http://localhost:3000` in the .NET environment so reset links match `/update-password.html`. The checked-in `/frontend` suffix is suitable only for a server actually serving that directory path. Hosted GraphQL defaults to the configured Render URL, while Pinterest still defaults to localhost unless `window.GRAPHQL_ENDPOINT` is explicitly set. See the backend guide before cross-origin deployment.
 
 ## Account page
 
 `frontend/account.html` provides hash-addressable sections:
 
-- **Profile:** Edit local demo display name/email. `scalable.profile.v1` stores these explicitly entered profile details in this browser. The Studio sidebar displays the saved name. This is not an identity change or an email-verification flow.
-- **Appearance:** Uses the same theme/accent/spacing/edges/typography/layout/canvas/reading preferences as the Studio. Changes persist through `appearance.js`.
-- **Connected services:** Pinterest uses actual authenticated status when the approved API is configured; Manage Pinterest opens its account-link/board-import flow. Static-only hosting retains its sample-preview link. Spotify, Amazon Music, Apple Music, SoundCloud, and YouTube remain **Not connected** previews. The `?import=` deep link is consumed after opening a known dialog. Pinterest is excluded from AI research. See [Pinterest setup](PINTEREST-INTEGRATION.md).
-- **Sign-in & security:** Explains the future identity boundary. Password settings are a message-only preview. Ending the demo clears its tab flag and returns to login without deleting boards, profile details, or appearance preferences.
+- **Profile:** Authorized GraphQL `me` supplies the in-memory name/email when available. Editing still writes `scalable.profile.v1` locally and does not change the Identity account or verify an email. The Studio reads that local profile at startup. Saved-board counts are browser-local.
+- **Customize:** Shared theme/accent/spacing/edges/typography/layout/canvas/reading preferences remain local browser settings.
+- **Connections:** Pinterest reads actual cookie-authenticated status when the approved backend is configured; its Manage link opens the import flow. Other music/YouTube cards remain Not connected previews. Pinterest imports are excluded from AI research. See [Pinterest setup](PINTEREST-INTEGRATION.md).
+- **Security:** Password-settings controls remain message-only. The end-session action calls GraphQL `logout`, clears the tab-scoped demo flag, and returns to login without deleting local boards/profile/preferences. It handles thrown errors but does not inspect the returned boolean. Some labels still describe the earlier preview.
 
-Local boards belong to the browser origin and are not partitioned by these demo profiles. Changing the profile or ending a demo session does not protect or switch their ownership. Real per-user authorization and SQL ownership checks belong in the backend.
+The Studio/account routes remain directly reachable. Local board/profile/preferences are not partitioned by Identity user and are not secured by a successful `me` query. Browser storage failures fall back to the current visit with appropriate persistence messages; provider credentials remain server-side.
 
-`account.js` owns page interactions; `icons.js` supplies the shared vector symbols. Blocked/corrupt storage falls back to the local preview, with failure messages when a save cannot persist. No passwords, provider tokens, or credentials are stored by these screens.
+## Implemented and future contracts
 
-## Future ASP.NET Core contract — not implemented
+Current GraphQL operations are `register`, `login`, `logout`, `requestPasswordReset`, `resetPassword`, authorized `me`, diagnostic `serviceStatus`, and the empty `boards` scaffold. Exact inputs/payloads are in [BACKEND.md](BACKEND.md#implemented-graphql-contract). There is no `/api/auth/register` or other REST identity route.
 
-| Method    | Endpoint                   | Responsibility                                                      |
-| --------- | -------------------------- | ------------------------------------------------------------------- |
-| GET       | `/api/session`             | Actual authenticated session summary, without tokens                |
-| POST      | `/api/auth/login`          | Server identity validation and secure session creation              |
-| POST      | `/api/auth/logout`         | Server session invalidation                                         |
-| POST      | `/api/auth/password-reset` | Recovery request with neutral response and server-side rate limits  |
-| GET / PUT | `/api/account/profile`     | Authorized profile read/update and separate verified-email workflow |
-| GET / PUT | `/api/account/preferences` | Optional authenticated preference sync                              |
-| GET       | `/api/account/connections` | Real provider status/capabilities without secrets                   |
-| POST      | `/api/media/uploads`       | Optional authenticated local-media upload; return a media ID        |
-
-Use the application's supported identity service, secure session handling, appropriate CSRF protections for cookie mutations, server-side input validation, and ownership checks. Replace demo flags/profile storage with service adapters; never treat the presence of browser data as authentication. Keep provider connections separate from application login. Add real loading, success, failure, recovery, and session-expiry behavior only from server responses.
+Profile/preference updates, board ownership/persistence, verified-email changes, cloud uploads, and real music-library connections remain future work. Design these against the GraphQL account authority instead of presenting old proposed REST routes as working services. Uploads need authenticated media IDs, access controls, retention rules, and server validation; provider OAuth remains separate from application login.
 
 ## Validation
 
-Run `node tests/studio.browser.cjs` for the existing Studio/audio/Pinterest regression suite and `node tests/video-account.browser.cjs` for these additions. Both require Playwright and Chromium; the new suite also uses FFmpeg (`FFMPEG_PATH` override) to generate a tiny local WebM fixture.
+The existing video/account suite uses Playwright/Chromium and FFmpeg (`CHROMIUM_PATH`/`FFMPEG_PATH` overrides). It contains URL/canonicalization/duplicate/embed checks, real local video decoding/playback/reattachment, persistence/removal/refinement, account/theme/deep-link/storage assertions, and mocked GraphQL/YouTube responses.
 
-The new suite checks URL rejection/normalization, duplicate moments, explicit embed load/unload, local video decoding/playback and reattachment after reload, removal, refinement preservation, mobile layouts, login validation, lack of credential persistence/transmission, local profile persistence, shared preferences, service deep links, preview sign-out, and blocked storage. The YouTube iframe route is intercepted by the test; live YouTube playback, identity APIs, provider APIs, SQL, and cloud uploads are not verified or implemented.
+The fresh T003 run failed at `tests/video-account.browser.cjs:261`: valid username-style login navigated away before a password-toggle assertion written for the old email-only flow. The navigation/theme suite failed during recovery: the mock matches `me` inside `message` and returns the wrong payload; its expected text and later signup assumptions are also outdated. These failures mean the checked-in suites do not establish complete passing account coverage for current main. Signup really transmits a registration request; claims that it never sends form data are obsolete.
+
+See [T003](T003.md) for all five suite outcomes and focused mocked checks. No live accounts/provider playback/email delivery or production database were used. Token-reset completion and actual mail delivery remain unverified.
 
 Previews: [login](design-previews/studio-login.png) · [account](design-previews/studio-account.png) · [connections](design-previews/studio-account-connections.png) · [video import](design-previews/studio-video-import.png) · [video reference](design-previews/studio-video-reference.png).
 
 Login, signup, recovery, account, and Studio pages share a static logo with the Studio star. System/Light/Dark choices live inside Customize rather than in the navbar; auth pages open a shared settings dialog and the account page uses its Customize tab. System follows the device by default. `theme-init.js` initializes appearance before paint; `appearance.js` handles explicit overrides, device updates, cross-tab synchronization, and cached-page restoration. The navigation/theme suite also verifies legacy MediaQueryList behavior and real links with JavaScript disabled.
 
-The navigation/theme browser suite also checks signup navigation under `/Scalable/`, required/whitespace/email/length/mismatch validation, visibility toggles and reset, no persistence or transmission of submitted details, blocked storage, and light/dark layouts at five widths.
-
-### Remote-branch integration validation
-
-The account integration is verified through the GraphQL API and does not contact a third-party auth service. Browser checks should stub the GraphQL endpoint when testing static Pages hosting; live registration, email delivery, and reset-token delivery require the backend.
+The navigation/theme suite contains project-path/theme/validation checks, but its obsolete expectations must be repaired before claiming that it passes against current main. Historical screenshots below/above may show the earlier preview and do not establish current auth behavior.

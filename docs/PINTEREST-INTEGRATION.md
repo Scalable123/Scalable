@@ -22,7 +22,7 @@ Install a current .NET 10 SDK. From the repository root, start the GraphQL/API h
 dotnet run --project Scalable.Api
 ```
 
-In another terminal, start the frontend and AI endpoint with `npm start`, then open `http://localhost:3000`. The frontend sends GraphQL and Pinterest API requests to `http://localhost:5078` by default. Defaults keep live Pinterest access unavailable and offer the sample preview.
+In another terminal, start the frontend and AI endpoint with `npm start`, then open `http://localhost:3000`. On loopback hosts the frontend sends GraphQL and Pinterest requests to `http://localhost:5078`. Hosted GraphQL defaults to the configured Render URL, but Pinterest still defaults to localhost unless `window.GRAPHQL_ENDPOINT` is explicitly set before modules initialize. Defaults keep live Pinterest access unavailable and offer the sample preview.
 
 Configure these **server-side** environment variables or equivalent deployment settings:
 
@@ -36,13 +36,17 @@ Configure these **server-side** environment variables or equivalent deployment s
 | `App__FrontendOrigin` | Exact frontend origin allowed to make credentialed GraphQL/Pinterest requests, e.g. `https://studio.example.com` |
 | `ConnectionStrings__Default` | Persistent Identity database connection |
 | `AllowedHosts` | Deployment's allowed host names |
-| `DataPath` | Private persistent directory outside static hosting; defaults to `Scalable.Api/data/` |
+| `DataPath` | Private persistent directory outside static hosting; defaults to `Scalable.Api/data/`; separate Pinterest SQLite data remains here even with PostgreSQL Identity |
+| `DataProtection__KeysPath` | Explicit persistent protected key directory; fallback is `<DataPath>/keys` |
+| `App__CrossSiteCookies` | `true` enables `SameSite=None; Secure` for cross-site Identity cookies; requires HTTPS/browser cookie support |
 
 Register `${PublicOrigin}/api/integrations/pinterest/callback` in the Pinterest app. ASP.NET does not automatically load `.env` files. Use environment configuration or the deployment secret manager, never browser configuration.
 
 Use one backend instance with persistent Identity and Pinterest SQLite storage and persistent ASP.NET Data Protection keys. Tokens, refresh credentials, username, scopes, and expirations are encrypted with an owner-specific purpose before SQL storage. Protect the private volume/key directory with restrictive permissions and host-appropriate encryption. The file-based development key ring is not independently wrapped with a production KMS. Preserve keys across restarts; losing them requires reconnecting accounts. Multiple API instances require a shared credential store/key management and distributed refresh/disconnect coordination.
 
-Publish the `Scalable.Api` project and keep the Node frontend/API origin configuration aligned with the backend. Set `App__FrontendOrigin` to the deployed frontend origin and configure `window.GRAPHQL_ENDPOINT` to the API origin. The ASP.NET API allows credentialed CORS only for that configured origin (and local loopback origins in development); cookie requests must remain same-site. GitHub Pages alone cannot host the API; its sample preview remains available. Keep query strings out of proxy/APM logs, especially OAuth callback queries.
+Publish the `Scalable.Api` project and keep the Node frontend/API origin configuration aligned with the backend. Set `App__FrontendOrigin` to the deployed frontend origin and configure `window.GRAPHQL_ENDPOINT` to the API origin. The ASP.NET API accepts the configured CORS origin list (currently including GitHub Pages), `App__FrontendOrigin`, and HTTP loopback hosts in Development. Cross-site Identity cookies require `App__CrossSiteCookies=true`, HTTPS, and browser acceptance; the default is false. GitHub Pages alone cannot host the API; its sample preview remains available. Keep query strings out of proxy/APM logs, especially OAuth callback queries.
+
+The implemented post-OAuth redirect is always `${App:FrontendOrigin}/index.html?import=pinterest&…`, without a Pages project path. `App__FrontendOrigin` rejects paths. Hosted `/Scalable/frontend/` return routing needs an implementation change or an appropriate root-hosted frontend. `window.GRAPHQL_ENDPOINT` does not fix callback routing. The API does not serve frontend assets. See [BACKEND.md](BACKEND.md) for this boundary and actual database/key settings.
 
 ## User flow
 
@@ -95,7 +99,7 @@ States include unavailable, signed out, disconnected, authorizing, denied/failed
 
 The same pin across selected boards yields one item with all source associations. Reimport merges associations without duplicating items; removal permits reimport. Fixtures retain `pinterest-demo:<fixture-id>` identities and `isSample: true`, and also carry `researchAllowed: false`. Live board URLs are not fabricated from IDs.
 
-Imported items remain display references after refinement and are never research request input. Live board titles/descriptions never become research prompts; new live-import boards start with a blank brief. Both current sample research and the future HTTP adapter reject Pinterest/pin.it/pinimg domain inputs. `research-policy.js` also rejects Pinterest-tagged objects or `researchAllowed: false` references in structured inputs. The new backend exposes no research/search/crawl endpoint. Future AI workers must independently enforce exclusion server-side, including tools, redirects, media, derived content, and provider allowlists; client flags alone are not a server security boundary.
+Imported items remain display references after refinement and are never research request input. Live board titles/descriptions never become research prompts; new live-import boards start with a blank brief. Both current sample research and the future HTTP adapter reject Pinterest/pin.it/pinimg domain inputs. `research-policy.js` also rejects Pinterest-tagged objects or `researchAllowed: false` references in structured inputs. The ASP.NET host exposes no research/search/crawl endpoint. The separate Node AI route exists but has no equivalent server-side Pinterest-specific input guard; it must enforce the exclusion before research/tools expand. Future AI workers must independently enforce exclusion server-side, including tools, redirects, media, derived content, and provider allowlists; client flags alone are not a server security boundary.
 
 ## Validation
 
@@ -110,4 +114,4 @@ node tests/saved-boards.browser.cjs
 
 Backend integration tests exercise actual routes with GraphQL-issued Identity cookies, synthetic Pinterest HTTP handlers, SQLite, encryption, replay/expiry, denial/scopes, ownership, scoped bookmarks, refresh/revocation, rate limits, and disconnect. Browser checks use actual modules with mocked APIs to verify cookie-based requests, pagination, atomic cancellation/failure, unsupported pins, source relationships, saving, research exclusion, disconnect, errors, and responsive dialogs. Existing preview behavior remains covered by Studio tests.
 
-Tests do not establish live account access, approval, real token exchange, library entitlement, media licensing, or production deployment. See [T001](T001.md) for decisions and results.
+Tests do not establish live account access, approval, real token exchange, library entitlement, media licensing, or production deployment. See [T001](T001.md) for historical implementation decisions and [T003](T003.md) for fresh outcomes. The current browser suite times out at line 69 waiting for rate-limit seconds; historical passes do not establish a current passing run. Backend tests could not run in this audit because no SDK was available and official downloads returned HTTP 403.

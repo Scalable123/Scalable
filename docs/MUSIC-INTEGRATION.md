@@ -6,14 +6,16 @@ The current implementation is a UI prototype plus working manual references and 
 
 - Treat songs, ambient sounds, albums, and playlists as explicit references. Manual playlist imports are one reference until a supported library API can enumerate tracks.
 - Keep `sourceKind`, `linkKind`, `isSample`, `provider`, and source metadata explicit so demo data, manual references, and authenticated library items remain distinguishable.
-- The frontend uses JSON board items; local audio has an in-memory object-URL registry keyed by item ID. Files do not go into the SQL DTO, localStorage, or provider requests.
+- The frontend uses JSON board items; local audio has an in-memory object-URL registry keyed by item ID. Files do not go into the board DTO, localStorage, or provider requests.
 - Local-file playback is available now. Service playback, library reads, OAuth, cloud audio upload/storage, and playlist writes are not implemented.
 
-## Future ASP.NET Core integration
+The implemented application account authority is ASP.NET GraphQL/Identity instead of Supabase; music accounts remain separate and unconnected. GraphQL is the API layer over the configured Identity database, while saved music references remain browser board metadata. See [BACKEND.md](BACKEND.md) and [T003](T003.md).
+
+## Future integration
 
 Choose providers only after checking their current developer programs, API access/approval, supported regions, library capabilities, scopes, and playback terms. In particular, do not assume Amazon Music offers the same self-service account/library access as Spotify. Some candidates may remain manual-link-only integrations.
 
-A future provider service could expose:
+The historical REST proposals below describe required capabilities, not implemented routes or the selected application data transport. New account-owned data should extend the GraphQL service; exact music fields/schema are not implemented. Protocol callbacks may remain HTTP routes. A future provider service needs equivalents of:
 
 | Method | Route                                         | Purpose                                                                        |
 | ------ | --------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -31,4 +33,4 @@ The server should handle authorization, state/PKCE where applicable, token refre
 
 Validate imported URLs again on the server. If later resolving metadata or fetching remote media, add independent destination validation and redirect handling; a frontend hostname check is not server-side fetch protection. Do not copy audio from streaming services or treat an imported link as a reuse license. Only expose permitted preview URLs and controls through the provider-supported flow.
 
-If persisting local uploads later, introduce a separate authenticated upload endpoint and media ID, with validation, access controls, file limits, and retention/deletion rules. Do not persist browser blob URLs or base64 recordings in SQL board JSON.
+If persisting local uploads later, introduce a separate authenticated upload endpoint and media ID, with validation, access controls, file limits, and retention/deletion rules. Do not persist browser blob URLs or base64 recordings in persisted board JSON.
