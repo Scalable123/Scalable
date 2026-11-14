@@ -109,18 +109,5 @@ window.addEventListener("pageshow", (event) => {
   }
   apply();
 });
-export function setupThemeControls(onSave = () => {}) {
-  const controls = [...document.querySelectorAll("[data-theme-control]")];
-  onAppearanceChange((preferences) =>
-    controls.forEach((control) => {
-      control.value = preferences.theme;
-    }),
-  );
-  controls.forEach((control) => {
-    control.disabled = false;
-    control.addEventListener("change", () =>
-      onSave(updateAppearance({ theme: control.value })),
-    );
-  });
-}
+
 apply();

@@ -1,3 +1,4 @@
+import { assertResearchInputAllowed } from "./research-policy.js";
 /** UI boundary. Replace this instance with ApiBoardService when .NET is available.
  * DTOs are JSON-friendly: camelCase, string IDs, ISO dates. File uploads are separate.
  */
@@ -110,6 +111,13 @@ function songsFor(key) {
     isSample: true,
   }));
 }
+// Read without normalization when deleting so unrelated saved records stay unchanged.
+function readStoredBoards() {
+  const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  if (!Array.isArray(parsed))
+    throw new Error("Saved board storage is not readable.");
+  return parsed;
+}
 // Keep existing browser-saved boards usable after the former music concept became sound.
 function normalizeBoard(board) {
   return {
@@ -133,6 +141,7 @@ const image = (id, filename, title, description, sourceUrl, position) => ({
 });
 export class DemoBoardService {
   async research({ prompt, includeSongs = true, includeSounds = true }) {
+    assertResearchInputAllowed(prompt);
     // Deliberate preview delay; this is local sample selection, not AI research.
     await new Promise((resolve) => setTimeout(resolve, 650));
     const key = /night|midnight|city|indigo/i.test(prompt)
@@ -210,11 +219,16 @@ export class DemoBoardService {
     };
   }
   async listBoards() {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (!Array.isArray(parsed))
-      throw new Error("Saved board storage is not readable.");
-    return parsed.map(normalizeBoard);
+    return readStoredBoards().map(normalizeBoard);
   }
+  async deleteBoard(id) {
+    const boards = readStoredBoards();
+    const next = boards.filter((board) => board.id !== id);
+    if (next.length === boards.length) return false;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    return true;
+  }
+
   async saveBoard(board) {
     const boards = await this.listBoards();
     const record = structuredClone(board);
@@ -244,6 +258,7 @@ export class ApiBoardService {
     referenceFile,
     { includeSongs = true, includeSounds = true } = {},
   ) {
+    assertResearchInputAllowed(prompt);
     const form = new FormData();
     form.append("prompt", prompt);
     form.append("includeSongs", String(includeSongs));
@@ -256,6 +271,12 @@ export class ApiBoardService {
   }
   listBoards() {
     return this.request("/boards");
+  }
+  async deleteBoard(id) {
+    await this.request(`/boards/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    return true;
   }
   saveBoard(board) {
     return this.request(`/boards/${encodeURIComponent(board.id)}`, {

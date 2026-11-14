@@ -1,4 +1,5 @@
-// Local demo data only. Replace this service with authorized, paginated backend DTOs.
+import { ApiPinterestService, safePinterestImage, validatePinterestAuthorization } from "./pinterest-service.js";
+// Sample mode is separate from authorized API mode and never represents a connection.
 const assets = new URL("../assets/", import.meta.url);
 const sampleSource =
   "https://github.com/StartBootstrap/startbootstrap-grayscale";
@@ -153,6 +154,7 @@ export class DemoPinterestService {
           sourceBoard: { id: board.id, title: board.title, url: null },
           originalPinUrl: null,
           isSample: true,
+          researchAllowed: false,
         })),
     );
   }
@@ -160,13 +162,82 @@ export class DemoPinterestService {
 export function setupPinterestImporter({
   element,
   onImport,
+  getBoardId = () => null,
   service = new DemoPinterestService(),
+  api = new ApiPinterestService(),
 }) {
   const $ = (selector) => document.querySelector(selector);
-  const library = service.listBoards();
+  let activeService = service;
+  let library = service.listBoards();
   const selectedBoards = new Set();
   const pinChoices = new Map();
   let step = "connect";
+  let controller = null;
+  let busy = false;
+  let reviewBoardId = null;
+  let connectionStatus = "preview";
+  const callbackOutcome = new URL(location.href).searchParams.get("pinterest");
+  if (["connected", "denied", "failed"].includes(callbackOutcome)) {
+    const url = new URL(location.href);
+    url.searchParams.delete("pinterest");
+    history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+  let callbackPending = true;
+  const live = () => activeService.isLive === true;
+  const sampleWord = () => live() ? "" : "sample ";
+  function modeCopy() {
+    $("#pinterest-connection-notice").textContent = connectionStatus === "connected" ? "PINTEREST · CONNECTED FOR BOARD IMPORT ONLY" : connectionStatus === "preview" ? "PINTEREST CONNECTION PREVIEW · NOT CONNECTED" : `PINTEREST · ${connectionStatus.replaceAll("_", " ").toUpperCase()}`;
+    $("#pinterest-library-description").textContent = live() ? "Your authorized boards. Pinterest is never used for AI research." : "Demo library — sample boards, not your Pinterest account.";
+    $("#end-pinterest-preview").textContent = live() ? "Disconnect Pinterest" : "End preview";
+    $("#pinterest-search-label").textContent = live() ? "Find your board" : "Find a sample board";
+    $("#pinterest-rights").textContent = live() ? "Import copies references; it does not change Pinterest or grant reuse rights. Pinterest content is excluded from AI research and analysis." : "Sample pins use local demo photography, not images fetched from Pinterest. Source metadata stays with the references; this does not transfer ownership or change a Pinterest board.";
+    $("#pinterest-save-reminder").textContent = `Your Studio canvas has been updated locally. Save the mood board to keep these ${sampleWord()}references. No Pinterest boards were changed.`;
+  }
+  async function run(message, action) {
+    if (busy) return;
+    busy = true;
+    controller = new AbortController();
+    const signal = controller.signal;
+    const controls = [...$("#pinterest-dialog").querySelectorAll("button,input")].filter(control => !["close-pinterest", "cancel-pinterest-request"].includes(control.id));
+    const disabled = controls.map(control => control.disabled);
+    controls.forEach(control => { control.disabled = true; });
+    $("#cancel-pinterest-request").hidden = false;
+    $("#pinterest-dialog").setAttribute("aria-busy", "true");
+    status(message);
+    try { await action(signal); }
+    catch (error) {
+      if (error.name === "AbortError") status("Request cancelled. Nothing has been imported.");
+      else {
+        if (["signed_out", "expired", "not_connected"].includes(error.code)) {
+          connectionStatus = error.code;
+          showStep("connect"); modeCopy();
+        }
+        status(`${error.message || "Pinterest is unavailable. Please retry."}${error.retryAfter ? ` Retry after ${error.retryAfter}.` : ""}`);
+      }
+    }
+    finally {
+      controls.forEach((control, index) => { control.disabled = disabled[index]; });
+      busy = false; controller = null;
+      $("#cancel-pinterest-request").hidden = true;
+      $("#pinterest-dialog").removeAttribute("aria-busy");
+      updateBoardCount();
+      if (step === "review") updatePinCount();
+    }
+  }
+  function resetSelection() {
+    selectedBoards.clear(); pinChoices.clear();
+    $("#pinterest-search").value = "";
+    $("#pinterest-review-form").reset();
+    $("#pinterest-new-board").hidden = true;
+    $("#pinterest-new-title").required = false;
+  }
+  async function loadLive(signal) {
+    const boards = await api.listBoards(signal, count => status(`Loading your boards… ${count} found.`));
+    signal.throwIfAborted();
+    activeService = api; library = boards; resetSelection(); modeCopy();
+    renderBoards(); showStep("boards");
+    if (!library.length) status("No owned boards are available with the current Pinterest permissions.");
+  }
   const status = (message) => {
     $("#pinterest-status").textContent = message;
   };
@@ -174,7 +245,7 @@ export function setupPinterestImporter({
     library.filter((board) => selectedBoards.has(board.id));
   const chosenPins = () =>
     chosenBoards()
-      .flatMap((board) => board.pins)
+      .flatMap((board) => board.pins || [])
       .filter((pin) => pinChoices.get(pin.id) !== false);
   function showStep(next) {
     step = next;
@@ -216,7 +287,7 @@ export function setupPinterestImporter({
       });
       const mosaic = element("span", "pinterest-board-mosaic");
       mosaic.setAttribute("aria-hidden", "true");
-      board.pins.slice(0, 3).forEach((pin) => {
+      (board.pins || (board.imageUrl ? [{ imageUrl: board.imageUrl }] : [])).slice(0, 3).forEach((pin) => {
         const img = element("img");
         img.src = pin.imageUrl;
         img.alt = "";
@@ -225,7 +296,7 @@ export function setupPinterestImporter({
       const copy = element("span", "pinterest-board-copy");
       copy.append(
         element("strong", "", board.title),
-        element("span", "", `${board.pins.length} sample pins`),
+        element("span", "", `${board.pins?.length ?? board.pinCount} ${sampleWord()}pins`),
         element("small", "", board.description),
       );
       card.append(check, mosaic, copy);
@@ -245,20 +316,20 @@ export function setupPinterestImporter({
     $("#select-pinterest-pins").indeterminate = count > 0 && count < total;
     $("#confirm-pinterest-import").disabled = count === 0;
     $("#confirm-pinterest-import").textContent =
-      `Import ${count} sample pin${count === 1 ? "" : "s"} ↗`;
+      `Import ${count} ${sampleWord()}pin${count === 1 ? "" : "s"} ↗`;
   }
   function renderReview() {
     $("#pinterest-pin-list").replaceChildren();
     const boards = chosenBoards();
     $("#pinterest-review-description").textContent =
-      `${boards.length} selected board${boards.length === 1 ? "" : "s"}. Every pin is included unless you deselect it.`;
+      `${boards.length} selected board${boards.length === 1 ? "" : "s"}. Every supported image pin is included unless you deselect it.${live() ? ` ${boards.reduce((sum, board) => sum + (board.unsupported || 0), 0)} unsupported pins excluded (video, carousel, or unavailable image). All pin pages were read.` : ""}`;
     for (const board of boards) {
       const group = element("fieldset", "pinterest-pin-group");
       group.append(
         element(
           "legend",
           "",
-          `${board.title} · ${board.pins.length} sample pins`,
+          `${board.title} · ${board.pins.length} ${sampleWord()}pins`,
         ),
       );
       const list = element("div", "pinterest-pin-grid");
@@ -291,22 +362,43 @@ export function setupPinterestImporter({
   }
   $("#import-pinterest").addEventListener("click", () => {
     $("#pinterest-dialog").showModal();
+    modeCopy();
     showStep(step);
+    if (step === "connect") void run("Checking Pinterest availability…", async signal => {
+      if (!await api.available(signal)) {
+        status("Live Pinterest import is unavailable here. You can try the sample preview."); return;
+      }
+      const connection = await api.status(signal);
+      signal.throwIfAborted();
+      connectionStatus = connection.status; modeCopy();
+      if (connection.status === "connected") await loadLive(signal);
+      else status(connection.status === "expired" ? "Pinterest access expired. Reconnect to continue." : "Link Pinterest to choose boards from your account, or use the separate sample preview.");
+      if (callbackPending && callbackOutcome === "denied") status("Pinterest authorization was denied. Nothing was imported. You can retry linking or use the sample preview.");
+      if (callbackPending && callbackOutcome === "failed") status("Pinterest could not finish linking. Nothing was imported. Check permissions and retry.");
+      callbackPending = false;
+    });
   });
+  $("#pinterest-dialog").addEventListener("close", () => controller?.abort());
+  $("#cancel-pinterest-request").addEventListener("click", () => controller?.abort());
+  $("#connect-pinterest").addEventListener("click", () => void run("Starting Pinterest sign-in…", async signal => {
+    if (!await api.available(signal)) { status("Live Pinterest import is unavailable here. You can try the sample preview."); return; }
+    const { authorizationUrl } = await api.authorize(signal);
+    signal.throwIfAborted();
+    window.location.assign(validatePinterestAuthorization(authorizationUrl));
+  }));
   for (const id of ["close-pinterest", "view-pinterest-board"])
     $(`#${id}`).addEventListener("click", () => $("#pinterest-dialog").close());
   $("#preview-pinterest").addEventListener("click", () => {
+    connectionStatus = "preview"; activeService = service; library = service.listBoards(); resetSelection(); modeCopy();
     renderBoards();
     showStep("boards");
   });
   $("#end-pinterest-preview").addEventListener("click", () => {
-    selectedBoards.clear();
-    pinChoices.clear();
-    $("#pinterest-search").value = "";
-    $("#pinterest-review-form").reset();
-    $("#pinterest-new-board").hidden = true;
-    $("#pinterest-new-title").required = false;
-    showStep("connect");
+    const reset = () => { connectionStatus = "preview"; activeService = service; library = service.listBoards(); resetSelection(); modeCopy(); showStep("connect"); };
+    if (live()) void run("Disconnecting Pinterest…", async signal => {
+      const result = await api.disconnect(signal); reset(); status(result.message);
+    });
+    else reset();
   });
   $("#pinterest-search").addEventListener("input", renderBoards);
   $("#select-pinterest-boards").addEventListener("click", () => {
@@ -319,8 +411,20 @@ export function setupPinterestImporter({
   });
   $("#review-pinterest").addEventListener("click", () => {
     if (!selectedBoards.size) return;
-    renderReview();
-    showStep("review");
+    reviewBoardId = getBoardId();
+    if (!live()) { renderReview(); showStep("review"); return; }
+    void run("Loading all pins from your selected boards…", async signal => {
+      const loaded = [];
+      for (const board of chosenBoards()) {
+        const pins = await api.listPins(board.id, signal, count => status(`Loading ${board.title}… ${count} pins read.`));
+        const supported = pins.filter(pin => pin.supported && safePinterestImage(pin.imageUrl));
+        loaded.push({ ...board, pins: supported, unsupported: pins.length - supported.length });
+      }
+      signal.throwIfAborted();
+      if (getBoardId() !== reviewBoardId) throw new Error("The current mood board changed. Choose your boards again.");
+      library = library.map(board => loaded.find(item => item.id === board.id) || board);
+      renderReview(); showStep("review");
+    });
   });
   for (const id of ["back-pinterest-boards", "more-pinterest-boards"])
     $(`#${id}`).addEventListener("click", () => {
@@ -359,8 +463,10 @@ export function setupPinterestImporter({
       return;
     }
     try {
+      if (busy) return;
+      if (getBoardId() !== reviewBoardId) throw new Error("The current mood board changed. Go back and review your selection again.");
       const result = onImport({
-        items: service.toBoardItems(
+        items: activeService.toBoardItems(
           chosenBoards(),
           pins.map((pin) => pin.id),
         ),
@@ -369,7 +475,7 @@ export function setupPinterestImporter({
         boards: chosenBoards().map(({ id, title }) => ({ id, title })),
       });
       $("#pinterest-result").textContent =
-        `${result.added} sample pin${result.added === 1 ? "" : "s"} ${destination === "new" ? "imported into a new mood board" : "added to your current mood board"}.${result.skipped ? ` ${result.skipped} already-present pin${result.skipped === 1 ? " was" : "s were"} skipped.` : ""}`;
+        `${result.added} ${sampleWord()}pin${result.added === 1 ? "" : "s"} ${destination === "new" ? "imported into a new mood board" : "added to your current mood board"}.${result.skipped ? ` ${result.skipped} already-present pin${result.skipped === 1 ? " was" : "s were"} skipped.` : ""}`;
       showStep("complete");
     } catch (error) {
       status(error.message);

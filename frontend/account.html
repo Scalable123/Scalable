@@ -24,24 +24,12 @@
               d="M50 2v96M2 50h96M16 16l68 68M16 84l68-68"
               stroke="currentColor"
               stroke-width="8"
-            /></svg
-        ></span>
+            /></svg>
+        </span>
         scalable<span class="brand-period">.</span></a
       >
       <div class="appearance-actions">
-        <label class="theme-picker" for="page-theme-toggle"
-          ><span>Theme</span
-          ><select
-            id="page-theme-toggle"
-            data-theme-control
-            aria-label="Color theme"
-            disabled
-          >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select></label
-        ><a href="index.html" class="toolbar-button">Back to Studio ↗</a>
+        <a href="index.html" class="toolbar-button">Back to Studio ↗</a>
       </div>
     </header>
     <div class="account-layout">
@@ -51,7 +39,7 @@
           <a href="#profile" data-account-panel="profile" aria-current="page"
             >Profile <span>↗</span></a
           ><a href="#appearance" data-account-panel="appearance"
-            >Appearance <span>↗</span></a
+            >Customize <span>↗</span></a
           ><a href="#connections" data-account-panel="connections"
             >Connected services <span>↗</span></a
           ><a href="#security" data-account-panel="security"
@@ -75,9 +63,9 @@
           >
         </header>
         <p class="account-disclaimer">
-          This is a frontend account preview. Profile details and preferences
-          stay in this browser. No real account, cloud sync, or provider
-          connection is active.
+          Profile details, preferences, and mood boards stay in this browser.
+          Scalable handles sign-in. Pinterest linking is available when approved
+          access is configured; cloud board sync remains planned.
         </p>
         <section data-account-section="profile" aria-labelledby="profile-title">
           <div class="account-panel-heading">
@@ -144,8 +132,8 @@
           <form id="appearance-form" class="appearance-form">
             <div class="appearance-field">
               <label for="theme-preference">Appearance</label>
-              <select id="theme-preference" name="theme">
-                <option value="system">Follow device</option>
+              <select id="theme-preference" name="theme" data-theme-control>
+                <option value="system">System — follow device</option>
                 <option value="light">Light — warm paper</option>
                 <option value="dark">Dark — evening studio</option>
               </select>
@@ -222,13 +210,7 @@
                 type="button"
                 class="toolbar-button"
               >
-                Reset to defaults</button
-              ><button
-                type="button"
-                id="account-appearance-done"
-                class="done-button"
-              >
-                Back to profile ↗
+                Reset to defaults
               </button>
             </div>
             <p id="appearance-status" class="settings-status" role="status"></p>
@@ -248,9 +230,9 @@
             </p>
           </div>
           <p class="preview-explainer">
-            All services are <strong>not connected</strong>. Open their Studio
-            import previews below. No sign-in, tokens, or library access are
-            available yet.
+            Pinterest supports account linking and importing your boards when
+            approved access is available. Its status appears below. Pinterest is
+            excluded from AI research. Other services offer import previews.
           </p>
           <div id="account-connections" class="account-connections"></div>
         </section>

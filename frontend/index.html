@@ -17,22 +17,14 @@
         <span class="studio-edition">/ YOUR CREATIVE SPACE</span></span
       >
       <div class="appearance-actions">
-        <a class="toolbar-button account-link" href="account.html">Account</a>
         <a class="toolbar-button login-link" href="login.html">Log in</a>
-        <label class="theme-picker" for="theme-toggle"
-          ><span>Theme</span
-          ><select
-            id="theme-toggle"
-            data-theme-control
-            aria-label="Color theme"
-            disabled
-          >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select></label
+
+        <button
+          id="customize"
+          data-customize-trigger
+          class="toolbar-button"
+          aria-haspopup="dialog"
         >
-        <button id="customize" class="toolbar-button" aria-haspopup="dialog">
           Customize <span aria-hidden="true">↗</span>
         </button>
       </div>
@@ -51,8 +43,8 @@
                 d="M50 2v96M2 50h96M16 16l68 68M16 84l68-68"
                 stroke="currentColor"
                 stroke-width="8"
-              /></svg
-          ></span>
+              /></svg>
+          </span>
           scalable<span class="brand-period">.</span></a
         >
         <p class="side-caption">A LITTLE SPACE TO THINK BIG.</p>
@@ -61,10 +53,6 @@
         </button>
         <nav aria-label="Workspace">
           <span class="nav-heading">YOUR WORKSPACE</span>
-          <button class="nav-item active" id="explore">
-            <span aria-hidden="true">◈</span> Explore a direction
-            <span class="nav-arrow">↗</span>
-          </button>
           <button class="nav-item" id="saved-boards">
             <span aria-hidden="true">▧</span> Saved boards
             <span id="saved-count" class="count">0</span>
@@ -287,7 +275,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
               </div>
               <div class="audio-dock">
                 <div>
-                  <strong>Bring your own soundtrack.</strong>
                   <p>Add music links or local audio to your board.</p>
                 </div>
                 <button
@@ -339,10 +326,6 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 <div id="sound-list" class="song-list"></div>
               </section>
             </section>
-            <div class="board-footer">
-              <span><i></i> Curated demo collection</span
-              ><span>Follow the feeling, not the formula. ↗</span>
-            </div>
           </section>
         </div>
         <footer class="page-footer">
@@ -365,8 +348,8 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
       <form id="appearance-form" class="appearance-form">
         <div class="appearance-field">
           <label for="theme-preference">Appearance</label>
-          <select id="theme-preference" name="theme">
-            <option value="system">Follow device</option>
+          <select id="theme-preference" name="theme" data-theme-control>
+            <option value="system">System — follow device</option>
             <option value="light">Light — warm paper</option>
             <option value="dark">Dark — evening studio</option>
           </select>
@@ -557,7 +540,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
           ×
         </button>
       </div>
-      <p class="connection-notice">
+      <p id="pinterest-connection-notice" class="connection-notice">
         PINTEREST CONNECTION PREVIEW · NOT CONNECTED
       </p>
       <ol class="pinterest-steps" aria-label="Pinterest import progress">
@@ -586,14 +569,17 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
           <li>Add to your current canvas or start a fresh direction.</li>
         </ul>
         <div class="preview-explainer">
-          <strong>This is a frontend preview.</strong>
+          <strong>Your boards, by your choice.</strong>
           <p>
-            No Pinterest account is connected or read. The next screens use
-            locally stored sample boards and photography. Real sign-in and
-            imports will use the future backend.
+            Link your account to import your boards when live access is available.
+            Pinterest is never searched, scanned, or analyzed by our AI.
+            Importing keeps references and does not grant image reuse rights.
+            Save your current mood board before leaving for Pinterest sign-in.
           </p>
         </div>
-        <button id="preview-pinterest" class="done-button">
+        <button id="connect-pinterest" class="done-button">Link Pinterest account ↗</button>
+        <p class="field-help">Use your <a href="login.html">Scalable login</a> first. Live access requires an approved Pinterest integration.</p>
+        <button id="preview-pinterest" class="toolbar-button">
           Preview Pinterest connection ↗
         </button>
       </section>
@@ -607,7 +593,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
             <h3 id="pinterest-boards-heading" tabindex="-1">
               Which boards are you feeling?
             </h3>
-            <p class="field-help">
+            <p id="pinterest-library-description" class="field-help">
               Demo library — sample boards, not your Pinterest account.
             </p>
           </div>
@@ -615,7 +601,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
             End preview
           </button>
         </div>
-        <label class="search-label" for="pinterest-search"
+        <label id="pinterest-search-label" class="search-label" for="pinterest-search"
           >Find a sample board</label
         ><input
           id="pinterest-search"
@@ -635,7 +621,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         </div>
         <div id="pinterest-board-list" class="pinterest-board-list"></div>
         <p id="pinterest-no-boards" class="empty-state" hidden>
-          No sample boards match that search.
+          No boards match that search.
         </p>
         <div class="pinterest-footer">
           <span class="field-help"
@@ -692,7 +678,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
             </p>
           </div>
           <div class="preview-explainer">
-            <p>
+            <p id="pinterest-rights">
               Sample pins use local demo photography, not images fetched from
               Pinterest. Source metadata stays with the references; this does
               not transfer ownership or change a Pinterest board.
@@ -723,7 +709,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
           </h3>
           <p id="pinterest-result"></p>
         </div>
-        <p class="field-help">
+        <p id="pinterest-save-reminder" class="field-help">
           Your Studio canvas has been updated locally. Save the mood board to
           keep these sample references. No Pinterest account or boards were
           changed.
@@ -742,6 +728,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         role="status"
         aria-live="polite"
       ></p>
+      <button id="cancel-pinterest-request" class="text-button" hidden>Cancel request</button>
     </dialog>
     <dialog id="audio-dialog" aria-labelledby="audio-dialog-title">
       <div class="dialog-header">
@@ -913,6 +900,36 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         role="status"
         aria-live="polite"
       ></p>
+    </dialog>
+    <dialog
+      id="delete-board-dialog"
+      role="alertdialog"
+      aria-labelledby="delete-board-title"
+      aria-describedby="delete-board-name delete-board-copy"
+    >
+      <p class="eyebrow">SAVED MOOD BOARD</p>
+      <h2 id="delete-board-title">
+        Are you sure you want to delete this mood board?
+      </h2>
+      <p id="delete-board-name" class="delete-board-name"></p>
+      <p id="delete-board-copy" class="dialog-copy">
+        The saved copy will be removed from this browser. This cannot be undone.
+        If this board is open, its current canvas will remain as an unsaved
+        draft.
+      </p>
+      <p id="delete-board-error" class="input-error" role="alert"></p>
+      <div class="delete-board-actions">
+        <button
+          id="cancel-delete-board"
+          class="toolbar-button"
+          type="button"
+          autofocus
+        >
+          Cancel</button
+        ><button id="confirm-delete-board" class="danger-button" type="button">
+          Delete mood board
+        </button>
+      </div>
     </dialog>
     <dialog id="dialog" aria-labelledby="dialog-title">
       <div class="dialog-header">

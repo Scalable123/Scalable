@@ -84,7 +84,7 @@ GraphQL inputs and payloads documented below.
 4. Login failures use one generic message so the API does not reveal whether an account exists.
 5. Registration signs the user in immediately after successful creation. This preserves a useful first-run flow while still creating a real database account.
 6. Demo/preview language is removed from the authentication path. Existing Studio sample content is unrelated to account identity and is not treated as authentication.
-7. Password reset requests always return the same message whether or not the email exists. The current email adapter logs a reset URL for local development; production must send it through a trusted mail provider.
+7. Password reset requests always return the same message whether or not the email exists. The current email adapter does not deliver or log reset URLs; configure a trusted mail provider to deliver them.
 8. Development Data Protection keys are stored in the ignored `Scalable.Api/.keys` directory so local Identity cookies and reset tokens are not tied to an unavailable user-profile key ring. Production must provide protected, persistent key storage.
 9. Deployment configuration is environment-specific and is not hard-coded into the authentication mutations. The local endpoint, SQLite database, logging email adapter, and development key directory are defaults for localhost only.
 10. The authentication contract remains GraphQL-based for deployment. A hosting platform may provide the database, key storage, mail delivery, and TLS, but it must not move password handling into browser storage or replace Identity's server-side hash verification.

@@ -1,41 +1,12 @@
 import { iconify } from "./icons.js";
-import {
-  onAppearanceChange,
-  updateAppearance,
-  resetAppearance,
-  setupThemeControls,
-} from "./appearance.js";
+import { setupCustomization } from "./customize.js";
+import { ApiPinterestService } from "./pinterest-service.js";
 import { graphqlRequest } from "./config/graphqlClient.js";
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
 const sessionKey = "scalable.demoSession";
 const profileKey = "scalable.profile.v1";
-onAppearanceChange((preferences) => {
-  if ($("#appearance-form")) {
-    for (const field of [
-      "theme",
-      "density",
-      "corners",
-      "typography",
-      "layout",
-      "canvas",
-      "textSize",
-    ])
-      $("#appearance-form").elements[field].value = preferences[field];
-    $("#appearance-form").elements.accent.value = preferences.accent;
-  }
-});
-setupThemeControls((saved) => {
-  if (!saved) {
-    const status =
-      $("#login-status") ||
-      $("#profile-status") ||
-      $("#recovery-status") ||
-      $("#signup-status");
-    status.textContent =
-      "Theme applied for this visit. Browser storage is unavailable.";
-  }
-});
+setupCustomization();
 function startDemo() {
   try {
     sessionStorage.setItem(sessionKey, "preview");
@@ -317,27 +288,8 @@ if (document.body.dataset.page === "login") {
         "Applied for this visit. Browser storage is unavailable; the profile could not be saved.";
     }
   });
-  const appearanceStatus = (saved) => {
-    $("#appearance-status").textContent = saved
-      ? "Preferences saved in this browser."
-      : "Applied for this visit. Browser storage is unavailable.";
-  };
-  $("#appearance-form").addEventListener("submit", (event) =>
-    event.preventDefault(),
-  );
-  $("#appearance-form").addEventListener("change", (event) =>
-    appearanceStatus(
-      updateAppearance({ [event.target.name]: event.target.value }),
-    ),
-  );
-  $("#reset-appearance").addEventListener("click", () =>
-    appearanceStatus(resetAppearance()),
-  );
-  $("#account-appearance-done").addEventListener("click", () => {
-    location.hash = "profile";
-  });
   for (const [name, target, description] of [
-    ["Pinterest", "pinterest", "Import full sample boards or individual pins."],
+    ["Pinterest", "pinterest", "Link your account and import your boards. Pinterest is excluded from AI research."],
     ["Spotify", "audio", "Preview music library selection or paste a link."],
     ["Amazon Music", "audio", "Explore a candidate music integration."],
     ["Apple Music", "audio", "Collect links or preview a sample library."],
@@ -362,6 +314,34 @@ if (document.body.dataset.page === "login") {
     row.append(copy, link);
     iconify(row);
     $("#account-connections").append(row);
+    if (target === "pinterest") {
+      const api = new ApiPinterestService();
+      void (async () => {
+        if (!await api.available()) return;
+        link.textContent = "Manage Pinterest ↗";
+        link.setAttribute("aria-label", "Manage Pinterest connection and board imports");
+        try {
+          const connection = await api.status();
+          status.textContent = ({ connected: "Connected · board import only", expired: "Expired · reconnect to import", disconnected: "Not connected", unavailable: "Unavailable" })[connection.status] || "Unavailable";
+        } catch (error) {
+          status.textContent = error.code === "signed_out" ? "Log in to link Pinterest" : "Connection unavailable · retry in importer";
+        }
+      })();
+    }
+    if (target === "pinterest") {
+      const api = new ApiPinterestService();
+      void (async () => {
+        if (!await api.available()) return;
+        link.textContent = "Manage Pinterest ↗";
+        link.setAttribute("aria-label", "Manage Pinterest connection and board imports");
+        try {
+          const connection = await api.status();
+          status.textContent = ({ connected: "Connected · board import only", expired: "Expired · reconnect to import", disconnected: "Not connected", unavailable: "Unavailable" })[connection.status] || "Unavailable";
+        } catch (error) {
+          status.textContent = error.code === "signed_out" ? "Log in to link Pinterest" : "Connection unavailable · retry in importer";
+        }
+      })();
+    }
   }
   $("#password-preview").addEventListener("click", () => {
     $("#security-status").textContent =

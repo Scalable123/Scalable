@@ -13,13 +13,8 @@ import {
   releaseLocalAudio,
 } from "./audio-library.js";
 import { boardService, prompts } from "./board-service.js";
+import { setupCustomization } from "./customize.js";
 import { createCreativeDirection } from "./ai-service.js";
-import {
-  onAppearanceChange,
-  updateAppearance,
-  resetAppearance,
-  setupThemeControls,
-} from "./appearance.js";
 
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
@@ -30,6 +25,8 @@ let filter = "all";
 let referenceFile = null;
 let referenceUrl = null;
 let toastTimeout;
+let pendingBoardDeletion = null;
+let deletingBoard = false;
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -56,6 +53,7 @@ function showDialog(title, content) {
 function renderImage(item) {
   const card = element("figure", `board-card image-card ${item.position}`);
   const img = element("img");
+  if (item.provider === "pinterest") img.referrerPolicy = "no-referrer";
   img.src = item.url;
   img.alt = item.description;
   if (item.imagePosition) img.style.objectPosition = item.imagePosition;
@@ -65,13 +63,23 @@ function renderImage(item) {
     "",
     item.provider === "pinterest" && item.isSample
       ? "Sample photo source ↗"
-      : "View image source ↗",
+      : item.provider === "pinterest" ? "View on Pinterest ↗" : "View image source ↗",
   );
   source.href = item.sourceUrl;
   source.target = "_blank";
   source.rel = "noopener noreferrer";
   source.title = item.sourceLabel;
   caption.append(element("strong", "", item.title), source);
+  if (item.provider === "pinterest" && !item.isSample && item.creatorSourceUrl) {
+    try {
+      const url = new URL(item.creatorSourceUrl);
+      if (url.protocol === "https:" && !url.username && !url.password && !url.port) {
+        const creator = element("a", "", "Original source ↗");
+        creator.href = url.href; creator.target = "_blank"; creator.rel = "noopener noreferrer";
+        caption.append(creator);
+      }
+    } catch { /* Invalid restored attribution remains plain metadata. */ }
+  }
   const pin = element("button", "pin", item.pinned ? "✓" : "+");
   pin.type = "button";
   pin.setAttribute(
@@ -244,10 +252,10 @@ function renderBoard() {
   grid.classList.toggle("has-pinterest", pinterestPins.length > 0);
   $("#pinterest-import-summary").hidden = pinterestPins.length === 0;
   const sourceBoardCount = new Set(
-    pinterestPins.map((item) => item.sourceBoard?.id),
+    pinterestPins.flatMap((item) => (item.sourceBoards || [item.sourceBoard]).map(source => source?.id)).filter(Boolean),
   ).size;
   $("#pinterest-import-summary").textContent =
-    `${pinterestPins.length} imported sample pin${pinterestPins.length === 1 ? "" : "s"} · ${sourceBoardCount} source board${sourceBoardCount === 1 ? "" : "s"} · save this mood board to keep the references`;
+    `${pinterestPins.length} imported ${pinterestPins.every(item => item.isSample) ? "sample " : ""}pin${pinterestPins.length === 1 ? "" : "s"} · ${sourceBoardCount} source board${sourceBoardCount === 1 ? "" : "s"} · save this mood board to keep the references`;
   $("#import-pinterest").disabled = false;
   $("#import-audio").disabled = false;
   $("#import-video").disabled = false;
@@ -454,6 +462,7 @@ function resetResearchUI() {
 }
 setupPinterestImporter({
   element,
+  getBoardId: () => board?.id,
   onImport({ items, destination, title, boards }) {
     if (!board)
       throw new Error(
@@ -472,8 +481,9 @@ setupPinterestImporter({
       board = {
         id: crypto.randomUUID(),
         title,
-        description: `Inspired by ${boards.map((board) => board.title).join(", ")}. Sample Pinterest import.`,
-        prompt: `Develop a creative direction inspired by ${boards.map((board) => board.title).join(", ")}.`,
+        description: items.every(item => item.isSample) ? `Inspired by ${boards.map((board) => board.title).join(", ")}. Sample Pinterest import.` : "References imported from your Pinterest boards. Excluded from AI research.",
+        // Provider board titles/descriptions and imported images are never research input.
+        prompt: items.every(item => item.isSample) ? `Develop a creative direction inspired by ${boards.map((board) => board.title).join(", ")}.` : "",
         createdAt: new Date().toISOString(),
         mode: "demo",
         researchOptions: { includeSongs: true, includeSounds: true },
@@ -489,7 +499,15 @@ setupPinterestImporter({
         board.items.map((item) => item.sourceKey).filter(Boolean),
       );
       const fresh = items.filter((item) => {
-        if (existing.has(item.sourceKey)) return false;
+        if (existing.has(item.sourceKey)) {
+          const current = board.items.find(saved => saved.sourceKey === item.sourceKey);
+          if (current && item.sourceBoards) {
+            const associations = new Map((current.sourceBoards || [current.sourceBoard]).filter(Boolean).map(source => [source.id, source]));
+            item.sourceBoards.forEach(source => associations.set(source.id, source));
+            current.sourceBoards = [...associations.values()];
+          }
+          return false;
+        }
         existing.add(item.sourceKey);
         return true;
       });
@@ -497,49 +515,11 @@ setupPinterestImporter({
       added = fresh.length;
     }
     selectFilter("all");
-    if (added) $("#save-label").textContent = "Save board";
+    if (items.length) $("#save-label").textContent = "Save board";
     return { added, skipped: items.length - added };
   },
 });
-onAppearanceChange((preferences) => {
-  for (const field of [
-    "theme",
-    "density",
-    "corners",
-    "typography",
-    "layout",
-    "canvas",
-    "textSize",
-  ])
-    $("#appearance-form").elements[field].value = preferences[field];
-  $("#appearance-form").elements.accent.value = preferences.accent;
-});
-function appearanceStatus(saved) {
-  $("#appearance-status").textContent = saved
-    ? "Preferences saved in this browser."
-    : "Applied for this visit. Browser storage is unavailable, so preferences could not be saved.";
-}
-setupThemeControls((saved) => {
-  appearanceStatus(saved);
-  if (!saved)
-    notify("Theme applied for this visit. Browser storage is unavailable.");
-});
-$("#customize").addEventListener("click", () =>
-  $("#appearance-dialog").showModal(),
-);
-for (const id of ["close-appearance", "done-appearance"])
-  $("#" + id).addEventListener("click", () => $("#appearance-dialog").close());
-$("#appearance-form").addEventListener("submit", (event) =>
-  event.preventDefault(),
-);
-$("#appearance-form").addEventListener("change", (event) => {
-  appearanceStatus(
-    updateAppearance({ [event.target.name]: event.target.value }),
-  );
-});
-$("#reset-appearance").addEventListener("click", () =>
-  appearanceStatus(resetAppearance()),
-);
+setupCustomization();
 document
   .querySelectorAll("[data-filter]")
   .forEach((button) =>
@@ -663,10 +643,10 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     selectFilter("all");
     $("#save-label").textContent = "Save board";
     notify(next.mode === "ai" ? "AI direction composed." : "Sample direction composed.");
-  } catch {
+  } catch (error) {
     if (runVersion === boardVersion)
       $("#input-error").textContent =
-        "We could not compose this board. Your current board is still here; please try again.";
+        error.message || "We could not compose this board. Your current board is still here; please try again.";
   } finally {
     if (runVersion === boardVersion) resetResearchUI();
   }
@@ -684,59 +664,159 @@ $("#save-board").addEventListener("click", async () => {
     notify("Could not save. Browser storage may be disabled or full.");
   }
 });
+async function renderSavedBoards() {
+  const boards = await boardService.listBoards();
+  $("#saved-count").textContent = boards.length;
+  const list = element("div");
+  if (!boards.length)
+    list.append(
+      element(
+        "p",
+        "dialog-copy",
+        "A space for your favorite directions. Save your first board to find it here. Boards stay in this browser.",
+      ),
+    );
+  boards.forEach((saved) => {
+    const row = element("div", "saved-item");
+    row.dataset.boardId = saved.id;
+    const image = saved.items.find((item) => item.type === "image");
+    const img = image?.url
+      ? element("img")
+      : element("span", "saved-thumbnail", "✳");
+    if (image?.url) {
+      img.src = image.url;
+      img.alt = "";
+    } else img.setAttribute("aria-hidden", "true");
+    const copy = element("div");
+    copy.append(
+      element("strong", "", saved.title),
+      element(
+        "small",
+        "",
+        `Local demo · ${new Date(saved.createdAt).toLocaleDateString()}`,
+      ),
+    );
+    const open = element("button", "", "Open ↗");
+    open.addEventListener("click", () => {
+      boardVersion += 1;
+      resetResearchUI();
+      retainLocalAudio(saved.items);
+      retainLocalVideos(saved.items);
+      board = saved;
+      $("#include-songs").checked =
+        saved.researchOptions?.includeSongs ??
+        saved.items.some((item) => item.type === "song");
+      $("#include-sounds").checked =
+        saved.researchOptions?.includeSounds ??
+        saved.items.some((item) => item.type === "sound");
+      $("#prompt").value = saved.prompt;
+      updateCharacters();
+      removeReference();
+      selectFilter("all");
+      $("#save-label").textContent = "Saved locally";
+      $("#dialog").close();
+    });
+    open.dataset.openBoard = saved.id;
+    const remove = element("button", "saved-delete", "Delete");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Delete saved mood board ${saved.title}`);
+    remove.addEventListener("click", () => {
+      pendingBoardDeletion = {
+        id: saved.id,
+        title: saved.title,
+        index: boards.indexOf(saved),
+      };
+      $("#delete-board-name").textContent = saved.title;
+      $("#delete-board-error").textContent = "";
+      $("#delete-board-dialog").showModal();
+      $("#cancel-delete-board").focus();
+    });
+    const actions = element("div", "saved-actions");
+    actions.append(open, remove);
+    row.append(img, copy, actions);
+    list.append(row);
+  });
+  showDialog("Your saved directions", list);
+  return list;
+}
 $("#saved-boards").addEventListener("click", async () => {
   try {
-    const boards = await boardService.listBoards();
-    const list = element("div");
-    if (!boards.length)
-      list.append(
-        element(
-          "p",
-          "dialog-copy",
-          "A space for your favorite directions. Save your first board to find it here. Boards stay in this browser.",
-        ),
-      );
-    boards.forEach((saved) => {
-      const row = element("div", "saved-item");
-      const img = element("img");
-      img.src = saved.items.find((item) => item.type === "image").url;
-      img.alt = "";
-      const copy = element("div");
-      copy.append(
-        element("strong", "", saved.title),
-        element(
-          "small",
-          "",
-          `Local demo · ${new Date(saved.createdAt).toLocaleDateString()}`,
-        ),
-      );
-      const open = element("button", "", "Open ↗");
-      open.addEventListener("click", () => {
-        boardVersion += 1;
-        resetResearchUI();
-        retainLocalAudio(saved.items);
-        retainLocalVideos(saved.items);
-        board = saved;
-        $("#include-songs").checked =
-          saved.researchOptions?.includeSongs ??
-          saved.items.some((item) => item.type === "song");
-        $("#include-sounds").checked =
-          saved.researchOptions?.includeSounds ??
-          saved.items.some((item) => item.type === "sound");
-        $("#prompt").value = saved.prompt;
-        updateCharacters();
-        removeReference();
-        selectFilter("all");
-        $("#save-label").textContent = "Saved locally";
-        $("#dialog").close();
-      });
-      row.append(img, copy, open);
-      list.append(row);
-    });
-    showDialog("Your saved directions", list);
+    await renderSavedBoards();
   } catch {
     notify("Saved boards could not be read from this browser.");
   }
+});
+const deleteDialog = $("#delete-board-dialog");
+$("#cancel-delete-board").addEventListener("click", () => {
+  if (!deletingBoard) deleteDialog.close();
+});
+deleteDialog.addEventListener("cancel", (event) => {
+  if (deletingBoard) event.preventDefault();
+});
+deleteDialog.addEventListener("close", () => {
+  if (!deleteDialog.open && !deletingBoard) pendingBoardDeletion = null;
+});
+$("#confirm-delete-board").addEventListener("click", async () => {
+  if (!pendingBoardDeletion || deletingBoard) return;
+  const target = pendingBoardDeletion;
+  deletingBoard = true;
+  $("#confirm-delete-board").disabled = true;
+  $("#confirm-delete-board").textContent = "Deleting…";
+  $("#cancel-delete-board").disabled = true;
+  $("#delete-board-error").textContent = "";
+  let removed;
+  try {
+    removed = await boardService.deleteBoard(target.id);
+  } catch {
+    $("#delete-board-error").textContent =
+      "Deletion could not be confirmed. Please try again. Your current canvas has been kept.";
+    deletingBoard = false;
+    $("#confirm-delete-board").disabled = false;
+    $("#confirm-delete-board").textContent = "Delete mood board";
+    $("#cancel-delete-board").disabled = false;
+    $("#cancel-delete-board").focus();
+    return;
+  }
+  const keptDraft = board?.id === target.id;
+  if (keptDraft) {
+    // Do not let a late research result restore the deleted saved identity.
+    boardVersion += 1;
+    resetResearchUI();
+    board = {
+      ...board,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    $("#save-label").textContent = "Save board";
+  }
+  await updateSavedCount();
+  let list;
+  try {
+    list = await renderSavedBoards();
+  } catch {
+    showDialog(
+      "Your saved directions",
+      element(
+        "p",
+        "dialog-copy",
+        "The saved copy was removed, but the list could not be refreshed. Close this window and open Saved boards again.",
+      ),
+    );
+  }
+  deletingBoard = false;
+  pendingBoardDeletion = null;
+  deleteDialog.close();
+  $("#confirm-delete-board").disabled = false;
+  $("#confirm-delete-board").textContent = "Delete mood board";
+  $("#cancel-delete-board").disabled = false;
+  const remaining = list?.querySelectorAll("[data-open-board]");
+  (remaining?.length
+    ? remaining[Math.min(target.index, remaining.length - 1)]
+    : $("#close-dialog")
+  ).focus();
+  notify(
+    `${removed ? "Saved mood board deleted." : "This mood board was already deleted."}${keptDraft ? " Your current canvas is now an unsaved draft." : ""}`,
+  );
 });
 $("#new-board").addEventListener("click", async () => {
   const runVersion = ++boardVersion;
@@ -766,14 +846,13 @@ $("#new-board").addEventListener("click", async () => {
     "A fresh start. The canvas shows a sample until you explore your own brief.",
   );
 });
-$("#explore").addEventListener("click", () => $("#prompt").focus());
 $("#about").addEventListener("click", () =>
   showDialog(
     "Welcome to The Studio",
     element(
       "p",
       "dialog-copy",
-      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Import Pinterest board previews selecting full boards or individual pins; no Pinterest account is connected. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio and video can play in this browser. YouTube players load only when requested. Login and account pages are frontend previews, not authenticated accounts. Provider connections are demo previews; no live AI research, streaming service, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
+      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore selects curated local collections; uploaded reference images are previewed only. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. Cloud board saving, live AI research, and music-service connections remain planned.",
     ),
   ),
 );
