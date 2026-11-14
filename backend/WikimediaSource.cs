@@ -33,7 +33,7 @@ public sealed class WikimediaSource(HttpClient http, RequestBudget budget, strin
             var page = pages[0];
             var title = Text(page, "title");
             var imageInfo = page.GetProperty("imageinfo")[0];
-            var imageUrl = SafeUrl(Text(imageInfo, "thumburl") ?? Text(imageInfo, "url"), ImageHost);
+            var imageUrl = SafeImageUrl(Text(imageInfo, "thumburl") ?? Text(imageInfo, "url"));
             var sourceUrl = SafeUrl(Text(imageInfo, "descriptionurl"), ApiHost);
             var metadata = imageInfo.GetProperty("extmetadata");
             var license = Clean(MetadataText(metadata, "LicenseShortName") ?? MetadataText(metadata, "UsageTerms"));
@@ -83,6 +83,14 @@ public sealed class WikimediaSource(HttpClient http, RequestBudget budget, strin
         if (!Uri.TryCreate(value, UriKind.Absolute, out var url) || url.Scheme != "https" ||
             url.Host != host || !url.IsDefaultPort || url.UserInfo != "")
             throw new ArgumentException("Invalid Wikimedia URL.");
+        return url.AbsoluteUri;
+    }
+
+    private static string SafeImageUrl(string? value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var url) || url.Scheme != "https" ||
+            (url.Host != ImageHost && url.Host != "thumb.wikimedia.org") || !url.IsDefaultPort || url.UserInfo != "")
+            throw new ArgumentException("Invalid Wikimedia image URL.");
         return url.AbsoluteUri;
     }
 }

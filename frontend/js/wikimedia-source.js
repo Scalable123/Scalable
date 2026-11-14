@@ -11,7 +11,8 @@ export const wikimediaSourceMessages = {
 function validUrl(value, host) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname === host && !url.port && !url.username && !url.password;
+    const hosts = Array.isArray(host) ? host : [host];
+    return url.protocol === "https:" && hosts.includes(url.hostname) && !url.port && !url.username && !url.password;
   } catch { return false; }
 }
 export async function searchWikimedia(prompt) {
@@ -31,7 +32,7 @@ export async function searchWikimedia(prompt) {
     if (!image || image.provider !== "wikimedia" || image.type !== "image" ||
         typeof image.externalPhotoId !== "string" || !/^\d{1,30}$/.test(image.externalPhotoId) ||
         image.id !== `wikimedia-${image.externalPhotoId}` ||
-        !validUrl(image.url, "upload.wikimedia.org") || !validUrl(image.sourceUrl, "commons.wikimedia.org") ||
+        !validUrl(image.url, ["upload.wikimedia.org", "thumb.wikimedia.org"]) || !validUrl(image.sourceUrl, "commons.wikimedia.org") ||
         !validUrl(image.creatorUrl, "commons.wikimedia.org") || typeof image.creatorName !== "string" ||
         !image.creatorName.trim() || typeof image.licenseName !== "string" || !image.licenseName.trim() ||
         typeof image.description !== "string" || typeof image.title !== "string")

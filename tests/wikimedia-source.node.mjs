@@ -7,7 +7,7 @@ const valid = {
   status: "available",
   image: {
     id: "wikimedia-12345", type: "image", provider: "wikimedia", externalPhotoId: "12345",
-    url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Quiet.jpg/1200px-Quiet.jpg",
+    url: "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a1/Quiet.jpg/1200px-Quiet.jpg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Quiet_coast.jpg",
     creatorUrl: "https://commons.wikimedia.org/wiki/File:Quiet_coast.jpg",
     creatorName: "Artist <b>", licenseName: "CC BY-SA 4.0", title: "File:Quiet coast.jpg", description: "A quiet coast",

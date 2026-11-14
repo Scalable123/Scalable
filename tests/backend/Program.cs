@@ -142,7 +142,7 @@ var wikimediaPayload = new
                 {
                     new
                     {
-                        thumburl = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Quiet.jpg/1200px-Quiet.jpg",
+                        thumburl = "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a1/Quiet.jpg/1200px-Quiet.jpg",
                         descriptionurl = "https://commons.wikimedia.org/wiki/File:Quiet_coast.jpg",
                         extmetadata = new
                         {
@@ -160,7 +160,7 @@ var wikimediaHandler = new WikimediaHandler([Reply(wikimediaPayload)]);
 var wikimediaSource = new WikimediaSource(new HttpClient(wikimediaHandler), new RequestBudget(FreshPath(), clock), "Scalable/1.0 (https://github.com/Scalable123/Scalable)");
 var wikimedia = await wikimediaSource.Search("quiet coast", default);
 Check(wikimedia.Status == "available" && wikimedia.Image?.Provider == "wikimedia" && wikimedia.Image.LicenseName == "CC BY-SA 4.0", "Wikimedia result preserves creator and license metadata");
-Check(wikimedia.Image?.Url.Contains("upload.wikimedia.org") == true && wikimediaHandler.UserAgents.Single().Contains("Scalable/1.0"), "Wikimedia result and identifying User-Agent are safe");
+Check(wikimedia.Image?.Url.Contains("thumb.wikimedia.org") == true && wikimediaHandler.UserAgents.Single().Contains("Scalable/1.0"), "Wikimedia thumbnail and identifying User-Agent are safe");
 Check(wikimediaHandler.Urls.Single().Query.Contains("gsrlimit=1"), "Wikimedia search requests one result");
 var wiki429 = new WikimediaHandler([Reply(new { }, HttpStatusCode.TooManyRequests)]);
 var wikiLimitedPath = FreshPath();
