@@ -43,7 +43,11 @@ No external catalog lookup, live AI recommendation, or streaming-service playbac
 - Pin/unpin images; pins survive a sample refinement. Save again to persist changes.
 - Copy palette HEX values with a manual-copy fallback.
 - Save boards locally, reopen them, or start a new exploration. Starting fresh discards the unsaved canvas but keeps saved boards.
+- In **Saved boards**, choose **Delete** and confirm **“Are you sure you want to delete this mood board?”** Cancel and Escape leave the saved copy untouched. Confirming removes only that board from this browser, updates the count/list, and returns keyboard focus to the list. Storage failures keep the confirmation open with a retry message.
+- Deleting the open board keeps its current canvas and imported media as an unsaved draft with a new ID. Saving that draft creates a new saved board. Deletion does not remove original files or content from connected providers.
 - Previously saved `type: "music"` concepts are read as `type: "sound"`. Existing boards are not overwritten automatically; older boards gain songs when the user explores again with songs enabled.
+
+Previews: [saved boards](design-previews/studio-saved-boards.png), [delete confirmation](design-previews/studio-delete-board.png).
 
 There is no real authenticated account, cloud sync, SQL connection, sharing, export, or live AI yet. Login and account pages are local frontend previews. Browser storage is origin/device-specific and may be cleared. Image-only research and drag-and-drop uploads remain unimplemented.
 
@@ -83,6 +87,7 @@ Proposed endpoints (not implemented):
 | GET    | `/api/boards`             | Authenticated owner's board summaries, with pagination                                                      |
 | GET    | `/api/boards/{id}`        | Complete board DTO                                                                                          |
 | PUT    | `/api/boards/{id}`        | Validate/save board; add concurrency/version checks                                                         |
+| DELETE | `/api/boards/{id}`        | Delete the authenticated owner's board; return 204; enforce ownership on the server                         |
 
 The demo list returns full boards. Adapt the saved-board UI to retrieve board detail when the backend returns summaries.
 
@@ -113,6 +118,8 @@ ASP.NET Core owns authorization, validation, upload verification/storage, resear
 Run `node tests/studio.browser.cjs` in a development environment with Playwright and Chromium installed. The script starts its own temporary static server. Set `CHROMIUM_PATH` if Chromium is installed somewhere other than `/usr/bin/chromium`.
 
 The checks cover desktop/mobile layouts, theme/device changes, persisted customization, keyboard dismissal, songs and sounds filters and inclusion options, sample selection, saved-board reopening, legacy board compatibility, and storage failures. This tests the frontend only; no backend/provider integration is claimed.
+
+Run `node tests/saved-boards.browser.cjs` for deletion checks: confirmation and safe default focus, Cancel/Enter/Escape, selective deletion, persistence after reload, storage failures, duplicate clicks, empty/count/focus states, responsive dark dialogs, and preservation of an open draft and its media. It also checks stale research cancellation, already-deleted boards, unchanged legacy records, and the proposed DELETE adapter using a mock response.
 
 ## Personalization and imported audio
 

@@ -110,6 +110,13 @@ function songsFor(key) {
     isSample: true,
   }));
 }
+// Read without normalization when deleting so unrelated saved records stay unchanged.
+function readStoredBoards() {
+  const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  if (!Array.isArray(parsed))
+    throw new Error("Saved board storage is not readable.");
+  return parsed;
+}
 // Keep existing browser-saved boards usable after the former music concept became sound.
 function normalizeBoard(board) {
   return {
@@ -210,11 +217,16 @@ export class DemoBoardService {
     };
   }
   async listBoards() {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (!Array.isArray(parsed))
-      throw new Error("Saved board storage is not readable.");
-    return parsed.map(normalizeBoard);
+    return readStoredBoards().map(normalizeBoard);
   }
+  async deleteBoard(id) {
+    const boards = readStoredBoards();
+    const next = boards.filter((board) => board.id !== id);
+    if (next.length === boards.length) return false;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    return true;
+  }
+
   async saveBoard(board) {
     const boards = await this.listBoards();
     const record = structuredClone(board);
@@ -256,6 +268,12 @@ export class ApiBoardService {
   }
   listBoards() {
     return this.request("/boards");
+  }
+  async deleteBoard(id) {
+    await this.request(`/boards/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    return true;
   }
   saveBoard(board) {
     return this.request(`/boards/${encodeURIComponent(board.id)}`, {
