@@ -84,7 +84,7 @@ The new suite checks URL rejection/normalization, duplicate moments, explicit em
 
 Previews: [login](design-previews/studio-login.png) · [account](design-previews/studio-account.png) · [connections](design-previews/studio-account-connections.png) · [video import](design-previews/studio-video-import.png) · [video reference](design-previews/studio-video-reference.png).
 
-Login, signup, recovery, account, and Studio pages share a System/Light/Dark theme selector and a static logo with the Studio star. System follows the device by default. `theme-init.js` initializes appearance before paint; `appearance.js` handles explicit overrides, device updates, cross-tab synchronization, and cached-page restoration. The navigation/theme suite also verifies legacy MediaQueryList behavior and real links with JavaScript disabled.
+Login, signup, recovery, account, and Studio pages share a static logo with the Studio star. System/Light/Dark choices live inside Customize rather than in the navbar; auth pages open a shared settings dialog and the account page uses its Customize tab. System follows the device by default. `theme-init.js` initializes appearance before paint; `appearance.js` handles explicit overrides, device updates, cross-tab synchronization, and cached-page restoration. The navigation/theme suite also verifies legacy MediaQueryList behavior and real links with JavaScript disabled.
 
 The navigation/theme browser suite also checks signup navigation under `/Scalable/`, required/whitespace/email/length/mismatch validation, visibility toggles and reset, no persistence or transmission of submitted details, blocked storage, and light/dark layouts at five widths.
 

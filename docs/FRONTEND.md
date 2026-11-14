@@ -18,7 +18,7 @@ Previews: [light](design-previews/studio.png), [dark](design-previews/studio-dar
 
 ## Appearance and customization
 
-- Studio, login, recovery, and account pages use the same **Theme: System / Light / Dark** selector. System is the default and follows device changes; manual overrides persist until System is selected again.
+- Theme lives inside **Customize**, alongside the other appearance preferences. Studio, login, signup, and recovery open a Customize dialog; the account page uses its **Customize** tab. System is the default and follows device changes; Light/Dark overrides persist until System is selected again. There is no separate navbar theme selector.
 - **Customize** offers light, dark, or device-following appearance; terracotta, olive, or plum accents; comfortable or compact canvas spacing; and soft or square card edges.
 - Changes apply immediately. Device-following mode responds to changes in the operating system color scheme. Reset restores the default device-following theme, terracotta accent, comfortable spacing, and soft edges.
 - `theme-init.js` applies the device/stored theme before styles paint. Preferences synchronize across open tabs and are re-read on back/forward-cache restoration. Legacy MediaQueryList listeners are supported; CSS follows the device when JavaScript is disabled.
@@ -43,7 +43,11 @@ No external catalog lookup, live AI recommendation, or streaming-service playbac
 - Pin/unpin images; pins survive a sample refinement. Save again to persist changes.
 - Copy palette HEX values with a manual-copy fallback.
 - Save boards locally, reopen them, or start a new exploration. Starting fresh discards the unsaved canvas but keeps saved boards.
+- In **Saved boards**, choose **Delete** and confirm **“Are you sure you want to delete this mood board?”** Cancel and Escape leave the saved copy untouched. Confirming removes only that board from this browser, updates the count/list, and returns keyboard focus to the list. Storage failures keep the confirmation open with a retry message.
+- Deleting the open board keeps its current canvas and imported media as an unsaved draft with a new ID. Saving that draft creates a new saved board. Deletion does not remove original files or content from connected providers.
 - Previously saved `type: "music"` concepts are read as `type: "sound"`. Existing boards are not overwritten automatically; older boards gain songs when the user explores again with songs enabled.
+
+Previews: [saved boards](design-previews/studio-saved-boards.png), [delete confirmation](design-previews/studio-delete-board.png).
 
 There is no real authenticated account, cloud sync, SQL connection, sharing, export, or live AI yet. Login and account pages are local frontend previews. Browser storage is origin/device-specific and may be cleared. Image-only research and drag-and-drop uploads remain unimplemented.
 
@@ -83,6 +87,7 @@ Proposed endpoints (not implemented):
 | GET    | `/api/boards`             | Authenticated owner's board summaries, with pagination                                                      |
 | GET    | `/api/boards/{id}`        | Complete board DTO                                                                                          |
 | PUT    | `/api/boards/{id}`        | Validate/save board; add concurrency/version checks                                                         |
+| DELETE | `/api/boards/{id}`        | Delete the authenticated owner's board; return 204; enforce ownership on the server                         |
 
 The demo list returns full boards. Adapt the saved-board UI to retrieve board detail when the backend returns summaries.
 
@@ -113,6 +118,8 @@ ASP.NET Core owns authorization, validation, upload verification/storage, resear
 Run `node tests/studio.browser.cjs` in a development environment with Playwright and Chromium installed. The script starts its own temporary static server. Set `CHROMIUM_PATH` if Chromium is installed somewhere other than `/usr/bin/chromium`.
 
 The checks cover desktop/mobile layouts, theme/device changes, persisted customization, keyboard dismissal, songs and sounds filters and inclusion options, sample selection, saved-board reopening, legacy board compatibility, and storage failures. This tests the frontend only; no backend/provider integration is claimed.
+
+Run `node tests/saved-boards.browser.cjs` for deletion checks: confirmation and safe default focus, Cancel/Enter/Escape, selective deletion, persistence after reload, storage failures, duplicate clicks, empty/count/focus states, responsive dark dialogs, and preservation of an open draft and its media. It also checks stale research cancellation, already-deleted boards, unchanged legacy records, and the proposed DELETE adapter using a mock response.
 
 ## Personalization and imported audio
 
@@ -170,3 +177,9 @@ The Studio, login, recovery, and account pages use the same static star-and-word
 Login's **Create an account** link opens `signup.html`, with display name, email, password, and confirmation validation. A successful submission shows a frontend-only confirmation and clears the form; it does not register an account or store/send the entered details. Continue to the account preview or return to login through ordinary links. Shared branding, System/Light/Dark preferences, and responsive layouts match the other pages. See the [signup handoff](VIDEO-ACCOUNT.md#create-account-page).
 
 Login, registration, session lookup, sign-out, and password recovery call the .NET GraphQL API. Password reset links carry an ASP.NET Identity token to `update-password.html`; no browser auth SDK is loaded. The frontend remains usable as a guest for Studio sample content, while account pages use the server session for identity.
+
+## Navigation cleanup
+
+The Studio has one account entry: the sidebar profile link, shown as an accessible avatar on mobile. The header keeps Log in and Customize. The focus-only Explore shortcut was removed; the brief and New mood board remain available. The soundtrack section uses one introduction plus an import action, and the repeated demo footer was removed. Account customization uses its existing tab navigation rather than an extra Back to profile button.
+
+`js/customize.js` shares appearance binding across pages and builds the auth-page Customize dialog from one field definition. System/Light/Dark, accent, layout, spacing, edges, typography, canvas, and reading size all use the existing stored preferences; no setting or saved board was reset.

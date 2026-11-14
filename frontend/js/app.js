@@ -13,13 +13,8 @@ import {
   releaseLocalAudio,
 } from "./audio-library.js";
 import { boardService, prompts } from "./board-service.js";
+import { setupCustomization } from "./customize.js";
 import { createCreativeDirection } from "./ai-service.js";
-import {
-  onAppearanceChange,
-  updateAppearance,
-  resetAppearance,
-  setupThemeControls,
-} from "./appearance.js";
 
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
@@ -30,6 +25,8 @@ let filter = "all";
 let referenceFile = null;
 let referenceUrl = null;
 let toastTimeout;
+let pendingBoardDeletion = null;
+let deletingBoard = false;
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -501,45 +498,7 @@ setupPinterestImporter({
     return { added, skipped: items.length - added };
   },
 });
-onAppearanceChange((preferences) => {
-  for (const field of [
-    "theme",
-    "density",
-    "corners",
-    "typography",
-    "layout",
-    "canvas",
-    "textSize",
-  ])
-    $("#appearance-form").elements[field].value = preferences[field];
-  $("#appearance-form").elements.accent.value = preferences.accent;
-});
-function appearanceStatus(saved) {
-  $("#appearance-status").textContent = saved
-    ? "Preferences saved in this browser."
-    : "Applied for this visit. Browser storage is unavailable, so preferences could not be saved.";
-}
-setupThemeControls((saved) => {
-  appearanceStatus(saved);
-  if (!saved)
-    notify("Theme applied for this visit. Browser storage is unavailable.");
-});
-$("#customize").addEventListener("click", () =>
-  $("#appearance-dialog").showModal(),
-);
-for (const id of ["close-appearance", "done-appearance"])
-  $("#" + id).addEventListener("click", () => $("#appearance-dialog").close());
-$("#appearance-form").addEventListener("submit", (event) =>
-  event.preventDefault(),
-);
-$("#appearance-form").addEventListener("change", (event) => {
-  appearanceStatus(
-    updateAppearance({ [event.target.name]: event.target.value }),
-  );
-});
-$("#reset-appearance").addEventListener("click", () =>
-  appearanceStatus(resetAppearance()),
-);
+setupCustomization();
 document
   .querySelectorAll("[data-filter]")
   .forEach((button) =>
@@ -684,59 +643,159 @@ $("#save-board").addEventListener("click", async () => {
     notify("Could not save. Browser storage may be disabled or full.");
   }
 });
+async function renderSavedBoards() {
+  const boards = await boardService.listBoards();
+  $("#saved-count").textContent = boards.length;
+  const list = element("div");
+  if (!boards.length)
+    list.append(
+      element(
+        "p",
+        "dialog-copy",
+        "A space for your favorite directions. Save your first board to find it here. Boards stay in this browser.",
+      ),
+    );
+  boards.forEach((saved) => {
+    const row = element("div", "saved-item");
+    row.dataset.boardId = saved.id;
+    const image = saved.items.find((item) => item.type === "image");
+    const img = image?.url
+      ? element("img")
+      : element("span", "saved-thumbnail", "✳");
+    if (image?.url) {
+      img.src = image.url;
+      img.alt = "";
+    } else img.setAttribute("aria-hidden", "true");
+    const copy = element("div");
+    copy.append(
+      element("strong", "", saved.title),
+      element(
+        "small",
+        "",
+        `Local demo · ${new Date(saved.createdAt).toLocaleDateString()}`,
+      ),
+    );
+    const open = element("button", "", "Open ↗");
+    open.addEventListener("click", () => {
+      boardVersion += 1;
+      resetResearchUI();
+      retainLocalAudio(saved.items);
+      retainLocalVideos(saved.items);
+      board = saved;
+      $("#include-songs").checked =
+        saved.researchOptions?.includeSongs ??
+        saved.items.some((item) => item.type === "song");
+      $("#include-sounds").checked =
+        saved.researchOptions?.includeSounds ??
+        saved.items.some((item) => item.type === "sound");
+      $("#prompt").value = saved.prompt;
+      updateCharacters();
+      removeReference();
+      selectFilter("all");
+      $("#save-label").textContent = "Saved locally";
+      $("#dialog").close();
+    });
+    open.dataset.openBoard = saved.id;
+    const remove = element("button", "saved-delete", "Delete");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Delete saved mood board ${saved.title}`);
+    remove.addEventListener("click", () => {
+      pendingBoardDeletion = {
+        id: saved.id,
+        title: saved.title,
+        index: boards.indexOf(saved),
+      };
+      $("#delete-board-name").textContent = saved.title;
+      $("#delete-board-error").textContent = "";
+      $("#delete-board-dialog").showModal();
+      $("#cancel-delete-board").focus();
+    });
+    const actions = element("div", "saved-actions");
+    actions.append(open, remove);
+    row.append(img, copy, actions);
+    list.append(row);
+  });
+  showDialog("Your saved directions", list);
+  return list;
+}
 $("#saved-boards").addEventListener("click", async () => {
   try {
-    const boards = await boardService.listBoards();
-    const list = element("div");
-    if (!boards.length)
-      list.append(
-        element(
-          "p",
-          "dialog-copy",
-          "A space for your favorite directions. Save your first board to find it here. Boards stay in this browser.",
-        ),
-      );
-    boards.forEach((saved) => {
-      const row = element("div", "saved-item");
-      const img = element("img");
-      img.src = saved.items.find((item) => item.type === "image").url;
-      img.alt = "";
-      const copy = element("div");
-      copy.append(
-        element("strong", "", saved.title),
-        element(
-          "small",
-          "",
-          `Local demo · ${new Date(saved.createdAt).toLocaleDateString()}`,
-        ),
-      );
-      const open = element("button", "", "Open ↗");
-      open.addEventListener("click", () => {
-        boardVersion += 1;
-        resetResearchUI();
-        retainLocalAudio(saved.items);
-        retainLocalVideos(saved.items);
-        board = saved;
-        $("#include-songs").checked =
-          saved.researchOptions?.includeSongs ??
-          saved.items.some((item) => item.type === "song");
-        $("#include-sounds").checked =
-          saved.researchOptions?.includeSounds ??
-          saved.items.some((item) => item.type === "sound");
-        $("#prompt").value = saved.prompt;
-        updateCharacters();
-        removeReference();
-        selectFilter("all");
-        $("#save-label").textContent = "Saved locally";
-        $("#dialog").close();
-      });
-      row.append(img, copy, open);
-      list.append(row);
-    });
-    showDialog("Your saved directions", list);
+    await renderSavedBoards();
   } catch {
     notify("Saved boards could not be read from this browser.");
   }
+});
+const deleteDialog = $("#delete-board-dialog");
+$("#cancel-delete-board").addEventListener("click", () => {
+  if (!deletingBoard) deleteDialog.close();
+});
+deleteDialog.addEventListener("cancel", (event) => {
+  if (deletingBoard) event.preventDefault();
+});
+deleteDialog.addEventListener("close", () => {
+  if (!deleteDialog.open && !deletingBoard) pendingBoardDeletion = null;
+});
+$("#confirm-delete-board").addEventListener("click", async () => {
+  if (!pendingBoardDeletion || deletingBoard) return;
+  const target = pendingBoardDeletion;
+  deletingBoard = true;
+  $("#confirm-delete-board").disabled = true;
+  $("#confirm-delete-board").textContent = "Deleting…";
+  $("#cancel-delete-board").disabled = true;
+  $("#delete-board-error").textContent = "";
+  let removed;
+  try {
+    removed = await boardService.deleteBoard(target.id);
+  } catch {
+    $("#delete-board-error").textContent =
+      "Deletion could not be confirmed. Please try again. Your current canvas has been kept.";
+    deletingBoard = false;
+    $("#confirm-delete-board").disabled = false;
+    $("#confirm-delete-board").textContent = "Delete mood board";
+    $("#cancel-delete-board").disabled = false;
+    $("#cancel-delete-board").focus();
+    return;
+  }
+  const keptDraft = board?.id === target.id;
+  if (keptDraft) {
+    // Do not let a late research result restore the deleted saved identity.
+    boardVersion += 1;
+    resetResearchUI();
+    board = {
+      ...board,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    $("#save-label").textContent = "Save board";
+  }
+  await updateSavedCount();
+  let list;
+  try {
+    list = await renderSavedBoards();
+  } catch {
+    showDialog(
+      "Your saved directions",
+      element(
+        "p",
+        "dialog-copy",
+        "The saved copy was removed, but the list could not be refreshed. Close this window and open Saved boards again.",
+      ),
+    );
+  }
+  deletingBoard = false;
+  pendingBoardDeletion = null;
+  deleteDialog.close();
+  $("#confirm-delete-board").disabled = false;
+  $("#confirm-delete-board").textContent = "Delete mood board";
+  $("#cancel-delete-board").disabled = false;
+  const remaining = list?.querySelectorAll("[data-open-board]");
+  (remaining?.length
+    ? remaining[Math.min(target.index, remaining.length - 1)]
+    : $("#close-dialog")
+  ).focus();
+  notify(
+    `${removed ? "Saved mood board deleted." : "This mood board was already deleted."}${keptDraft ? " Your current canvas is now an unsaved draft." : ""}`,
+  );
 });
 $("#new-board").addEventListener("click", async () => {
   const runVersion = ++boardVersion;
@@ -766,7 +825,6 @@ $("#new-board").addEventListener("click", async () => {
     "A fresh start. The canvas shows a sample until you explore your own brief.",
   );
 });
-$("#explore").addEventListener("click", () => $("#prompt").focus());
 $("#about").addEventListener("click", () =>
   showDialog(
     "Welcome to The Studio",
