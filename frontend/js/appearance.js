@@ -20,16 +20,26 @@ const allowed = {
   canvas: ["plain", "dotted"],
   textSize: ["standard", "large"],
 };
-const device = window.matchMedia("(prefers-color-scheme: dark)");
+const device =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-color-scheme: dark)")
+    : { matches: false };
+function storedPreferences(value) {
+  const result = { ...defaults };
+  try {
+    const saved = JSON.parse(value);
+    for (const field of Object.keys(defaults))
+      if (allowed[field].includes(saved?.[field])) result[field] = saved[field];
+  } catch {
+    /* Invalid stored data falls back to valid defaults. */
+  }
+  return result;
+}
 let preferences = { ...defaults };
 try {
-  const saved = JSON.parse(localStorage.getItem(key));
-  for (const field of Object.keys(defaults)) {
-    if (allowed[field].includes(saved?.[field]))
-      preferences[field] = saved[field];
-  }
+  preferences = storedPreferences(localStorage.getItem(key));
 } catch {
-  /* Use valid defaults when storage is unavailable or corrupt. */
+  /* Use device defaults. */
 }
 const listeners = new Set();
 function apply() {
@@ -77,7 +87,40 @@ export function onAppearanceChange(listener) {
   listeners.add(listener);
   listener(getAppearance());
 }
-device.addEventListener("change", () => {
+const onDeviceChange = () => {
   if (preferences.theme === "system") apply();
+};
+if (typeof device.addEventListener === "function")
+  device.addEventListener("change", onDeviceChange);
+else if (typeof device.addListener === "function")
+  device.addListener(onDeviceChange);
+window.addEventListener("storage", (event) => {
+  if (event.key === key || event.key === null) {
+    preferences = storedPreferences(event.newValue);
+    apply();
+  }
 });
+window.addEventListener("pageshow", (event) => {
+  if (!event.persisted) return;
+  try {
+    preferences = storedPreferences(localStorage.getItem(key));
+  } catch {
+    /* Keep per-visit overrides. */
+  }
+  apply();
+});
+export function setupThemeControls(onSave = () => {}) {
+  const controls = [...document.querySelectorAll("[data-theme-control]")];
+  onAppearanceChange((preferences) =>
+    controls.forEach((control) => {
+      control.value = preferences.theme;
+    }),
+  );
+  controls.forEach((control) => {
+    control.disabled = false;
+    control.addEventListener("change", () =>
+      onSave(updateAppearance({ theme: control.value })),
+    );
+  });
+}
 apply();

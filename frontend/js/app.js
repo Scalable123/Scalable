@@ -17,6 +17,7 @@ import {
   onAppearanceChange,
   updateAppearance,
   resetAppearance,
+  setupThemeControls,
 } from "./appearance.js";
 
 iconify(document.body);
@@ -500,13 +501,6 @@ setupPinterestImporter({
   },
 });
 onAppearanceChange((preferences) => {
-  const dark = document.documentElement.dataset.theme === "dark";
-  $("#theme-toggle").setAttribute("aria-pressed", String(dark));
-  $("#theme-toggle").textContent = dark ? "Light mode" : "Dark mode";
-  $("#theme-toggle").setAttribute(
-    "aria-label",
-    dark ? "Switch to light mode" : "Switch to dark mode",
-  );
   for (const field of [
     "theme",
     "density",
@@ -524,10 +518,7 @@ function appearanceStatus(saved) {
     ? "Preferences saved in this browser."
     : "Applied for this visit. Browser storage is unavailable, so preferences could not be saved.";
 }
-$("#theme-toggle").addEventListener("click", () => {
-  const saved = updateAppearance({
-    theme: document.documentElement.dataset.theme === "dark" ? "light" : "dark",
-  });
+setupThemeControls((saved) => {
   appearanceStatus(saved);
   if (!saved)
     notify("Theme applied for this visit. Browser storage is unavailable.");
