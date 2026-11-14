@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f5f3ed" />
     <title>Scalable — A place for your next idea</title>
+    <link rel="icon" type="image/png" href="assets/scalable-favicon-transparent.png" />
     <script src="js/theme-init.js"></script>
     <script>
       if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
@@ -37,20 +38,7 @@
     <div class="app-shell">
       <aside class="sidebar">
         <a class="brand" href="index.html" aria-label="Scalable home"
-          ><span class="brand-mark" aria-hidden="true"
-            >s<svg
-              class="brand-star"
-              viewBox="0 0 100 100"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M50 2v96M2 50h96M16 16l68 68M16 84l68-68"
-                stroke="currentColor"
-                stroke-width="8"
-              /></svg>
-          </span>
-          scalable<span class="brand-period">.</span></a
+          ><img class="brand-logo" src="assets/scalable-logo.png" alt="" /><span>scalable<span class="brand-period">.</span></span></a
         >
         <p class="side-caption">A LITTLE SPACE TO THINK BIG.</p>
         <button class="new-board" id="new-board">
@@ -148,7 +136,45 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 >
                   ×
                 </button>
+              </div>
+              <div class="pinterest-dock" hidden>
+                <span class="pinterest-mark" aria-hidden="true">P</span>
+                <div>
+                  <strong>Start from Pinterest.</strong>
+                  <p>Use a full board as your starting point.</p>
+                </div>
+                <button
+                  type="button"
+                  id="import-pinterest"
+                  class="toolbar-button"
+                  aria-haspopup="dialog"
+                  disabled
+                >
+                  Import Pinterest board ↗
+                </button>
+              </div>
+              <p id="pinterest-import-summary" class="field-help" hidden></p>
+              <div class="quote-dock">
+                <span class="quote-mark" aria-hidden="true">“</span>
+                <div>
+                  <strong>Find a sourced quote.</strong>
+                  <p>Search Wikiquote and keep the source attached.</p>
+                </div>
+                <button type="button" id="import-quote" class="toolbar-button" aria-haspopup="dialog">
+                  Import quote ↗
+                </button>
+              </div>
               </div> -->
+              <div class="quote-dock">
+                <span class="quote-mark" aria-hidden="true">“</span>
+                <div>
+                  <strong>Find a sourced quote.</strong>
+                  <p>Search Wikiquote and keep the source attached.</p>
+                </div>
+                <button type="button" id="import-quote" class="toolbar-button" aria-haspopup="dialog">
+                  Import quote ↗
+                </button>
+              </div>
               <p class="input-error" id="input-error" role="alert"></p>
               <span class="field-caption">OR BORROW A LITTLE INSPIRATION</span>
               <div class="prompt-chips">
@@ -498,7 +524,246 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         role="status"
         aria-live="polite"
       ></p>
+    </dialog>
+    <dialog id="pinterest-dialog" aria-labelledby="pinterest-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">FROM COLLECTING TO CREATING</p>
+          <h2 id="pinterest-title">A head start on your next idea.</h2>
+        </div>
+        <button id="close-pinterest" aria-label="Close Pinterest importer">
+          ×
+        </button>
+      </div>
+      <p id="pinterest-connection-notice" class="connection-notice">
+        PINTEREST CONNECTION PREVIEW · NOT CONNECTED
+      </p>
+      <ol class="pinterest-steps" aria-label="Pinterest import progress">
+        <li data-pinterest-step="connect" aria-current="step">01 / Connect</li>
+        <li data-pinterest-step="boards">02 / Boards</li>
+        <li data-pinterest-step="review">03 / Review</li>
+        <li data-pinterest-step="complete">04 / Done</li>
+      </ol>
+      <section
+        id="pinterest-connect"
+        aria-labelledby="pinterest-connect-heading"
+      >
+        <div class="pinterest-welcome">
+          <span class="pinterest-mark" aria-hidden="true">P</span>
+          <h3 id="pinterest-connect-heading" tabindex="-1">
+            Your saved ideas. A new starting point.
+          </h3>
+          <p>
+            Choose your Pinterest boards, bring over their pins, and build a
+            mood board that feels like you.
+          </p>
+        </div>
+        <ul class="pinterest-benefits">
+          <li>Import complete boards, or choose individual pins.</li>
+          <li>Keep the source board attached to each reference.</li>
+          <li>Add to your current canvas or start a fresh direction.</li>
+        </ul>
+        <div class="preview-explainer">
+          <strong>Your boards, by your choice.</strong>
+          <p>
+            Link your account to import your boards when live access is available.
+            Pinterest is never searched, scanned, or analyzed by our AI.
+            Importing keeps references and does not grant image reuse rights.
+            Save your current mood board before leaving for Pinterest sign-in.
+          </p>
+        </div>
+        <button id="connect-pinterest" class="done-button">Link Pinterest account ↗</button>
+        <p class="field-help">Use your <a href="login.html">Scalable login</a> first. Live access requires an approved Pinterest integration.</p>
+        <button id="preview-pinterest" class="toolbar-button">
+          Preview Pinterest connection ↗
+        </button>
+      </section>
+      <section
+        id="pinterest-boards"
+        aria-labelledby="pinterest-boards-heading"
+        hidden
+      >
+        <div class="pinterest-screen-heading">
+          <div>
+            <h3 id="pinterest-boards-heading" tabindex="-1">
+              Which boards are you feeling?
+            </h3>
+            <p id="pinterest-library-description" class="field-help">
+              Demo library — sample boards, not your Pinterest account.
+            </p>
+          </div>
+          <button id="end-pinterest-preview" class="text-button">
+            End preview
+          </button>
+        </div>
+        <label id="pinterest-search-label" class="search-label" for="pinterest-search"
+          >Find a sample board</label
+        ><input
+          id="pinterest-search"
+          type="search"
+          maxlength="100"
+          placeholder="Search by board name…"
+        />
+        <div class="selection-toolbar">
+          <span id="pinterest-board-count" role="status"></span>
+          <div>
+            <button id="select-pinterest-boards" class="text-button">
+              Select all boards</button
+            ><button id="clear-pinterest-boards" class="text-button">
+              Clear selection
+            </button>
+          </div>
+        </div>
+        <div id="pinterest-board-list" class="pinterest-board-list"></div>
+        <p id="pinterest-no-boards" class="empty-state" hidden>
+          No boards match that search.
+        </p>
+        <div class="pinterest-footer">
+          <span class="field-help"
+            >Full boards are selected for import by default.</span
+          ><button id="review-pinterest" class="done-button" disabled>
+            Review selected boards ↗
+          </button>
+        </div>
+      </section>
+      <section
+        id="pinterest-review"
+        aria-labelledby="pinterest-review-heading"
+        hidden
+      >
+        <div class="pinterest-screen-heading">
+          <div>
+            <h3 id="pinterest-review-heading" tabindex="-1">
+              Make these ideas your own.
+            </h3>
+            <p id="pinterest-review-description" class="field-help"></p>
+          </div>
+          <button id="back-pinterest-boards" class="text-button">
+            Back to boards
+          </button>
+        </div>
+        <form id="pinterest-review-form">
+          <div class="selection-toolbar">
+            <label class="pin-select-all"
+              ><input type="checkbox" id="select-pinterest-pins" checked />
+              Select every pin</label
+            ><span id="pinterest-pin-count" role="status"></span>
+          </div>
+          <div id="pinterest-pin-list" class="pinterest-pin-list"></div>
+          <fieldset class="pinterest-destination">
+            <legend>Where should these pins go?</legend>
+            <label
+              ><input type="radio" name="destination" value="current" checked />
+              Add to my current mood board</label
+            ><label
+              ><input type="radio" name="destination" value="new" /> Start a new
+              mood board</label
+            >
+          </fieldset>
+          <div id="pinterest-new-board" class="import-form" hidden>
+            <label for="pinterest-new-title">New mood board name</label
+            ><input
+              id="pinterest-new-title"
+              maxlength="120"
+              placeholder="A new creative direction"
+            />
+            <p class="field-help">
+              Starting fresh replaces the current unsaved canvas. Save it before
+              importing into a new board if you want to keep it.
+            </p>
+          </div>
+          <div class="preview-explainer">
+            <p id="pinterest-rights">
+              Sample pins use local demo photography, not images fetched from
+              Pinterest. Source metadata stays with the references; this does
+              not transfer ownership or change a Pinterest board.
+            </p>
+          </div>
+          <div class="pinterest-footer">
+            <span class="field-help"
+              >Existing pins will be skipped when adding to a board.</span
+            ><button
+              id="confirm-pinterest-import"
+              class="done-button"
+              type="submit"
+            >
+              Import sample pins ↗
+            </button>
+          </div>
+        </form>
+      </section>
+      <section
+        id="pinterest-complete"
+        aria-labelledby="pinterest-complete-heading"
+        hidden
+      >
+        <div class="pinterest-welcome">
+          <span class="import-complete-mark" aria-hidden="true">✓</span>
+          <h3 id="pinterest-complete-heading" tabindex="-1">
+            A little inspiration goes a long way.
+          </h3>
+          <p id="pinterest-result"></p>
+        </div>
+        <p id="pinterest-save-reminder" class="field-help">
+          Your Studio canvas has been updated locally. Save the mood board to
+          keep these sample references. No Pinterest account or boards were
+          changed.
+        </p>
+        <div class="pinterest-footer">
+          <button id="more-pinterest-boards" class="text-button">
+            Import more boards</button
+          ><button id="view-pinterest-board" class="done-button">
+            View mood board ↗
+          </button>
+        </div>
+      </section>
+      <p
+        id="pinterest-status"
+        class="settings-status"
+        role="status"
+        aria-live="polite"
+      ></p>
+      <button id="cancel-pinterest-request" class="text-button" hidden>Cancel request</button>
+    </dialog>
+    <dialog id="quote-dialog" aria-labelledby="quote-dialog-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">WORDS WITH A SOURCE</p>
+          <h2 id="quote-dialog-title">Find a sourced quote.</h2>
+        </div>
+        <button id="close-quote" aria-label="Close quote search">×</button>
+      </div>
+      <form id="quote-search-form" class="import-form">
+        <label for="quote-search">Search Wikiquote</label>
+        <div class="form-pair">
+          <input id="quote-search" maxlength="100" placeholder="Wisdom, courage, wonder" required />
+          <button class="done-button" type="submit">Search quotes ↗</button>
+        </div>
+      </form>
+      <p id="quote-search-status" class="settings-status" role="status" aria-live="polite"></p>
+      <div id="quote-search-results" class="provider-tracks"></div>
+      <p class="field-help">Results are short Wikiquote page excerpts. The source page and CC BY-SA attribution stay attached to every reference.</p>
+    </dialog>
     </dialog> -->
+    <dialog id="quote-dialog" aria-labelledby="quote-dialog-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">WORDS WITH A SOURCE</p>
+          <h2 id="quote-dialog-title">Find a sourced quote.</h2>
+        </div>
+        <button id="close-quote" aria-label="Close quote search">×</button>
+      </div>
+      <form id="quote-search-form" class="import-form">
+        <label for="quote-search">Search Wikiquote</label>
+        <div class="form-pair">
+          <input id="quote-search" maxlength="100" placeholder="Wisdom, courage, wonder" required />
+          <button class="done-button" type="submit">Search quotes ↗</button>
+        </div>
+      </form>
+      <p id="quote-search-status" class="settings-status" role="status" aria-live="polite"></p>
+      <div id="quote-search-results" class="provider-tracks"></div>
+      <p class="field-help">Results are short Wikiquote page excerpts. The source page and CC BY-SA attribution stay attached to every reference.</p>
+    </dialog>
     <dialog id="audio-dialog" aria-labelledby="audio-dialog-title">
       <div class="dialog-header">
         <div>
@@ -594,6 +859,20 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
           access, and provider permissions will be handled by the backend.
           Availability depends on each provider’s API access.
         </p>
+        <form id="spotify-search-form" class="import-form">
+          <label for="music-provider">Search a music catalog</label>
+          <div class="form-pair">
+            <select id="music-provider" aria-label="Music provider">
+              <option value="spotify">Spotify</option>
+              <option value="jamendo">Jamendo</option>
+              <option value="soundcloud">SoundCloud</option>
+            </select>
+            <input id="spotify-search" maxlength="100" placeholder="Artist, song, or mood" required />
+            <button class="done-button" type="submit">Search catalog ↗</button>
+          </div>
+          <p id="spotify-search-status" class="field-help" role="status" aria-live="polite"></p>
+          <div id="spotify-search-results" class="provider-tracks"></div>
+        </form>
         <div id="provider-list" class="provider-list"></div>
         <section
           id="provider-preview"

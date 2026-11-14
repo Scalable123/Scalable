@@ -163,6 +163,18 @@ function renderPalette(item) {
   );
   return card;
 }
+function renderQuote(item) {
+  const card = element("blockquote", "board-card quote-card");
+  card.append(element("span", "card-eyebrow", "SOURCED QUOTE"), element("p", "quote-text", `“${item.text}”`));
+  const attribution = element("p", "quote-attribution", item.author ? `— ${item.author}` : item.sourceTitle);
+  const source = element("a", "quote-source", "View Wikiquote source ↗");
+  source.href = item.sourceUrl;
+  source.target = "_blank";
+  source.rel = "noopener noreferrer";
+  attribution.append(document.createTextNode(" · "), source);
+  card.append(attribution);
+  return card;
+}
 function renderSound(item) {
   const card = element("section", "board-card music-card");
   card.setAttribute("aria-label", "Ambient sound direction");
@@ -301,6 +313,7 @@ function renderBoard() {
       if (item.type === "image") grid.append(renderImage(item));
       if (item.type === "palette") grid.append(renderPalette(item));
       if (item.type === "sound") grid.append(renderSound(item));
+      if (item.type === "quote") grid.append(renderQuote(item));
       if (item.type === "note") {
         const note = element("div", "board-card note-card");
         note.append(element("span", "", "✳"), element("p", "", item.text));
@@ -374,6 +387,114 @@ function resetResearchUI() {
   $("#generate").firstElementChild.textContent = "Explore this feeling";
   grid.setAttribute("aria-busy", "false");
 }
+/* Retired Pinterest importer kept out of the active application.
+setupPinterestImporter({
+  element,
+  getBoardId: () => board?.id,
+  onImport({ items, destination, title, boards }) {
+    if (!board)
+      throw new Error(
+        "Wait for the current board to finish loading, then try again.",
+      );
+    let added = 0;
+    if (destination === "new") {
+      boardVersion += 1;
+      resetResearchUI();
+      document
+        .querySelectorAll("audio,video")
+        .forEach((audio) => audio.pause());
+      retainLocalAudio([]);
+      retainLocalVideos([]);
+      removeReference();
+      board = {
+        id: crypto.randomUUID(),
+        title,
+        description: items.every(item => item.isSample) ? `Inspired by ${boards.map((board) => board.title).join(", ")}. Sample Pinterest import.` : "References imported from your Pinterest boards. Excluded from AI research.",
+        // Provider board titles/descriptions and imported images are never research input.
+        prompt: items.every(item => item.isSample) ? `Develop a creative direction inspired by ${boards.map((board) => board.title).join(", ")}.` : "",
+        createdAt: new Date().toISOString(),
+        mode: "demo",
+        researchOptions: { includeSongs: true, includeSounds: true },
+        items,
+      };
+      $("#prompt").value = board.prompt;
+      updateCharacters();
+      $("#include-songs").checked = true;
+      $("#include-sounds").checked = true;
+      added = items.length;
+    } else {
+      const existing = new Set(
+        board.items.map((item) => item.sourceKey).filter(Boolean),
+      );
+      const fresh = items.filter((item) => {
+        if (existing.has(item.sourceKey)) {
+          const current = board.items.find(saved => saved.sourceKey === item.sourceKey);
+          if (current && item.sourceBoards) {
+            const associations = new Map((current.sourceBoards || [current.sourceBoard]).filter(Boolean).map(source => [source.id, source]));
+            item.sourceBoards.forEach(source => associations.set(source.id, source));
+            current.sourceBoards = [...associations.values()];
+          }
+          return false;
+        }
+        existing.add(item.sourceKey);
+        return true;
+      });
+      board.items.push(...fresh);
+      added = fresh.length;
+    }
+    selectFilter("all");
+    if (items.length) $("#save-label").textContent = "Save board";
+    return { added, skipped: items.length - added };
+  },
+});
+*/
+const quoteDialog = $("#quote-dialog");
+$("#import-quote").addEventListener("click", () => {
+  $("#quote-search").value = $("#prompt").value.trim();
+  $("#quote-search-status").textContent = "";
+  $("#quote-search-results").replaceChildren();
+  quoteDialog.showModal();
+});
+$("#close-quote").addEventListener("click", () => quoteDialog.close());
+$("#quote-search-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const query = $("#quote-search").value.trim();
+  const status = $("#quote-search-status");
+  const results = $("#quote-search-results");
+  status.textContent = "Searching Wikiquote…";
+  results.replaceChildren();
+  try {
+    const response = await fetch(`/api/quotes/wikiquote/search?q=${encodeURIComponent(query)}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Wikiquote is unavailable.");
+    const items = payload.items.map((item) => ({
+      id: crypto.randomUUID(), type: "quote", text: item.text, sourceTitle: item.title,
+      sourceUrl: item.sourceUrl, provider: "wikiquote", sourceKind: "wikiquote-page",
+      sourceKey: `wikiquote:${item.id}`, license: item.license, imported: true,
+    }));
+    if (!items.length) { status.textContent = "No sourced Wikiquote pages matched that search."; return; }
+    items.forEach((item, index) => {
+      const label = element("label", "demo-track");
+      const checkbox = element("input");
+      checkbox.type = "checkbox"; checkbox.value = String(index);
+      const copy = element("span");
+      copy.append(element("strong", "", item.sourceTitle), element("small", "", `${item.text.slice(0, 180)}${item.text.length > 180 ? "…" : ""}`));
+      label.append(checkbox, copy); results.append(label);
+    });
+    const add = element("button", "done-button", "Add selected quotes ↗");
+    add.type = "button";
+    add.addEventListener("click", () => {
+      const selected = [...results.querySelectorAll("input:checked")].map((input) => items[Number(input.value)]);
+      if (!selected.length) { status.textContent = "Choose at least one quote."; return; }
+      const existing = new Set(board.items.map((item) => item.sourceKey).filter(Boolean));
+      const fresh = selected.filter((item) => !existing.has(item.sourceKey));
+      board.items.push(...fresh); selectFilter("all"); renderBoard();
+      $("#save-label").textContent = "Save board";
+      status.textContent = `${fresh.length} quote${fresh.length === 1 ? "" : "s"} added. Save your board to keep the references.`;
+    });
+    results.append(add); status.textContent = "Choose sourced quotes to add to your board.";
+  } catch (error) { status.textContent = error.message; }
+});
 setupCustomization();
 document
   .querySelectorAll("[data-filter]")

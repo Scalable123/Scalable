@@ -28,6 +28,13 @@ export const providers = [
     color: "#a65e32",
     note: "Music & independent sounds",
   },
+  {
+    id: "jamendo",
+    name: "Jamendo",
+    mark: "J",
+    color: "#7a5b9e",
+    note: "Independent and openly licensed music",
+  },
 ];
 const amazonHosts = new Set(
   [
@@ -95,6 +102,9 @@ export function parseMediaLink(value) {
   ) {
     provider = "soundcloud";
     resourceType = parts.includes("sets") ? "playlist" : "sound";
+  } else if (["jamendo.com", "www.jamendo.com"].includes(host) && parts.length) {
+    provider = "jamendo";
+    resourceType = "song";
   } else if (
     ["www.youtube.com", "youtube.com", "music.youtube.com"].includes(host) &&
     ((url.pathname === "/watch" && url.searchParams.get("v")) ||
@@ -249,6 +259,7 @@ export function setupAudioImporter({ onImport, getBoardId, element }) {
   const tabs = [...dialog.querySelectorAll("[data-import-tab]")];
   let sampleTracks = [];
   let activeProvider = null;
+  let spotifyTracks = [];
   function chooseTab(name, focus = false) {
     tabs.forEach((tab) => {
       const selected = tab.dataset.importTab === name;
@@ -301,6 +312,94 @@ export function setupAudioImporter({ onImport, getBoardId, element }) {
       status(error.message);
     }
   });
+  $("#spotify-search-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const query = $("#spotify-search").value.trim();
+    const statusNode = $("#spotify-search-status");
+    const results = $("#spotify-search-results");
+    const provider = $("#music-provider").value;
+    if (!query) return;
+    statusNode.textContent = `Searching ${provider}…`;
+    results.replaceChildren();
+    try {
+      const response = await fetch(`/api/music/${provider}/search?q=${encodeURIComponent(query)}`, { credentials: "same-origin" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Spotify search is unavailable.");
+      spotifyTracks = payload.items.map((track) => reference({
+        type: "song",
+        title: track.title,
+        artist: track.artist,
+        url: track.discoveryUrl,
+        sourceKind: `${provider}-api`,
+        isSample: false,
+      }));
+      spotifyTracks.forEach((item, index) => {
+        const label = element("label", "demo-track");
+        const checkbox = element("input");
+        checkbox.type = "checkbox";
+        checkbox.value = String(index);
+        const copy = element("span");
+        copy.append(element("strong", "", item.title), element("small", "", `${item.artist} · ${provider}`));
+        label.append(checkbox, copy);
+        results.append(label);
+      });
+      statusNode.textContent = spotifyTracks.length ? "Choose songs to add to your board." : "No Spotify tracks matched that search.";
+      if (spotifyTracks.length) {
+        const add = element("button", "done-button", "Add selected songs ↗");
+        add.type = "button";
+        add.addEventListener("click", () => {
+          const selected = [...results.querySelectorAll("input:checked")].map((input) => spotifyTracks[Number(input.value)]);
+          if (!selected.length) { statusNode.textContent = "Choose at least one song."; return; }
+          const count = onImport(selected);
+          statusNode.textContent = count ? `${count} Spotify song${count === 1 ? "" : "s"} added. Save your board to keep it.` : "Those songs are already on this board.";
+        });
+        results.append(add);
+      }
+    } catch (error) {
+      statusNode.textContent = error.message;
+    }
+  });
+  $("#audio-file-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = $("#add-file");
+    button.disabled = true;
+    status("Checking this local audio file…");
+    const id = crypto.randomUUID();
+    const targetBoardId = getBoardId();
+    try {
+      const file = $("#audio-file").files[0];
+      const fileInfo = await attachLocalAudio(id, file);
+      const item = {
+        id,
+        type: $("#file-kind").value,
+        title:
+          $("#file-title").value.trim() || file.name.replace(/\.[^.]+$/, ""),
+        artist: "",
+        imported: true,
+        sourceKind: "local-file",
+        fileInfo,
+        sourceKey: `file:${file.name}:${file.size}:${file.lastModified}`,
+        explanation:
+          "Local audio. Only file details are saved; reattach after reopening in a new visit.",
+        tags: "Local file · stays on this device",
+        isSample: false,
+      };
+      const count = onImport([item], targetBoardId);
+      if (!count) releaseLocalAudio(id);
+      status(
+        count
+          ? "Local audio added. The recording stays in this tab; save keeps its details only."
+          : "This file is already on this board.",
+      );
+      if (count) event.target.reset();
+    } catch (error) {
+      releaseLocalAudio(id);
+      status(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   for (const provider of providers) {
     const card = element("article", "provider-card");
     const mark = element("span", "provider-mark", provider.mark);
