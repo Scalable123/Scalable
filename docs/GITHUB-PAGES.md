@@ -51,6 +51,6 @@ Pages cannot execute `server.js`. The AI client uses absolute-root `/api/ai/crea
 
 No Pages settings, repository publishing source, or live deployment are changed by adding these files. Actual publication is a separate step through GitHub.
 
-## Optional Unsplash backend
+## Hosted image-source API
 
-T001 adds a separate ASP.NET Core image-source host. Pages still publishes static files only and does not run the Unsplash endpoint. The live source requires the .NET host serving the frontend, or a shared-origin reverse proxy to `/api/image-sources/unsplash`. Static-only Pages continues showing samples and reports the source unavailable after Explore. Never embed the provider key into a Pages artifact. [Backend deployment and secret configuration](BACKEND.md) describes the required runtime and persistent quota volume. No publishing configuration was changed for this task.
+The hosted ASP.NET GraphQL/Identity API now exposes the Wikimedia endpoint at `/api/image-sources/wikimedia`. Pages still publishes static files only, so the frontend resolves API calls to `https://scalable-5rgd.onrender.com` by default; override this before modules initialize with `window.SCALABLE_API_ORIGIN` when deploying the API elsewhere. The API deployment must allow the exact Pages origin in CORS and persist its data directory for the shared Wikimedia budget. Wikimedia needs no API key; never embed provider credentials into a Pages artifact. Unsplash remains optional and requires its separate server key.

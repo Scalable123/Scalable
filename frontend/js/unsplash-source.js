@@ -1,5 +1,7 @@
-// Same-origin backend only. Credentials and the shared quota never enter browser storage.
-const endpoint = new URL("../../api/image-sources/unsplash", import.meta.url);
+import { apiOrigin } from "./config/api-origin.js";
+
+// Credentials and the shared quota never enter browser storage.
+const endpoint = new URL("/api/image-sources/unsplash", apiOrigin());
 export const sourceMessages = {
   available: "One Unsplash photo added.",
   rate_limited: "Unsplash’s hourly request budget is used up. Sample images are shown; try again later.",

@@ -1,6 +1,8 @@
 // Wikimedia credentials are not required for this read-only Commons search.
 // The server owns the User-Agent, shared quota, URL validation, and attribution metadata.
-const endpoint = new URL("../../api/image-sources/wikimedia", import.meta.url);
+import { apiOrigin } from "./config/api-origin.js";
+
+const endpoint = new URL("/api/image-sources/wikimedia", apiOrigin());
 export const wikimediaSourceMessages = {
   available: "One Wikimedia Commons image added.",
   rate_limited: "Wikimedia Commons is rate limited. Sample images are shown; try again later.",

@@ -114,6 +114,17 @@ builder.Services.AddSingleton(services => new PinterestStore(Path.Combine(
     "pinterest.db")));
 builder.Services.AddSingleton<PinterestIntegration>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton(new ProviderRequestBudget(
+    builder.Configuration["Wikimedia:BudgetPath"] ?? Path.Combine(dataRoot, "wikimedia-budget.json"),
+    TimeProvider.System));
+builder.Services.AddSingleton<WikimediaSource>(services => new WikimediaSource(
+    new HttpClient(new SocketsHttpHandler
+    {
+        AllowAutoRedirect = false,
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+    }) { Timeout = TimeSpan.FromSeconds(5) },
+    services.GetRequiredService<ProviderRequestBudget>(),
+    builder.Configuration["Wikimedia:UserAgent"] ?? "Scalable/1.0 (https://github.com/Scalable123/Scalable)"));
 builder.Services.AddHttpClient("Pinterest", client =>
 {
     client.BaseAddress = new Uri("https://api.pinterest.com/v5/");
@@ -152,6 +163,14 @@ builder.Services.AddRateLimiter(options =>
     };
     options.AddPolicy("pinterest", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+        context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        }));
+    options.AddPolicy("provider", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions
         {
@@ -234,6 +253,13 @@ app.UseRateLimiter();
 app.MapGet("/api/integrations/pinterest/availability", (PinterestIntegration integration) =>
     Results.Ok(new { available = integration.Available, researchAllowed = false }))
     .RequireRateLimiting("pinterest");
+app.MapPost("/api/image-sources/wikimedia", async (WikimediaInput input, WikimediaSource source, CancellationToken token) =>
+{
+    var prompt = input.Prompt?.Trim();
+    if (string.IsNullOrWhiteSpace(prompt) || prompt.Length > 2000)
+        return Results.BadRequest(new { error = "A prompt of 1–2000 characters is required." });
+    return Results.Ok(await source.Search(prompt, token));
+}).RequireRateLimiting("provider");
 var pinterest = app.MapGroup("/api/integrations/pinterest")
     .RequireAuthorization()
     .RequireRateLimiting("pinterest");
@@ -296,3 +322,5 @@ static bool IsAllowedOrigin(string origin, IConfiguration configuration, bool is
 }
 
 public partial class Program { }
+
+public sealed record WikimediaInput(string? Prompt);
