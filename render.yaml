@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: scalable-ai
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: FRONTEND_ORIGIN
+        value: https://scalable123.github.io

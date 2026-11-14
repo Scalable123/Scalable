@@ -21,8 +21,20 @@ async function loadEnv() {
   }
 }
 
-const json = (response, status, body) => {
-  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+function corsHeaders(request) {
+  const configuredOrigin = process.env.FRONTEND_ORIGIN?.trim();
+  const requestOrigin = request.headers.origin;
+  if (!configuredOrigin || !requestOrigin || requestOrigin !== configuredOrigin) return {};
+  return {
+    "Access-Control-Allow-Origin": requestOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
+  };
+}
+
+const json = (response, status, body, request) => {
+  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(request) });
   response.end(JSON.stringify(body));
 };
 
@@ -78,30 +90,35 @@ async function createDirection(input) {
 const mime = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml" };
 async function serve(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
-  if (request.method === "POST" && url.pathname === "/api/ai/creative-direction") {
+  if (url.pathname === "/api/ai/creative-direction") {
+    const configuredOrigin = process.env.FRONTEND_ORIGIN?.trim();
+    const requestOrigin = request.headers.origin;
+    if (requestOrigin && configuredOrigin && requestOrigin !== configuredOrigin) return json(response, 403, { error: "Origin is not allowed." }, request);
+    if (request.method === "OPTIONS") return json(response, 204, {}, request);
+    if (request.method !== "POST") return json(response, 405, { error: "Method not allowed." }, request);
     try {
       const input = await readJson(request, 15_000_000);
-      if (typeof input.prompt !== "string" || !input.prompt.trim() || input.prompt.length > 2000) return json(response, 400, { error: "Prompt must be between 1 and 2000 characters." });
+      if (typeof input.prompt !== "string" || !input.prompt.trim() || input.prompt.length > 2000) return json(response, 400, { error: "Prompt must be between 1 and 2000 characters." }, request);
       if (input.referenceImage !== undefined &&
         (typeof input.referenceImage !== "string" ||
           !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(input.referenceImage) ||
           input.referenceImage.length > 14_000_000))
-        return json(response, 400, { error: "Reference image must be a base64 JPG, PNG, or WebP smaller than 10 MB." });
-      return json(response, 200, await createDirection({ ...input, prompt: input.prompt.trim() }));
+        return json(response, 400, { error: "Reference image must be a base64 JPG, PNG, or WebP smaller than 10 MB." }, request);
+      return json(response, 200, await createDirection({ ...input, prompt: input.prompt.trim() }), request);
     } catch (error) {
-      return json(response, 502, { error: error.message || "AI request failed." });
+      return json(response, 502, { error: error.message || "AI request failed." }, request);
     }
   }
-  if (request.method !== "GET") return json(response, 405, { error: "Method not allowed." });
+  if (request.method !== "GET") return json(response, 405, { error: "Method not allowed." }, request);
   const requested = url.pathname === "/" ? "/index.html" : url.pathname;
   const file = normalize(join(frontendRoot, requested));
-  if (!file.startsWith(frontendRoot)) return json(response, 404, { error: "Not found." });
+  if (!file.startsWith(frontendRoot)) return json(response, 404, { error: "Not found." }, request);
   try {
     const contents = await readFile(file);
     response.writeHead(200, { "Content-Type": `${mime[extname(file)] || "application/octet-stream"}; charset=utf-8` });
     response.end(contents);
   } catch {
-    json(response, 404, { error: "Not found." });
+    json(response, 404, { error: "Not found." }, request);
   }
 }
 
