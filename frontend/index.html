@@ -175,6 +175,21 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 ↗ <span id="save-label">Save board</span>
               </button>
             </div>
+            <div class="audio-dock">
+              <div>
+                <p class="section-label">A SOUNDTRACK THAT’S YOURS</p>
+                <strong>Bring a little of your world.</strong>
+                <p>Add music links or local audio to your board.</p>
+              </div>
+              <button
+                id="import-audio"
+                class="toolbar-button"
+                aria-haspopup="dialog"
+                disabled
+              >
+                ＋ Import audio
+              </button>
+            </div>
             <div class="board-toolbar">
               <div
                 class="filters"
@@ -210,10 +225,29 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 <span class="sample-label">Curated sample picks</span>
               </div>
               <p class="song-caption">
-                Real songs to explore. Sample suggestions, not live AI research.
-                Links open a catalog search; no playback here.
+                Curated suggestions and your own references. Sample picks are
+                not live research. Service links open their source; local audio
+                plays in this browser.
               </p>
               <div id="song-list" class="song-list"></div>
+            </section>
+            <section
+              id="sound-library"
+              class="song-section"
+              aria-labelledby="sound-library-heading"
+              hidden
+            >
+              <div class="song-heading">
+                <h3 id="sound-library-heading">
+                  Your sound references<span>.</span>
+                </h3>
+                <span class="sample-label">Added by you</span>
+              </div>
+              <p class="song-caption">
+                Linked references open at their source. Local recordings play
+                only in this browser.
+              </p>
+              <div id="sound-list" class="song-list"></div>
             </section>
             <div class="board-footer">
               <span><i></i> Curated demo collection</span
@@ -239,12 +273,14 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         and stay in this browser.
       </p>
       <form id="appearance-form" class="appearance-form">
-        <label for="theme-preference">Appearance</label>
-        <select id="theme-preference" name="theme">
-          <option value="system">Follow device</option>
-          <option value="light">Light — warm paper</option>
-          <option value="dark">Dark — evening studio</option>
-        </select>
+        <div class="appearance-field">
+          <label for="theme-preference">Appearance</label>
+          <select id="theme-preference" name="theme">
+            <option value="system">Follow device</option>
+            <option value="light">Light — warm paper</option>
+            <option value="dark">Dark — evening studio</option>
+          </select>
+        </div>
         <fieldset class="accent-options">
           <legend>Accent color</legend>
           <label
@@ -269,16 +305,48 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
             >Plum</label
           >
         </fieldset>
-        <label for="density-preference">Canvas spacing</label
-        ><select id="density-preference" name="density">
-          <option value="comfortable">Comfortable</option>
-          <option value="compact">Compact</option>
-        </select>
-        <label for="corners-preference">Card edges</label
-        ><select id="corners-preference" name="corners">
-          <option value="soft">Soft corners</option>
-          <option value="square">Square corners</option>
-        </select>
+        <div class="appearance-field">
+          <label for="density-preference">Canvas spacing</label
+          ><select id="density-preference" name="density">
+            <option value="comfortable">Comfortable</option>
+            <option value="compact">Compact</option>
+          </select>
+        </div>
+        <div class="appearance-field">
+          <label for="corners-preference">Card edges</label
+          ><select id="corners-preference" name="corners">
+            <option value="soft">Soft corners</option>
+            <option value="square">Square corners</option>
+          </select>
+        </div>
+        <div class="appearance-field">
+          <label for="typography-preference">Typography</label
+          ><select id="typography-preference" name="typography">
+            <option value="editorial">Editorial — expressive serif</option>
+            <option value="modern">Modern — clean sans serif</option>
+          </select>
+        </div>
+        <div class="appearance-field">
+          <label for="layout-preference">Board arrangement</label
+          ><select id="layout-preference" name="layout">
+            <option value="collage">Editorial collage</option>
+            <option value="grid">Even grid</option>
+          </select>
+        </div>
+        <div class="appearance-field">
+          <label for="canvas-preference">Canvas background</label
+          ><select id="canvas-preference" name="canvas">
+            <option value="plain">Plain paper</option>
+            <option value="dotted">Subtle dot grid</option>
+          </select>
+        </div>
+        <div class="appearance-field">
+          <label for="text-size-preference">Reading size</label
+          ><select id="text-size-preference" name="textSize">
+            <option value="standard">Standard</option>
+            <option value="large">Larger text</option>
+          </select>
+        </div>
         <div class="appearance-footer">
           <button id="reset-appearance" type="button" class="toolbar-button">
             Reset to defaults</button
@@ -288,6 +356,177 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         </div>
         <p id="appearance-status" class="settings-status" role="status"></p>
       </form>
+    </dialog>
+    <dialog id="audio-dialog" aria-labelledby="audio-dialog-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">YOUR WORLD, YOUR SOUNDTRACK</p>
+          <h2 id="audio-dialog-title">Bring your own sound.</h2>
+        </div>
+        <button id="close-audio" aria-label="Close audio importer">×</button>
+      </div>
+      <p class="dialog-copy">
+        Collect a song, a playlist, or a recording that belongs in your world.
+      </p>
+      <div class="import-tabs" role="tablist" aria-label="Audio import method">
+        <button
+          id="link-tab"
+          role="tab"
+          aria-selected="true"
+          aria-controls="link-panel"
+          tabindex="0"
+          data-import-tab="link"
+        >
+          Paste a link
+        </button>
+        <button
+          id="file-tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="file-panel"
+          tabindex="-1"
+          data-import-tab="file"
+        >
+          Local audio
+        </button>
+        <button
+          id="services-tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="services-panel"
+          tabindex="-1"
+          data-import-tab="services"
+        >
+          Music services
+        </button>
+      </div>
+      <div id="link-panel" role="tabpanel" aria-labelledby="link-tab">
+        <form id="audio-link-form" class="import-form">
+          <label for="audio-link">Music or sound link</label
+          ><input
+            id="audio-link"
+            type="url"
+            required
+            maxlength="2048"
+            placeholder="https://open.spotify.com/track/…"
+            aria-describedby="link-help"
+          />
+          <p id="link-help" class="field-help">
+            Spotify, Amazon Music, Apple Music, SoundCloud, or YouTube. Albums
+            and playlists stay as one reference; links are not expanded or
+            streamed.
+          </p>
+          <div class="form-pair">
+            <div>
+              <label for="link-title">Title or playlist name</label
+              ><input
+                id="link-title"
+                required
+                maxlength="160"
+                placeholder="The song that started it all"
+              />
+            </div>
+            <div>
+              <label for="link-artist"
+                >Artist or creator <span>(optional)</span></label
+              ><input
+                id="link-artist"
+                maxlength="120"
+                placeholder="Artist name"
+              />
+            </div>
+          </div>
+          <label for="link-kind">Add as</label
+          ><select id="link-kind">
+            <option value="song">Song / music reference</option>
+            <option value="sound">Ambient sound reference</option>
+          </select>
+          <p class="field-help">
+            You supply the details. No account connection or metadata lookup
+            happens here.
+          </p>
+          <button class="done-button" type="submit">Add reference ↗</button>
+        </form>
+      </div>
+      <div id="file-panel" role="tabpanel" aria-labelledby="file-tab" hidden>
+        <form id="audio-file-form" class="import-form">
+          <label for="audio-file">Choose an audio file</label
+          ><input
+            id="audio-file"
+            type="file"
+            accept="audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a"
+            required
+            aria-describedby="file-help"
+          />
+          <p id="file-help" class="field-help">
+            MP3, WAV, OGG, or M4A · up to 20 MB · browser-supported audio only.
+            Files stay on your device. Save keeps the title and file details;
+            reopen a board and reattach the file to play it again.
+          </p>
+          <label for="file-title"
+            >Title <span>(optional; defaults to filename)</span></label
+          ><input
+            id="file-title"
+            maxlength="160"
+            placeholder="Morning rain on the windowsill"
+          />
+          <label for="file-kind">Add as</label
+          ><select id="file-kind">
+            <option value="sound">Ambient sound</option>
+            <option value="song">Song</option>
+          </select>
+          <button class="done-button" type="submit" id="add-file">
+            Add local audio ↗
+          </button>
+        </form>
+      </div>
+      <div
+        id="services-panel"
+        role="tabpanel"
+        aria-labelledby="services-tab"
+        hidden
+      >
+        <p class="connection-notice">
+          CONNECTION PREVIEW · No music accounts are connected.
+        </p>
+        <p class="field-help">
+          Explore how a provider library could work. Real sign-in, library
+          access, and provider permissions will be handled by the backend.
+          Availability depends on each provider’s API access.
+        </p>
+        <div id="provider-list" class="provider-list"></div>
+        <section
+          id="provider-preview"
+          class="provider-preview"
+          aria-labelledby="provider-preview-title"
+          hidden
+        >
+          <div class="song-heading">
+            <h3 id="provider-preview-title"></h3>
+            <button id="leave-provider" class="text-button">
+              Leave preview
+            </button>
+          </div>
+          <p class="connection-notice">DEMO LIBRARY · NOT YOUR ACCOUNT</p>
+          <p class="field-help">
+            These hand-picked examples demonstrate selection only. No provider
+            has been contacted. Adding them creates sample references with
+            search links.
+          </p>
+          <form id="provider-import-form">
+            <div id="provider-tracks"></div>
+            <button class="done-button" type="submit">
+              Add selected demo references ↗
+            </button>
+          </form>
+        </section>
+      </div>
+      <p
+        id="audio-import-status"
+        class="settings-status"
+        role="status"
+        aria-live="polite"
+      ></p>
     </dialog>
     <dialog id="dialog" aria-labelledby="dialog-title">
       <div class="dialog-header">

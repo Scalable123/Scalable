@@ -1,3 +1,9 @@
+import {
+  setupAudioImporter,
+  renderAudioReference,
+  retainLocalAudio,
+  releaseLocalAudio,
+} from "./audio-library.js";
 import { boardService, prompts } from "./board-service.js";
 import {
   onAppearanceChange,
@@ -175,6 +181,8 @@ function renderSound(item) {
   return card;
 }
 function renderSong(item, index) {
+  if (item.imported)
+    return renderAudioReference(item, index, referenceHandlers);
   const card = element("article", "song-card");
   card.append(
     element("span", "song-number", String(index + 1).padStart(2, "0")),
@@ -227,18 +235,40 @@ function renderBoard() {
   grid.classList.toggle("filtered", filter !== "all");
   grid.classList.toggle(
     "no-sound",
-    !board.items.some((item) => item.type === "sound"),
+    !board.items.some((item) => item.type === "sound" && !item.imported),
   );
+  document.querySelectorAll("audio").forEach((audio) => audio.pause());
   grid.replaceChildren();
   const songs = board.items.filter((item) => item.type === "song");
   $("#song-list").replaceChildren(...songs.map(renderSong));
+  $("#song-section .sample-label").textContent = songs.some(
+    (item) => item.imported,
+  )
+    ? "Samples & your references"
+    : "Curated sample picks";
+  const sounds = board.items.filter(
+    (item) => item.type === "sound" && item.imported,
+  );
+  $("#sound-list").replaceChildren(
+    ...sounds.map((item, index) =>
+      renderAudioReference(item, index, referenceHandlers),
+    ),
+  );
+  $("#sound-library").hidden =
+    !(filter === "all" || filter === "sound") || !sounds.length;
   $("#song-section").hidden =
     !(filter === "all" || filter === "song") || songs.length === 0;
-  grid.hidden = filter === "song" && songs.length > 0;
+  grid.hidden =
+    (filter === "song" && songs.length > 0) ||
+    (filter === "sound" &&
+      sounds.length > 0 &&
+      !board.items.some((item) => item.type === "sound" && !item.imported));
   board.items
     .filter(
       (item) =>
-        item.type !== "song" && (filter === "all" || item.type === filter),
+        item.type !== "song" &&
+        !item.imported &&
+        (filter === "all" || item.type === filter),
     )
     .forEach((item) => {
       if (item.type === "image") grid.append(renderImage(item));
@@ -295,6 +325,59 @@ function removeReference() {
   $("#reference-preview").hidden = true;
   $("#upload-label").hidden = false;
 }
+const referenceHandlers = {
+  element,
+  onRemove(id) {
+    document.querySelectorAll("audio").forEach((audio) => audio.pause());
+    releaseLocalAudio(id);
+    board.items = board.items.filter((item) => item.id !== id);
+    $("#save-label").textContent = "Save board";
+    renderBoard();
+    notify("Reference removed. Save to keep your changes.");
+    $("#import-audio").focus();
+  },
+  onReattach(id, fileInfo) {
+    const item = board.items.find((item) => item.id === id);
+    if (!item) {
+      releaseLocalAudio(id);
+      return;
+    }
+    item.fileInfo = fileInfo;
+    item.sourceKey = `file:${fileInfo.name}:${fileInfo.size}:${fileInfo.lastModified}`;
+    $("#save-label").textContent = "Save board";
+    renderBoard();
+    notify(
+      "Local file attached for this visit. Save to keep its updated details.",
+    );
+  },
+};
+setupAudioImporter({
+  element,
+  getBoardId: () => board?.id,
+  onImport(items, targetBoardId) {
+    if (!board || (targetBoardId && board.id !== targetBoardId))
+      throw new Error(
+        "The board changed while the file was loading. Open the importer and try again.",
+      );
+    const existing = new Set(
+      board.items.filter((item) => item.imported).map((item) => item.sourceKey),
+    );
+    const added = items.filter((item) => {
+      if (existing.has(item.sourceKey)) return false;
+      existing.add(item.sourceKey);
+      return true;
+    });
+    board.items.push(...added);
+    if (added.length) {
+      selectFilter("all");
+      $("#save-label").textContent = "Save board";
+      notify(
+        `${added.length} audio reference${added.length === 1 ? "" : "s"} added. Save your board to keep the details.`,
+      );
+    }
+    return added.length;
+  },
+});
 onAppearanceChange((preferences) => {
   const dark = document.documentElement.dataset.theme === "dark";
   $("#theme-toggle").setAttribute("aria-pressed", String(dark));
@@ -303,7 +386,15 @@ onAppearanceChange((preferences) => {
     "aria-label",
     dark ? "Switch to light mode" : "Switch to dark mode",
   );
-  for (const field of ["theme", "density", "corners"])
+  for (const field of [
+    "theme",
+    "density",
+    "corners",
+    "typography",
+    "layout",
+    "canvas",
+    "textSize",
+  ])
     $("#appearance-form").elements[field].value = preferences[field];
   $("#appearance-form").elements.accent.value = preferences.accent;
 });
@@ -411,6 +502,7 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     next.items = next.items.map(
       (item) => pinned.find((pin) => pin.id === item.id) || item,
     );
+    next.items.push(...(board?.items || []).filter((item) => item.imported));
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
@@ -432,7 +524,9 @@ $("#save-board").addEventListener("click", async () => {
     await boardService.saveBoard(board);
     $("#save-label").textContent = "Saved locally";
     await updateSavedCount();
-    notify("Saved in this browser. Reference uploads are not saved.");
+    notify(
+      "Board saved locally. Audio file details are saved; files must be reattached in a new visit. Reference images are not saved.",
+    );
   } catch {
     notify("Could not save. Browser storage may be disabled or full.");
   }
@@ -465,6 +559,7 @@ $("#saved-boards").addEventListener("click", async () => {
       );
       const open = element("button", "", "Open ↗");
       open.addEventListener("click", () => {
+        retainLocalAudio(saved.items);
         board = saved;
         $("#include-songs").checked =
           saved.researchOptions?.includeSongs ??
@@ -488,6 +583,8 @@ $("#saved-boards").addEventListener("click", async () => {
   }
 });
 $("#new-board").addEventListener("click", async () => {
+  document.querySelectorAll("audio").forEach((audio) => audio.pause());
+  retainLocalAudio([]);
   $("#prompt").value = "";
   updateCharacters();
   removeReference();
@@ -512,7 +609,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Make The Studio yours with light or dark mode, accent colors, canvas spacing, and card edges. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. No live AI research, playback, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
+      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio can play in this browser. Provider connections are demo previews; no live AI research, streaming service, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
     ),
   ),
 );
@@ -534,3 +631,5 @@ board = await boardService.research({
   ...researchOptions(),
 });
 renderBoard();
+
+$("#import-audio").disabled = false;

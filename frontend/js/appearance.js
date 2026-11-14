@@ -5,12 +5,20 @@ const defaults = {
   accent: "terracotta",
   density: "comfortable",
   corners: "soft",
+  typography: "editorial",
+  layout: "collage",
+  canvas: "plain",
+  textSize: "standard",
 };
 const allowed = {
   theme: ["system", "light", "dark"],
   accent: ["terracotta", "olive", "plum"],
   density: ["comfortable", "compact"],
   corners: ["soft", "square"],
+  typography: ["editorial", "modern"],
+  layout: ["collage", "grid"],
+  canvas: ["plain", "dotted"],
+  textSize: ["standard", "large"],
 };
 const device = window.matchMedia("(prefers-color-scheme: dark)");
 let preferences = { ...defaults };
@@ -32,7 +40,15 @@ function apply() {
         ? "dark"
         : "light"
       : preferences.theme;
-  for (const field of ["accent", "density", "corners"])
+  for (const field of [
+    "accent",
+    "density",
+    "corners",
+    "typography",
+    "layout",
+    "canvas",
+    "textSize",
+  ])
     root.dataset[field] = preferences[field];
   root.style.colorScheme = root.dataset.theme;
   document.querySelector('meta[name="theme-color"]').content =
