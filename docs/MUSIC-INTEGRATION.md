@@ -1,19 +1,19 @@
 # Music services: frontend handoff
 
-The current implementation is a UI prototype plus working manual references and local audio playback. **No music accounts are connected.** Preview fixtures are hand-picked examples, not user library data. Provider names in the interface indicate integration candidates, not confirmed API availability.
+The current implementation is a UI prototype plus working manual references, local audio playback, and bounded server-side catalog search for Spotify, Jamendo, and SoundCloud. **No music accounts are connected.** Search results are provider references, not user library data or downloaded audio. Quote and additional music candidates are listed in [API-SOURCES.md](API-SOURCES.md).
 
 ## Boundaries to retain
 
 - Treat songs, ambient sounds, albums, and playlists as explicit references. Manual playlist imports are one reference until a supported library API can enumerate tracks.
 - Keep `sourceKind`, `linkKind`, `isSample`, `provider`, and source metadata explicit so demo data, manual references, and authenticated library items remain distinguishable.
 - The frontend uses JSON board items; local audio has an in-memory object-URL registry keyed by item ID. Files do not go into the board DTO, localStorage, or provider requests.
-- Local-file playback is available now. Service playback, library reads, OAuth, cloud audio upload/storage, and playlist writes are not implemented.
+- Local-file playback and bounded public catalog search are available now. Service playback, user library reads, OAuth, cloud audio upload/storage, and playlist writes are not implemented.
 
 The implemented application account authority is ASP.NET GraphQL/Identity instead of Supabase; music accounts remain separate and unconnected. GraphQL is the API layer over the configured Identity database, while saved music references remain browser board metadata. See [BACKEND.md](BACKEND.md) and [T003](T003.md).
 
 ## Future integration
 
-Choose providers only after checking their current developer programs, API access/approval, supported regions, library capabilities, scopes, and playback terms. In particular, do not assume Amazon Music offers the same self-service account/library access as Spotify. Some candidates may remain manual-link-only integrations.
+Choose providers only after checking their current developer programs, API access/approval, supported regions, library capabilities, scopes, and playback terms. In particular, do not assume Amazon Music offers the same self-service account/library access as Spotify. iTunes and MusicBrainz are documented discovery/metadata candidates; they are not yet wired into the running adapter. Some candidates may remain manual-link-only integrations.
 
 The historical REST proposals below describe required capabilities, not implemented routes or the selected application data transport. New account-owned data should extend the GraphQL service; exact music fields/schema are not implemented. Protocol callbacks may remain HTTP routes. A future provider service needs equivalents of:
 
