@@ -1,13 +1,16 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Scalable.Api;
+using Scalable.Api.Data;
 using Xunit;
 
 namespace Scalable.Api.Tests;
@@ -16,35 +19,35 @@ public sealed class PinterestTests
 {
     private const string Root = "/api/integrations/pinterest";
     [Fact] public async Task Requires_verified_application_session_and_approved_configuration() {
-        await using var app = new TestApp(); using var client = app.Client();
+        await using var app = new TestApp(); using var client = await app.Client();
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(Root)).StatusCode);
         client.DefaultRequestHeaders.Authorization = new("Bearer", "forged");
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync(Root + "/authorize", null)).StatusCode);
+        using var authenticated = await app.Client("user-a");
         app.Services.GetRequiredService<IConfiguration>()["Pinterest:ImportUseApproved"] = "false";
-        client.DefaultRequestHeaders.Authorization = new("Bearer", "user-a");
-        Assert.Contains("unavailable", await client.GetStringAsync(Root));
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.PostAsync(Root + "/authorize", null)).StatusCode);
+        Assert.Contains("unavailable", await authenticated.GetStringAsync(Root));
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await authenticated.PostAsync(Root + "/authorize", null)).StatusCode);
         Assert.Empty(app.Upstream.ProviderCalls);
     }
     [Fact] public async Task OAuth_is_browser_bound_single_use_and_encrypted_with_no_credentials_in_responses() {
-        await using var app = new TestApp(); using var client = app.Client("user-a");
+        await using var app = new TestApp(); using var client = await app.Client("user-a");
         var state = await Begin(client);
-        using var otherBrowser = app.Client("user-a");
+        using var otherBrowser = await app.Client("user-a");
         Assert.Equal(HttpStatusCode.BadRequest, (await otherBrowser.GetAsync(Root + $"/callback?state={state}&code=ok")).StatusCode);
         var callback = await client.GetAsync(Root + $"/callback?state={state}&code=ok");
         Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
-        Assert.Equal("https://app.example/frontend/index.html?import=pinterest&pinterest=connected", callback.Headers.Location!.AbsoluteUri);
+        Assert.Equal("https://app.example/index.html?import=pinterest&pinterest=connected", callback.Headers.Location!.AbsoluteUri);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(Root + $"/callback?state={state}&code=ok")).StatusCode);
         var status = await client.GetStringAsync(Root);
         Assert.Contains("connected", status); Assert.DoesNotContain("secret-access", status);
-        var stored = app.Services.GetRequiredService<PinterestStore>().Read(TestUpstream.UserA)!;
+        var stored = app.Services.GetRequiredService<PinterestStore>().Read(app.UserIds["user-a"])!;
         Assert.DoesNotContain("secret-access", stored); Assert.DoesNotContain("secret-refresh", stored);
         Assert.DoesNotContain("secret-client", status);
         Assert.Equal("no-store", (await client.GetAsync(Root)).Headers.CacheControl!.ToString());
         Assert.All(app.Upstream.ProviderCalls, path => Assert.DoesNotContain("search", path));
     }
     [Fact] public async Task Denial_expiry_and_disconnect_invalidate_authorization() {
-        await using var app = new TestApp(); using var client = app.Client("user-a");
+        await using var app = new TestApp(); using var client = await app.Client("user-a");
         var state = await Begin(client);
         var denial = await client.GetAsync(Root + $"/callback?state={state}&error=access_denied");
         Assert.Contains("pinterest=denied", denial.Headers.Location!.Query);
@@ -55,8 +58,8 @@ public sealed class PinterestTests
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(Root + $"/callback?state={state}&code=ok")).StatusCode);
     }
     [Fact] public async Task Board_and_pin_pages_enforce_ownership_and_bind_bookmarks_to_owner_and_resource() {
-        await using var app = new TestApp(); using var client = app.Client("user-a"); await Link(client);
-        using var other = app.Client("user-b");
+        await using var app = new TestApp(); using var client = await app.Client("user-a"); await Link(client);
+        using var other = await app.Client("user-b");
         Assert.Equal(HttpStatusCode.Conflict, (await other.GetAsync(Root + "/boards")).StatusCode);
         var first = await client.GetFromJsonAsync<JsonElement>(Root + "/boards");
         Assert.Single(first.GetProperty("items").EnumerateArray());
@@ -78,7 +81,7 @@ public sealed class PinterestTests
         Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync("/api/research-runs", null)).StatusCode);
     }
     [Fact] public async Task Refresh_rate_limit_and_disconnect_report_real_outcomes_without_scraping() {
-        await using var app = new TestApp(); using var client = app.Client("user-a"); await Link(client);
+        await using var app = new TestApp(); using var client = await app.Client("user-a"); await Link(client);
         app.Clock.Advance(TimeSpan.FromHours(2));
         await client.GetAsync(Root + "/boards"); Assert.Equal(1, app.Upstream.Refreshes);
         app.Upstream.RateLimited = true;
@@ -87,24 +90,24 @@ public sealed class PinterestTests
         Assert.Equal("90", limited.Headers.RetryAfter!.ToString());
         var disconnect = await client.DeleteAsync(Root);
         Assert.True((await disconnect.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("providerRevocationRequired").GetBoolean());
-        Assert.Null(app.Services.GetRequiredService<PinterestStore>().Read(TestUpstream.UserA));
+        Assert.Null(app.Services.GetRequiredService<PinterestStore>().Read(app.UserIds["user-a"]));
         Assert.DoesNotContain(app.Upstream.ProviderCalls, path => path.Contains("revoke"));
         Assert.Equal(HttpStatusCode.Conflict, (await client.GetAsync(Root + "/boards")).StatusCode);
     }
     [Fact] public async Task Missing_scopes_and_provider_auth_failures_never_create_a_connection() {
-        await using var app = new TestApp(); using var client = app.Client("user-a");
+        await using var app = new TestApp(); using var client = await app.Client("user-a");
         app.Upstream.Scope = "boards:read";
         var state = await Begin(client);
         var callback = await client.GetAsync(Root + $"/callback?state={state}&code=ok");
         Assert.Contains("pinterest=failed", callback.Headers.Location!.Query);
-        Assert.Null(app.Services.GetRequiredService<PinterestStore>().Read(TestUpstream.UserA));
+        Assert.Null(app.Services.GetRequiredService<PinterestStore>().Read(app.UserIds["user-a"]));
         app.Upstream.Scope = PinterestIntegration.Scopes; await Link(client);
         app.Clock.Advance(TimeSpan.FromHours(2)); app.Upstream.RejectRefresh = true;
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(Root + "/boards")).StatusCode);
-        Assert.Null(app.Services.GetRequiredService<PinterestStore>().Read(TestUpstream.UserA));
+        Assert.Null(app.Services.GetRequiredService<PinterestStore>().Read(app.UserIds["user-a"]));
     }
     [Fact] public async Task Provider_revocation_changes_connection_status_to_expired() {
-        await using var app = new TestApp(); using var client = app.Client("user-a"); await Link(client);
+        await using var app = new TestApp(); using var client = await app.Client("user-a"); await Link(client);
         app.Upstream.RejectAccess = true;
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync(Root + "/boards")).StatusCode);
         var status = await client.GetFromJsonAsync<JsonElement>(Root);
@@ -130,24 +133,48 @@ public sealed class TestApp : WebApplicationFactory<Program>
 {
     public TestUpstream Upstream { get; } = new();
     public TestClock Clock { get; } = new();
+    public Dictionary<string, string> UserIds { get; } = [];
     private readonly string data = Path.Combine(Path.GetTempPath(), "scalable-pinterest-test-" + Guid.NewGuid());
     protected override void ConfigureWebHost(IWebHostBuilder builder) {
+        Directory.CreateDirectory(data);
         builder.UseEnvironment("Development");
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> {
-            ["DataPath"] = data, ["PublicOrigin"] = "https://app.example", ["AllowedHosts"] = "*",
+            ["DataPath"] = data, ["ConnectionStrings:Default"] = $"Data Source={Path.Combine(data, "identity.db")}",
+            ["PublicOrigin"] = "https://app.example", ["App:FrontendOrigin"] = "https://app.example", ["AllowedHosts"] = "*",
             ["Pinterest:Enabled"] = "true", ["Pinterest:ImportUseApproved"] = "true", ["Pinterest:ClientId"] = "test-client",
-            ["Pinterest:ClientSecret"] = "secret-client", ["Supabase:Url"] = "https://identity.example", ["Supabase:PublishableKey"] = "public-test"
+            ["Pinterest:ClientSecret"] = "secret-client"
         }));
         builder.ConfigureServices(services => {
+            services.RemoveAll<PinterestStore>();
+            services.AddSingleton(new PinterestStore(Path.Combine(data, "pinterest.db")));
+            services.RemoveAll<AppDbContext>();
+            services.RemoveAll<DbContextOptions<AppDbContext>>();
+            services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlite($"Data Source={Path.Combine(data, "identity.db")}"));
             services.AddSingleton<TimeProvider>(Clock);
             services.AddHttpClient("Pinterest").ConfigurePrimaryHttpMessageHandler(() => new ForwardHandler(Upstream));
-            services.AddHttpClient("Supabase").ConfigurePrimaryHttpMessageHandler(() => new ForwardHandler(Upstream));
         });
     }
-    public HttpClient Client(string? user = null) {
+    public async Task<HttpClient> Client(string? user = null) {
         var client = CreateClient(new() { AllowAutoRedirect = false, HandleCookies = true, BaseAddress = new Uri("https://app.example") });
-        if (user is not null) client.DefaultRequestHeaders.Authorization = new("Bearer", user);
+        if (user is not null) await SignIn(client, user);
         return client;
+    }
+    private async Task SignIn(HttpClient client, string username) {
+        var register = !UserIds.ContainsKey(username);
+        var query = register
+            ? "mutation Register($input: RegisterInput!) { register(input: $input) { succeeded message user { id } } }"
+            : "mutation Login($input: LoginInput!) { login(input: $input) { succeeded message user { id } } }";
+        object input = register
+            ? new { username, email = $"{username}@example.test", displayName = username, password = "ValidPass123!" }
+            : new { identifier = username, password = "ValidPass123!" };
+        using var response = await client.PostAsJsonAsync("/graphql", new { query, variables = new { input } });
+        response.EnsureSuccessStatusCode();
+        using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var result = payload.RootElement.GetProperty("data").GetProperty(register ? "register" : "login");
+        Assert.True(result.GetProperty("succeeded").GetBoolean(), result.GetProperty("message").GetString());
+        UserIds[username] = result.GetProperty("user").GetProperty("id").GetString()!;
     }
     public override async ValueTask DisposeAsync() {
         await base.DisposeAsync();
@@ -165,7 +192,6 @@ public sealed class ForwardHandler(TestUpstream upstream) : HttpMessageHandler {
 }
 public sealed class TestUpstream
 {
-    public const string UserA = "11111111-1111-1111-1111-111111111111";
     public List<string> ProviderCalls { get; } = [];
     public int Refreshes { get; private set; }
     public bool RateLimited { get; set; }
@@ -174,10 +200,6 @@ public sealed class TestUpstream
     public string Scope { get; set; } = PinterestIntegration.Scopes;
     public async Task<HttpResponseMessage> Send(HttpRequestMessage request, CancellationToken cancel) {
         var uri = request.RequestUri!;
-        if (uri.Host == "identity.example") return request.Headers.Authorization?.Parameter switch {
-            "user-a" => Json(new { id = UserA }), "user-b" => Json(new { id = "22222222-2222-2222-2222-222222222222" }),
-            _ => new(HttpStatusCode.Unauthorized)
-        };
         Assert.Equal("api.pinterest.com", uri.Host); ProviderCalls.Add(uri.PathAndQuery);
         if (uri.AbsolutePath == "/v5/oauth/token") {
             Assert.Equal("Basic", request.Headers.Authorization!.Scheme);

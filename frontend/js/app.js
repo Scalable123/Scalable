@@ -14,6 +14,7 @@ import {
 } from "./audio-library.js";
 import { boardService, prompts } from "./board-service.js";
 import { setupCustomization } from "./customize.js";
+import { createCreativeDirection } from "./ai-service.js";
 
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
@@ -588,6 +589,47 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       referenceFile,
       ...researchOptions(),
     });
+    try {
+      const direction = await createCreativeDirection({
+        prompt,
+        ...researchOptions(),
+      });
+      next.title = direction.title;
+      next.description = direction.description;
+      next.mode = "ai";
+      next.items = next.items.map((item) =>
+        item.type === "palette"
+          ? { ...item, colors: direction.palette }
+          : item.type === "note"
+            ? { ...item, text: direction.note }
+            : item,
+      );
+      next.items = next.items.filter(
+        (item) =>
+          (item.type !== "song" || researchOptions().includeSongs) &&
+          (item.type !== "sound" || researchOptions().includeSounds),
+      );
+      if (researchOptions().includeSongs) {
+        next.items.push(...direction.songs.map((song, index) => ({
+          id: `ai-song-${index}`,
+          type: "song",
+          ...song,
+          discoveryUrl: `https://open.spotify.com/search/${encodeURIComponent(`${song.title} ${song.artist}`)}`,
+          linkKind: "catalog-search",
+          isSample: false,
+        })));
+      }
+      if (researchOptions().includeSounds) {
+        next.items.push(...direction.sounds.map((sound, index) => ({
+          id: `ai-sound-${index}`,
+          type: "sound",
+          ...sound,
+          isSample: false,
+        })));
+      }
+    } catch {
+      notify("AI is unavailable, so a local sample direction is shown instead.");
+    }
     if (runVersion !== boardVersion) return;
     // Preserve explicitly pinned choices when refining this local exploration.
     const pinned = (board?.items || []).filter(
@@ -600,9 +642,7 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
-    notify(
-      "Sample direction composed. Live research will connect through .NET.",
-    );
+    notify(next.mode === "ai" ? "AI direction composed." : "Sample direction composed.");
   } catch (error) {
     if (runVersion === boardVersion)
       $("#input-error").textContent =
@@ -812,7 +852,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore selects curated local collections; uploaded reference images are previewed only. Song links open catalog searches, and YouTube players load only on request. Supabase handles sign-in; local profiles and boards remain in browser storage. Cloud board saving, live AI research, and music-service connections remain planned.",
+      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore selects curated local collections; uploaded reference images are previewed only. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. Cloud board saving, live AI research, and music-service connections remain planned.",
     ),
   ),
 );

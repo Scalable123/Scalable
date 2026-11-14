@@ -43,6 +43,18 @@ public sealed class PinterestIntegration(PinterestStore store, IDataProtectionPr
         }
     }
     private string CallbackUrl => new Uri(Origin, CallbackPath).AbsoluteUri;
+    private Uri FrontendOrigin {
+        get {
+            var value = config["App:FrontendOrigin"];
+            if (string.IsNullOrWhiteSpace(value)) return Origin;
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.AbsolutePath != "/" ||
+                !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Query) ||
+                !string.IsNullOrEmpty(uri.Fragment) ||
+                (uri.Scheme != "https" && !(environment.IsDevelopment() && uri.Scheme == "http" && uri.IsLoopback)))
+                throw new IntegrationException(503, "unavailable", "The Pinterest frontend origin is not configured.");
+            return uri;
+        }
+    }
     private CookieOptions Cookie => new() { HttpOnly = true, Secure = Origin.Scheme == "https", SameSite = SameSiteMode.Lax, Path = CallbackPath, MaxAge = TimeSpan.FromMinutes(10), IsEssential = true };
     private void RequireEnabled() {
         if (!Enabled) throw new IntegrationException(503, "unavailable", "Pinterest account import is not configured. You can use the sample preview.");
@@ -107,7 +119,7 @@ public sealed class PinterestIntegration(PinterestStore store, IDataProtectionPr
                 }
             }
             // Fixed redirect, no caller-supplied return URL and no tokens/codes in the destination.
-            return Results.Redirect(new Uri(Origin, $"/frontend/index.html?import=pinterest&pinterest={outcome}").AbsoluteUri);
+            return Results.Redirect(new Uri(FrontendOrigin, $"/index.html?import=pinterest&pinterest={outcome}").AbsoluteUri);
         }
         finally { gate.Release(); }
     }

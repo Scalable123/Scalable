@@ -26,7 +26,6 @@ const path = require("node:path");
     const page = await context.newPage(); page.on("pageerror", e => errors.push(e.message));
     let connection = "connected", failure = false, delay = false, disconnected = false;
     let failBoards = false;
-    await context.route("**/js/config/supabaseClient.js", route => route.fulfill({ contentType: "text/javascript", body: `export const supabase = { auth: { async getSession() { return { data: { session: { access_token: 'application-test-token' } } }; } } };` }));
     await context.route("https://i.pinimg.com/**", async route => {
       external.push(route.request().url());
       await route.fulfill({ contentType: "image/jpeg", body: await fs.readFile(path.join(root, "assets/water.jpg")) });
@@ -34,10 +33,10 @@ const path = require("node:path");
     await context.route("**/api/integrations/pinterest{,/**}", async route => {
       const request = route.request(); const url = new URL(request.url());
       const endpoint = url.pathname.replace("/api/integrations/pinterest", "");
-      requests.push({ endpoint, method: request.method(), bookmark: url.searchParams.get("bookmark"), auth: request.headers().authorization });
+      assert.equal(request.headers().authorization, undefined, "Pinterest API uses the GraphQL cookie session, not a bearer token");
+      requests.push({ endpoint, method: request.method(), bookmark: url.searchParams.get("bookmark") });
       const reply = body => route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
       if (endpoint === "/availability") return reply({ available: true, researchAllowed: false });
-      assert.equal(request.headers().authorization, "Bearer application-test-token");
       if (!endpoint && request.method() === "DELETE") { disconnected = true; connection = "disconnected"; return reply({ message: "Disconnected from Scalable. Remove Scalable in Pinterest account settings to revoke Pinterest's grant.", providerRevocationRequired: true }); }
       if (!endpoint) return reply({ status: connection, canImport: connection === "connected", researchAllowed: false });
       if (endpoint === "/boards") {
@@ -91,7 +90,7 @@ const path = require("node:path");
     assert.equal(saved.items.length, 2); assert.equal(saved.items[0].sourceBoards.length, 2);
     assert(saved.items.every(item => item.researchAllowed === false && item.sourceKind === "pinterest-api" && !item.isSample));
     assert(saved.items.every(item => item.originalPinUrl.includes("pinterest.com/pin/") && item.creatorSourceUrl.includes("creator.example")));
-    assert(!JSON.stringify(saved).includes("application-test-token"));
+    assert(requests.length > 0);
     await page.locator("#prompt").fill("Research https://www.pinterest.com/pin/101/");
     await page.locator("#generate").click();
     await page.waitForFunction(() => document.querySelector("#input-error").textContent.includes("cannot be used for AI research"));
@@ -99,7 +98,6 @@ const path = require("node:path");
     await page.locator("#prompt").fill("A quiet coastal direction"); await page.locator("#generate").click();
     await page.waitForFunction(() => !document.querySelector("#generate").disabled);
     assert.equal(await page.locator(".imported-pin-badge").count(), 2);
-    // Exercise the future HTTP research boundary against the actual module, before fetch can execute.
     const guarded = await page.evaluate(async () => {
       const { ApiBoardService } = await import("/js/board-service.js");
       const { assertResearchInputAllowed } = await import("/js/research-policy.js");
@@ -117,7 +115,6 @@ const path = require("node:path");
     assert(disconnected); assert.equal(await page.locator(".imported-pin-badge").count(), 2);
     assert.match(await page.locator("#pinterest-connection-notice").textContent(), /NOT CONNECTED/);
     await page.locator("#close-pinterest").click();
-    // Signed-out/expired, empty, and forbidden states do not silently switch to fixtures.
     connection = "expired";
     await page.locator("#import-pinterest").click();
     await page.waitForFunction(() => document.querySelector("#pinterest-status").textContent.includes("expired"));
@@ -129,7 +126,6 @@ const path = require("node:path");
     assert.equal(await page.locator("#pinterest-boards").isVisible(), false);
     assert.equal(await page.locator(".imported-pin-badge").count(), 2);
     await page.locator("#close-pinterest").click(); failBoards = false;
-    // Explicit sample fallback remains separate and responsive.
     await page.locator("#import-pinterest").click();
     await page.locator('#pinterest-board-list input[value="11"]').waitFor();
     for (const width of [1440, 768, 390, 320]) {
@@ -139,7 +135,7 @@ const path = require("node:path");
     }
     assert.equal(errors.length, 0, errors.join("\n"));
     assert(external.every(url => new URL(url).hostname === "i.pinimg.com"));
-    console.log("Passed: authenticated Pinterest adapter, all board/pin pages, no pre-selection pin reads, cancellation and partial-page failure atomicity, unsupported pins, source associations, live provenance, local save, research exclusion, refresh/reconnect UI, safe authorization URL, disconnect preserving imports, forbidden state, and responsive dialogs. Zero browser errors; providers mocked.");
+    console.log("Passed: GraphQL cookie-session Pinterest adapter, all board/pin pages, no pre-selection pin reads, cancellation and partial-page failure atomicity, unsupported pins, source associations, live provenance, local save, research exclusion, reconnect UI, safe authorization URL, disconnect preserving imports, forbidden state, and responsive dialogs. Zero browser errors; providers mocked.");
     await context.close();
   } finally {
     await browser?.close(); await new Promise(resolve => server.close(resolve));

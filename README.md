@@ -20,17 +20,17 @@ Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/
 
 **Start from Pinterest:** Use **Import Pinterest board** to link your account through the configured backend, review your owned boards, and copy selected references into the current canvas or a new local mood board. All pages are read before review; cancellation or failures preserve the canvas. A separate sample preview works on static hosting. Pinterest is excluded from AI research, scanning, and analysis. Live access stays disabled until developer approval, permitted use, and credentials are configured. See [Pinterest setup, API, and limitations](docs/PINTEREST-INTEGRATION.md) and the [T001 decision record](docs/T001.md).
 
-To run the API and frontend together with .NET 10: `ASPNETCORE_ENVIRONMENT=Development dotnet run --project backend/Scalable.Api --urls http://localhost:5080`, then open `http://localhost:5080/frontend/index.html`. Default settings keep live Pinterest disabled. Run `dotnet test Scalable.sln` and `node tests/pinterest-api.browser.cjs` for the mocked integration checks.
+Run the GraphQL/Identity and Pinterest API with .NET 10 using `dotnet run --project Scalable.Api`; run the frontend and AI endpoint separately with `npm start`, then open `http://localhost:3000`. The frontend sends GraphQL and Pinterest API requests to `http://localhost:5078` by default. Live Pinterest use is disabled by default. Run `dotnet test Scalable.sln` and `node tests/pinterest-api.browser.cjs` for the mocked integration checks.
 
-**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) preview local profiles, shared preferences, and service connections. Supabase sign-in, session lookup, sign-out, and password recovery are integrated on this branch. Signup remains a frontend validation preview and does not register users or send/store its form details. See the [video/account handoff](docs/VIDEO-ACCOUNT.md).
+**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) use the ASP.NET GraphQL Identity service for permanent accounts, sessions, and password recovery. See the [authentication worklog](docs/AUTH-INTEGRATION.md) and [video/account handoff](docs/VIDEO-ACCOUNT.md).
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
-The [complete frontend documentation](documentation/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests.
+The [complete frontend documentation](docs/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests.
 
 ## GitHub Pages
 
-The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; Supabase Auth remains an external service, and the planned .NET backend is not hosted by Pages.
+The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend only; deploy the .NET GraphQL/Identity and Pinterest API separately.
 
 ## Product vision
 

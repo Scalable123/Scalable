@@ -1,4 +1,4 @@
-// Application requests go to the same-origin backend. Pinterest tokens never enter this module.
+// Application requests use the GraphQL backend's authenticated browser session.
 export class PinterestApiError extends Error {
   constructor(message, code = "unavailable", retryAfter = null) {
     super(message);
@@ -6,26 +6,22 @@ export class PinterestApiError extends Error {
     this.retryAfter = retryAfter;
   }
 }
-async function sessionToken() {
-  try {
-    const { supabase } = await import("./config/supabaseClient.js");
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data?.session?.access_token) throw new Error();
-    return data.session.access_token;
-  } catch {
-    throw new PinterestApiError("Log in to Scalable before linking Pinterest.", "signed_out");
-  }
-}
 export class ApiPinterestService {
-  constructor({ getToken = sessionToken, fetcher = (...args) => fetch(...args) } = {}) {
-    this.getToken = getToken;
+  constructor({ fetcher = (...args) => fetch(...args) } = {}) {
     this.fetcher = fetcher;
-    this.baseUrl = "/api/integrations/pinterest";
+    this.baseUrl = new URL(
+      "/api/integrations/pinterest",
+      window.GRAPHQL_ENDPOINT || "http://localhost:5078/graphql",
+    ).href;
     this.isLive = true;
   }
   async available(signal) {
     try {
-      const response = await this.fetcher(`${this.baseUrl}/availability`, { signal, credentials: "same-origin", cache: "no-store" });
+      const response = await this.fetcher(`${this.baseUrl}/availability`, {
+        signal,
+        credentials: "include",
+        cache: "no-store",
+      });
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) return false;
       return (await response.json()).available === true;
     } catch (error) {
@@ -34,16 +30,21 @@ export class ApiPinterestService {
     }
   }
   async request(path = "", { signal, ...options } = {}) {
-    const token = await this.getToken();
     signal?.throwIfAborted();
     const response = await this.fetcher(`${this.baseUrl}${path}`, {
-      ...options, signal, credentials: "same-origin", cache: "no-store",
-      headers: { Authorization: `Bearer ${token}` },
+      ...options,
+      signal,
+      credentials: "include",
+      cache: "no-store",
+      headers: { ...options.headers },
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new PinterestApiError(body.message || (response.status === 401 ? "Your session expired. Log in or reconnect Pinterest." : "Pinterest is unavailable. Please retry."),
-        body.error || (response.status === 401 ? "expired" : "unavailable"), response.headers.get("retry-after"));
+      throw new PinterestApiError(
+        body.message || (response.status === 401 ? "Your session expired. Log in or reconnect Pinterest." : "Pinterest is unavailable. Please retry."),
+        body.error || (response.status === 401 ? "expired" : "unavailable"),
+        response.headers.get("retry-after"),
+      );
     }
     return response.status === 204 ? null : response.json();
   }
@@ -88,7 +89,6 @@ export class ApiPinterestService {
           items.get(pin.id).sourceBoards.push(sourceBoard);
           continue;
         }
-        // Canonical pin links are derived only from IDs returned by the authorized API.
         const originalPinUrl = `https://www.pinterest.com/pin/${pin.id}/`;
         items.set(pin.id, {
           id: crypto.randomUUID(), type: "image", title: pin.title || "Pinterest pin", description: pin.description || "",

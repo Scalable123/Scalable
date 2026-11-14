@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Path = System.IO.Path;
 
 namespace Scalable.Api;
 
@@ -7,8 +8,9 @@ public sealed class PinterestStore
     private readonly string connectionString;
     public PinterestStore(string path)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        connectionString = new SqliteConnectionStringBuilder { DataSource = path }.ToString();
+        var fullPath = Path.GetFullPath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        connectionString = new SqliteConnectionStringBuilder { DataSource = fullPath }.ToString();
         using var db = Open();
         using var command = db.CreateCommand();
         command.CommandText = """

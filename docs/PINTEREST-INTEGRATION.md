@@ -2,7 +2,7 @@
 
 Pinterest is available only for **user-directed account linking and importing the user's own boards**. Scalable does not search, crawl, scrape, or use Pinterest content for AI research, image analysis, recommendations, or training. Imports copy references into Scalable; originals on Pinterest are never modified or deleted.
 
-The implementation includes an ASP.NET Core API and an asynchronous browser importer. Live use is **disabled by default**. The separate sample preview still runs on a static server or GitHub Pages. Tests use synthetic responses; a successful live Pinterest connection has not been verified.
+The implementation includes routes on the ASP.NET Core GraphQL/Identity host and an asynchronous browser importer. Pinterest routes use the same ASP.NET Identity cookie session as GraphQL. Live use is **disabled by default**. The separate sample preview still runs on a static server or GitHub Pages. Tests use synthetic responses; a successful live Pinterest connection has not been verified.
 
 ## Permitted use and provider requirements
 
@@ -16,13 +16,13 @@ The specification says `/oauth/token/revoke` currently supports **system-user to
 
 ## Local setup and deployment
 
-Install a current .NET 10 SDK. From the repository root:
+Install a current .NET 10 SDK. From the repository root, start the GraphQL/API host:
 
 ```sh
-ASPNETCORE_ENVIRONMENT=Development dotnet run --project backend/Scalable.Api --urls http://localhost:5080
+dotnet run --project Scalable.Api
 ```
 
-Open `http://localhost:5080/frontend/index.html`. Only frontend assets are served under `/frontend`; the repository, server settings, database, and encryption keys are not static content. Defaults keep live access unavailable and offer the sample preview.
+In another terminal, start the frontend and AI endpoint with `npm start`, then open `http://localhost:3000`. The frontend sends GraphQL and Pinterest API requests to `http://localhost:5078` by default. Defaults keep live Pinterest access unavailable and offer the sample preview.
 
 Configure these **server-side** environment variables or equivalent deployment settings:
 
@@ -32,23 +32,23 @@ Configure these **server-side** environment variables or equivalent deployment s
 | `Pinterest__ImportUseApproved` | `true` only after permitted-use review |
 | `Pinterest__ClientId` | Approved Pinterest app ID |
 | `Pinterest__ClientSecret` | App secret; never commit or ship to the frontend |
-| `Supabase__Url` | Same project as `frontend/js/config/supabase-config.js` |
-| `Supabase__PublishableKey` | That project's publishable key; no service-role key needed |
-| `PublicOrigin` | Exact external origin, e.g. `https://studio.example.com`; HTTPS required outside Development loopback |
+| `PublicOrigin` | Exact external API origin used for the Pinterest callback, e.g. `https://api.example.com`; HTTPS required outside Development loopback |
+| `App__FrontendOrigin` | Exact frontend origin allowed to make credentialed GraphQL/Pinterest requests, e.g. `https://studio.example.com` |
+| `ConnectionStrings__Default` | Persistent Identity database connection |
 | `AllowedHosts` | Deployment's allowed host names |
-| `DataPath` | Private persistent directory outside static hosting; default project `data/` |
+| `DataPath` | Private persistent directory outside static hosting; defaults to `Scalable.Api/data/` |
 
 Register `${PublicOrigin}/api/integrations/pinterest/callback` in the Pinterest app. ASP.NET does not automatically load `.env` files. Use environment configuration or the deployment secret manager, never browser configuration.
 
-Use one backend instance with persistent SQLite storage and ASP.NET Data Protection keys. Tokens, refresh credentials, username, scopes, and expirations are encrypted with an owner-specific purpose before SQL storage. Protect the private volume/key directory with restrictive permissions and host-appropriate encryption. The file-based development key ring is not independently wrapped with a production KMS. Preserve keys across restarts; losing them requires reconnecting accounts. Multiple API instances require a shared credential store/key management and distributed refresh/disconnect coordination.
+Use one backend instance with persistent Identity and Pinterest SQLite storage and persistent ASP.NET Data Protection keys. Tokens, refresh credentials, username, scopes, and expirations are encrypted with an owner-specific purpose before SQL storage. Protect the private volume/key directory with restrictive permissions and host-appropriate encryption. The file-based development key ring is not independently wrapped with a production KMS. Preserve keys across restarts; losing them requires reconnecting accounts. Multiple API instances require a shared credential store/key management and distributed refresh/disconnect coordination.
 
-`dotnet publish backend/Scalable.Api -c Release -o work/publish` includes frontend assets in `wwwroot`. Run the published app with its content root set to the publish directory. Reverse-proxy hosting must serve `/frontend` and `/api` through the same HTTPS origin and set `PublicOrigin` to that external origin. Cross-origin CORS/cookies are not configured. GitHub Pages alone cannot host the API; its sample preview remains available. Keep query strings and authorization headers out of proxy/APM logs, especially OAuth callback queries.
+Publish the `Scalable.Api` project and keep the Node frontend/API origin configuration aligned with the backend. Set `App__FrontendOrigin` to the deployed frontend origin and configure `window.GRAPHQL_ENDPOINT` to the API origin. The ASP.NET API allows credentialed CORS only for that configured origin (and local loopback origins in development); cookie requests must remain same-site. GitHub Pages alone cannot host the API; its sample preview remains available. Keep query strings out of proxy/APM logs, especially OAuth callback queries.
 
 ## User flow
 
-1. Log in to Scalable through existing Supabase sign-in. Save unsaved work before leaving for Pinterest authorization; the importer displays this reminder.
-2. Open **Import Pinterest board**. Availability is checked without loading the auth SDK on static-only hosts. When available, actual authenticated status is read. Account connection cards also show actual status.
-3. Choose **Link Pinterest account**. A bearer-authenticated POST starts OAuth. A hashed random ten-minute state is bound to the Scalable user and a random HttpOnly/SameSite=Lax browser cookie. Starting again invalidates older pending authorization for that user. Callback validates the binding and atomically consumes state before server-side code exchange. Replay, expiry, and denial cannot create a connection. Fixed callback redirects never contain credentials or codes.
+1. Log in to Scalable through the GraphQL identity service. Save unsaved work before leaving for Pinterest authorization; the importer displays this reminder.
+2. Open **Import Pinterest board**. Availability is checked without requiring a session. When available, actual authenticated status is read through the GraphQL backend's Identity cookie. Account connection cards also show actual status.
+3. Choose **Link Pinterest account**. A credentialed cookie-session POST starts OAuth. A hashed random ten-minute state is bound to the Scalable user and a random HttpOnly/SameSite=Lax browser cookie. Starting again invalidates older pending authorization for that user. Callback validates the binding and atomically consumes state before server-side code exchange. Replay, expiry, and denial cannot create a connection. Fixed callback redirects never contain credentials or codes.
 4. All board-summary pages load. Pins are read only after the user selects boards and requests review. Search and Select all cover the full loaded library.
 5. Review reads every pin page for each selected board. Progress and Cancel request are available; closing aborts outstanding work. Every page must finish before Review appears. A failed page, rate limit, pagination bound, or cancellation cannot commit earlier pages to the canvas.
 6. Review supported image pins, optionally deselect some, and choose the current or a new named Scalable board. Video, carousel, missing-image, and untrusted-image-host pins are excluded and counted. Zero selected pins disables Import. A changing Pinterest board can change during pagination; traversal is not a provider snapshot guarantee.
@@ -58,7 +58,7 @@ Use one backend instance with persistent SQLite storage and ASP.NET Data Protect
 
 ## Implemented API
 
-Routes are under `/api/integrations/pinterest`. Availability/callback are public; all others require a Supabase bearer token validated against `/auth/v1/user`. The caller cannot choose another owner. Pinterest credentials never enter browser responses/storage. There are no cookie-only application mutations or permissive CORS settings.
+Routes are under `/api/integrations/pinterest` on the ASP.NET Identity host. Availability and callback are public; all other routes require the same authenticated Identity cookie issued by GraphQL registration/login. The caller cannot choose another owner. Pinterest credentials never enter browser responses/storage. Credentialed CORS is restricted to the configured frontend origin and local loopback in development; state-changing API requests validate their Origin when supplied.
 
 | Method | Suffix | Result |
 | --- | --- | --- |
@@ -108,6 +108,6 @@ node tests/navigation-theme.browser.cjs
 node tests/saved-boards.browser.cjs
 ```
 
-Backend integration tests exercise actual routes with synthetic Supabase/Pinterest HTTP handlers, SQLite, encryption, browser cookies, replay/expiry, denial/scopes, ownership, scoped bookmarks, refresh/revocation, rate limits, and disconnect. Browser checks use actual modules with mocked APIs to verify pagination, atomic cancellation/failure, unsupported pins, source relationships, saving, research exclusion, disconnect, errors, and responsive dialogs. Existing preview behavior remains covered by Studio tests.
+Backend integration tests exercise actual routes with GraphQL-issued Identity cookies, synthetic Pinterest HTTP handlers, SQLite, encryption, replay/expiry, denial/scopes, ownership, scoped bookmarks, refresh/revocation, rate limits, and disconnect. Browser checks use actual modules with mocked APIs to verify cookie-based requests, pagination, atomic cancellation/failure, unsupported pins, source relationships, saving, research exclusion, disconnect, errors, and responsive dialogs. Existing preview behavior remains covered by Studio tests.
 
 Tests do not establish live account access, approval, real token exchange, library entitlement, media licensing, or production deployment. See [T001](T001.md) for decisions and results.
