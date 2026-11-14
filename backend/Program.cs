@@ -14,7 +14,11 @@ builder.Services.AddSingleton(services => new UnsplashSource(
     new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(5) },
     services.GetRequiredService<RequestBudget>(), builder.Configuration["Unsplash:AccessKey"]));
 builder.Services.AddSingleton(services => new WikimediaSource(
-    new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(5) },
+    new HttpClient(new SocketsHttpHandler
+    {
+        AllowAutoRedirect = false,
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+    }) { Timeout = TimeSpan.FromSeconds(5) },
     new RequestBudget(wikimediaBudgetPath, TimeProvider.System),
     builder.Configuration["Wikimedia:UserAgent"] ?? "Scalable/1.0 (https://github.com/Scalable123/Scalable)"));
 var app = builder.Build();
