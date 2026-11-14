@@ -2399,13 +2399,13 @@ html[data-layout="grid"] .board-grid:not(.filtered) .palette-colors {
   height: 27px;
   font-size: 20px;
 }
-html[data-layout="collage"] .board-grid.has-pinterest:not(.filtered) {
+html[data-layout="collage"] .board-grid:is(.has-pinterest, .has-wikimedia):not(.filtered) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: none;
   grid-auto-rows: 160px;
 }
 html[data-layout="collage"]
-  .board-grid.has-pinterest:not(.filtered)
+  .board-grid:is(.has-pinterest, .has-wikimedia):not(.filtered)
   > .board-card {
   grid-column: auto;
   grid-row: auto;
@@ -2413,12 +2413,12 @@ html[data-layout="collage"]
   min-height: 0;
 }
 html[data-layout="collage"]
-  .board-grid.has-pinterest:not(.filtered)
+  .board-grid:is(.has-pinterest, .has-wikimedia):not(.filtered)
   > .image-card {
   display: block;
 }
 html[data-layout="collage"]
-  .board-grid.has-pinterest:not(.filtered)
+  .board-grid:is(.has-pinterest, .has-wikimedia):not(.filtered)
   > .image-card:first-child {
   grid-column: span 2;
   grid-row: span 2;
@@ -2432,7 +2432,7 @@ html[data-layout="collage"]
     margin-left: 58px;
     max-width: 100%;
   }
-  html[data-layout="collage"] .board-grid.has-pinterest:not(.filtered) {
+  html[data-layout="collage"] .board-grid:is(.has-pinterest, .has-wikimedia):not(.filtered) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -2507,7 +2507,7 @@ html[data-layout="collage"]
     font-size: 7px;
   }
   html[data-layout="collage"]
-    .board-grid.has-pinterest:not(.filtered)
+    .board-grid:is(.has-pinterest, .has-wikimedia):not(.filtered)
     > .image-card:first-child {
     grid-row: span 1;
   }
@@ -3485,6 +3485,49 @@ html[data-layout="collage"]
   min-height: 44px;
   border-radius: 4px;
   font-size: 12px;
+}
+
+/* Keep Commons attribution fully readable in every canvas layout/filter. */
+html[data-layout] .board-grid.has-wikimedia:not(.filtered),
+.board-grid.has-wikimedia.filtered {
+  grid-auto-rows: minmax(180px, auto);
+}
+html[data-layout] .board-grid.has-wikimedia > .image-card.wikimedia-card {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  display: block;
+  min-height: 0;
+}
+.board-grid > .wikimedia-card img {
+  height: 220px;
+  object-fit: contain;
+  transform: none;
+}
+.board-grid > .wikimedia-card::after {
+  display: none;
+}
+.board-grid > .wikimedia-card figcaption {
+  position: static;
+  padding: 14px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.board-grid > .wikimedia-card figcaption strong {
+  margin-bottom: 6px;
+  font-size: 19px;
+}
+.board-grid > .wikimedia-card figcaption a,
+.wikimedia-card .image-credit {
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 1;
+}
+.wikimedia-card .image-credit {
+  display: block;
+  margin: 5px 0;
+}
+#wikimedia-status {
+  margin: 12px 0;
 }
 html[data-theme="dark"] .danger-button {
   background: #a64640;

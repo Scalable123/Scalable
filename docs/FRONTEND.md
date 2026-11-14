@@ -38,7 +38,7 @@ No external catalog lookup, live AI recommendation, or streaming-service playbac
 
 ## Other working interactions
 
-- Edit a brief or choose a sample prompt. Explore selects one of three curated sample collections using keywords. Photography stays the same while palette, title, note, songs, and ambient direction change. This is not AI research.
+- Edit a brief or choose a sample prompt. Explore selects one of three curated sample collections using keywords and searches Wikimedia Commons for at most one new image. Initial load and New mood board use local samples without a search. Palette, title, note, songs, and ambient direction remain curated examples; this is not AI research.
 - Preview a JPG/PNG/WebP reference up to 10 MB. The browser verifies decoding. Files never leave the browser and are neither analyzed nor persisted.
 - Pin/unpin images; pins survive a sample refinement. Save again to persist changes.
 - Copy palette HEX values with a manual-copy fallback.
@@ -67,13 +67,14 @@ frontend/
   js/video-library.js    YouTube references and local video playback/imports
   js/audio-library.js    Link imports, provider previews, local audio registry
   js/pinterest-import.js Pinterest connection preview, board/pin selection, import DTOs
-  js/board-service.js    Demo service, saved-board compatibility, future HTTP adapter
+  js/board-service.js    Sample/Wikimedia composition, saved boards, future HTTP adapter
+  js/wikimedia-source.js Public Commons lookup, bounded request budget, source validation
   assets/                Local sample photography and source notes
 ```
 
 ## Connecting ASP.NET Core later
 
-The renderer uses `boardService`, not SQL or an AI SDK. `DemoBoardService` owns local sample generation and persistence. `ApiBoardService` documents an HTTP boundary and is not enabled.
+The renderer uses `boardService`, not SQL or an AI SDK. `DemoBoardService` owns local sample generation and persistence. The active `WikimediaBoardService` extends it with a public Commons lookup only on prompt submission. `ApiBoardService` documents an HTTP boundary and is not enabled. See [backend status](BACKEND.md) before adding server code.
 
 The production research lifecycle requires an integration pass: replace demo `research()` with `startResearch()`, poll `getResearchRun()` to completion, and add cancellation, partial results, timeouts, and loading/error states. The adapter sends a multipart prompt, optional reference file, and `includeSongs`/`includeSounds` booleans as text fields for .NET model binding.
 
@@ -117,7 +118,7 @@ ASP.NET Core owns authorization, validation, upload verification/storage, resear
 
 Run `node tests/studio.browser.cjs` in a development environment with Playwright and Chromium installed. The script starts its own temporary static server. Set `CHROMIUM_PATH` if Chromium is installed somewhere other than `/usr/bin/chromium`.
 
-The checks cover desktop/mobile layouts, theme/device changes, persisted customization, keyboard dismissal, songs and sounds filters and inclusion options, sample selection, saved-board reopening, legacy board compatibility, and storage failures. This tests the frontend only; no backend/provider integration is claimed.
+The checks cover desktop/mobile layouts, theme/device changes, persisted customization, keyboard dismissal, songs and sounds filters and inclusion options, sample selection, saved-board reopening, legacy board compatibility, and storage failures. Wikimedia responses are mocked. This tests the frontend only; no live backend/provider delivery is claimed.
 
 Run `node tests/saved-boards.browser.cjs` for deletion checks: confirmation and safe default focus, Cancel/Enter/Escape, selective deletion, persistence after reload, storage failures, duplicate clicks, empty/count/focus states, responsive dark dialogs, and preservation of an open draft and its media. It also checks stale research cancellation, already-deleted boards, unchanged legacy records, and the proposed DELETE adapter using a mock response.
 
@@ -150,7 +151,7 @@ Additional imported item fields:
 
 The importer never stores account credentials or marks a provider connected. See [music integration handoff](MUSIC-INTEGRATION.md) for the future backend boundary.
 
-The browser suite also exercises new preference persistence/reset, import dialogs across five widths, validated/duplicate links, all four provider previews, real local WAV decoding/playback, save/reopen/reattach, imported-reference preservation/removal, and absence of external provider requests during these flows.
+The browser suite also exercises new preference persistence/reset, import dialogs across five widths, validated/duplicate links, all four provider previews, real local WAV decoding/playback, save/reopen/reattach, imported-reference preservation/removal, and absence of unmocked external provider requests during these flows.
 
 ## Start from Pinterest boards
 
@@ -183,3 +184,15 @@ The branch also contains Supabase sign-in, recovery, session lookup, and sign-ou
 The Studio has one account entry: the sidebar profile link, shown as an accessible avatar on mobile. The header keeps Log in and Customize. The focus-only Explore shortcut was removed; the brief and New mood board remain available. The soundtrack section uses one introduction plus an import action, and the repeated demo footer was removed. Account customization uses its existing tab navigation rather than an extra Back to profile button.
 
 `js/customize.js` shares appearance binding across pages and builds the auth-page Customize dialog from one field definition. System/Light/Dark, accent, layout, spacing, edges, typography, canvas, and reading size all use the existing stored preferences; no setting or saved board was reset.
+
+## Wikimedia Commons image search — T001
+
+Prompt submission now adds at most **one new Wikimedia image**, alongside the existing curated collection, when a supported credited/licensed result and request budget are available. Public Commons reads need no API key. Initial/sample generation and opening saved boards do not search. Search words leave the browser for Wikimedia; uploaded reference files remain local. This is keyword search, not live AI.
+
+`wikimedia-source.js` owns the API adapter, single-request/one-image selection, cross-tab lock, persistent throttle/cooldown, ten-minute bounded cache, eight-second timeout, URL/metadata validation, and source-status copy. HTTP 429/503 and API lag/throttle responses pause requests. Missing/blocked coordination skips this source. `WikimediaBoardService` composes provider results without changing the inactive .NET contract.
+
+Wikimedia cards display creator, supplied credit/custom attribution/copyright and safe attribution links, original file source, and linked license. Full images use contain sizing; attribution stays outside the preview and wraps. Supported licenses and conservative exclusions are detailed in [Wikimedia integration](WIKIMEDIA-INTEGRATION.md). Metadata/URLs are revalidated when restored. Board JSON preserves these fields; image bytes are not saved.
+
+Existing pinned Wikimedia images survive refinement, deduplicated by identity; they can coexist with the one newly selected image from a later prompt. Unpinned older results are replaced. New/Open/import-to-new/delete-active-board abort stale lookups as well as invalidating the board version. Empty/failed/timed-out/rate-limited lookups report status and leave samples and pinned/imported choices available.
+
+Run `node tests/wikimedia.browser.cjs` plus the four existing browser suites. The dedicated suite mocks provider responses/files and covers budgets, attribution, failure paths, persistence/refinement, cancellation, and 40 responsive combinations. The environment proxy blocked live Commons API verification; see the integration notes before rollout. [T001](T001.md) records decisions and validation; [BACKEND](BACKEND.md) states the future server requirements.

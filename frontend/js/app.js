@@ -14,6 +14,7 @@ import {
 } from "./audio-library.js";
 import { boardService, prompts } from "./board-service.js";
 import { setupCustomization } from "./customize.js";
+import { validWikimediaImage, wikimediaCreditUrl, wikimediaStatus } from "./wikimedia-source.js";
 
 iconify(document.body);
 const $ = (selector) => document.querySelector(selector);
@@ -26,6 +27,7 @@ let referenceUrl = null;
 let toastTimeout;
 let pendingBoardDeletion = null;
 let deletingBoard = false;
+let activeResearch = null;
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -50,8 +52,12 @@ function showDialog(title, content) {
   if (!$("#dialog").open) $("#dialog").showModal();
 }
 function renderImage(item) {
+  return item.provider === "wikimedia" ? renderWikimediaImage(item) : renderStandardImage(item);
+}
+function renderStandardImage(item) {
   const card = element("figure", `board-card image-card ${item.position}`);
   const img = element("img");
+  if (item.provider === "wikimedia") img.referrerPolicy = "no-referrer";
   img.src = item.url;
   img.alt = item.description;
   if (item.imagePosition) img.style.objectPosition = item.imagePosition;
@@ -103,6 +109,46 @@ function renderImage(item) {
     remove.addEventListener("click", () => referenceHandlers.onRemove(item.id));
     card.append(badge, remove);
   }
+  return card;
+}
+function renderWikimediaImage(item) {
+  const card = element("figure", "board-card image-card wikimedia-card");
+  card.dataset.sourceKey = item.sourceKey;
+  if (!validWikimediaImage(item)) {
+    card.append(element("p", "field-help", "This Wikimedia reference has incomplete or unsupported source details."));
+    return card;
+  }
+  // Use the shared pin behavior without trusting restored media/source URLs first.
+  const base = renderStandardImage(item);
+  const img = base.querySelector("img");
+  img.addEventListener("error", () => {
+    img.hidden = true;
+    card.prepend(element("p", "field-help", "Wikimedia preview unavailable. Open the image source to view the original."));
+  }, { once: true });
+  const caption = base.querySelector("figcaption");
+  caption.append(element("span", "image-credit", `Wikimedia Commons · ${item.creator}`));
+  for (const text of [item.credit, item.attribution, item.copyright]) {
+    if (text) caption.append(element("span", "image-credit", text));
+  }
+  if (Array.isArray(item.attributionLinks)) {
+    const links = element("span", "image-credit");
+    for (const entry of item.attributionLinks) {
+      const url = wikimediaCreditUrl(entry?.url);
+      if (!url) continue;
+      const link = element("a", "", entry.label || url);
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      links.append(link, document.createTextNode(" "));
+    }
+    caption.append(links);
+  }
+  const license = element("a", "image-license", item.license.name);
+  license.href = item.license.url;
+  license.target = "_blank";
+  license.rel = "noopener noreferrer";
+  caption.append(license);
+  card.append(img, caption, base.querySelector(".pin"));
   return card;
 }
 function renderPalette(item) {
@@ -232,12 +278,14 @@ function renderBoard() {
     element("span", "", "."),
   );
   $("#board-description").textContent = board.description;
+  $("#wikimedia-status").textContent = wikimediaStatus(board.sourceResults?.wikimedia);
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
   const pinterestPins = board.items.filter(
     (item) => item.provider === "pinterest",
   );
   grid.classList.toggle("has-pinterest", pinterestPins.length > 0);
+  grid.classList.toggle("has-wikimedia", board.items.some((item) => item.provider === "wikimedia"));
   $("#pinterest-import-summary").hidden = pinterestPins.length === 0;
   const sourceBoardCount = new Set(
     pinterestPins.map((item) => item.sourceBoard?.id),
@@ -444,6 +492,8 @@ setupVideoImporter({
   },
 });
 function resetResearchUI() {
+  activeResearch?.abort();
+  activeResearch = null;
   $("#generate").disabled = false;
   $("#generate").firstElementChild.textContent = "Explore this feeling";
   grid.setAttribute("aria-busy", "false");
@@ -548,6 +598,7 @@ $("#reference").addEventListener("change", async (event) => {
 $("#remove-reference").addEventListener("click", removeReference);
 $("#prompt-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  if ($("#generate").disabled) return;
   const prompt = $("#prompt").value.trim();
   if (!prompt) {
     $("#input-error").textContent =
@@ -556,15 +607,19 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     return;
   }
   const runVersion = ++boardVersion;
+  activeResearch = new AbortController();
   const button = $("#generate");
   button.disabled = true;
-  button.firstElementChild.textContent = "Composing a sample…";
+  button.firstElementChild.textContent = "Exploring your direction…";
+  $("#wikimedia-status").textContent = "Looking for one Wikimedia Commons image…";
   grid.setAttribute("aria-busy", "true");
   $("#input-error").textContent = "";
   try {
     const next = await boardService.research({
       prompt,
       referenceFile,
+      includeWikimedia: true,
+      signal: activeResearch.signal,
       ...researchOptions(),
     });
     if (runVersion !== boardVersion) return;
@@ -576,16 +631,26 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       (item) => pinned.find((pin) => pin.id === item.id) || item,
     );
     next.items.push(...(board?.items || []).filter((item) => item.imported));
+    // Provider identities vary by prompt. Keep older pinned results without duplicates.
+    const existing = new Set(next.items.map((item) => item.id));
+    for (const pin of pinned) {
+      if (pin.provider === "wikimedia" && !existing.has(pin.id)) {
+        next.items.push(pin);
+        existing.add(pin.id);
+      }
+    }
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
     notify(
-      "Sample direction composed. Live research will connect through .NET.",
+      "Direction composed. Wikimedia results show their credit and license; other content uses curated samples.",
     );
   } catch {
-    if (runVersion === boardVersion)
+    if (runVersion === boardVersion) {
       $("#input-error").textContent =
         "We could not compose this board. Your current board is still here; please try again.";
+      $("#wikimedia-status").textContent = wikimediaStatus(board?.sourceResults?.wikimedia);
+    }
   } finally {
     if (runVersion === boardVersion) resetResearchUI();
   }
@@ -791,7 +856,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Import Pinterest board previews selecting full boards or individual pins; no Pinterest account is connected. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio and video can play in this browser. YouTube players load only when requested. Login and account pages are frontend previews, not authenticated accounts. Provider connections are demo previews; no live AI research, streaming service, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
+      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Explore searches Wikimedia Commons for up to one new image, with source, credit, and license. Your brief's search words are sent to Wikimedia; uploaded references stay in this browser. Pinned images and imported references survive refinement. Other board content uses curated samples; live AI research is not connected. Import audio adds music links, local recordings, or demo library references. Pinterest previews use local sample boards. Local audio and video play in this browser; YouTube players load on request. Login uses Supabase; media-account connections remain previews. Boards and appearance preferences stay in browser storage; no application backend or SQL board sync is connected.",
     ),
   ),
 );

@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { mockWikimedia, isWikimediaLookup } = require("./helpers/mock-wikimedia.cjs");
 
 (async () => {
   const root = path.resolve(__dirname, "../frontend");
@@ -50,6 +51,7 @@ const path = require("node:path");
     await mockSupabase(context);
     const page = await context.newPage();
     const errors = [];
+    await mockWikimedia(page.context());
     const requests = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("request", (request) =>
@@ -366,12 +368,12 @@ const path = require("node:path");
     );
     assert(
       external.every((request) =>
-        request.url.startsWith("https://www.youtube-nocookie.com/embed/"),
+        request.url.startsWith("https://www.youtube-nocookie.com/embed/") || isWikimediaLookup(request.url),
       ),
     );
     assert.deepEqual(errors, []);
     console.log(
-      "Passed: YouTube validation/canonicalization/deduplication and explicit mocked embed load/unload; real local video decode/playback/save/reattach/removal; refinement preservation; video/login/account responsive layouts; login validation/no credential persistence; local profile, shared appearance, connection deep links, preview sign-out, and blocked storage. No authentication or provider API requests. Zero browser errors.",
+      "Passed: YouTube validation/canonicalization/deduplication and explicit mocked embed load/unload; real local video decode/playback/save/reattach/removal; refinement preservation; video/login/account responsive layouts; login validation/no credential persistence; local profile, shared appearance, connection deep links, preview sign-out, and blocked storage. Wikimedia responses mocked; no live authentication or provider API requests. Zero browser errors.",
     );
   } finally {
     await browser?.close();

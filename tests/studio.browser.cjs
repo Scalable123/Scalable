@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { mockWikimedia, isWikimediaLookup } = require("./helpers/mock-wikimedia.cjs");
 
 (async () => {
   const root = path.resolve(__dirname, "../frontend");
@@ -47,6 +48,7 @@ const path = require("node:path");
       colorScheme: "light",
     });
     const page = await context.newPage();
+    await mockWikimedia(context);
     const errors = [];
     const watch = (page) => page.on("pageerror", (e) => errors.push(e.message));
     watch(page);
@@ -326,7 +328,7 @@ const path = require("node:path");
     page.on("request", (request) => {
       if (
         /^https?:/.test(request.url()) &&
-        new URL(request.url()).origin !== url
+        new URL(request.url()).origin !== url && !isWikimediaLookup(request.url())
       )
         externalRequests.push(request.url());
     });
@@ -783,7 +785,7 @@ const path = require("node:path");
       .waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "Passed: Studio themes, customization persistence/reset, OS theme changes, 20 responsive combinations, songs/sounds and inclusion options, catalog-search links, pins, saved-board reopening, legacy compatibility, and blocked storage. Plus extended appearance settings, link imports, provider library previews, local audio decoding/playback, reattachment, persistence, safe URLs, duplicate prevention, and removal. Pinterest: full-board and selected-pin imports, duplicate prevention, save/reopen, new-board creation, stale-research protection, and 20 responsive layout/theme combinations. No provider requests. Zero browser errors.",
+      "Passed: Studio themes, customization persistence/reset, OS theme changes, 20 responsive combinations, songs/sounds and inclusion options, catalog-search links, pins, saved-board reopening, legacy compatibility, and blocked storage. Plus extended appearance settings, link imports, provider library previews, local audio decoding/playback, reattachment, persistence, safe URLs, duplicate prevention, and removal. Pinterest: full-board and selected-pin imports, duplicate prevention, save/reopen, new-board creation, stale-research protection, and 20 responsive layout/theme combinations. Wikimedia responses mocked; no live provider requests. Zero browser errors.",
     );
   } finally {
     await browser?.close();

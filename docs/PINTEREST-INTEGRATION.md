@@ -71,4 +71,4 @@ Render real disconnected, authorizing, connected, expired, denied, empty-library
 
 ## Validation
 
-`node tests/studio.browser.cjs` includes board search/selection, whole-board counts, partial pin selection, empty selection, duplicates and reimport after removal, save/reload/reopen, pin persistence through refinement, new-board creation, stale-research protection, dialog focus, and imported-board layouts across five widths in light/dark and collage/grid modes. It also checks that these flows make no external provider requests.
+`node tests/studio.browser.cjs` includes board search/selection, whole-board counts, partial pin selection, empty selection, duplicates and reimport after removal, save/reload/reopen, pin persistence through refinement, new-board creation, stale-research protection, dialog focus, and imported-board layouts across five widths in light/dark and collage/grid modes. Wikimedia searches during refinement use mocked empty responses; these checks make no unmocked external provider requests. Pinterest import itself remains local. [Wikimedia integration](WIKIMEDIA-INTEGRATION.md) explains the separate source and its dedicated suite.

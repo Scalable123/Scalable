@@ -1,6 +1,8 @@
 /** UI boundary. Replace this instance with ApiBoardService when .NET is available.
  * DTOs are JSON-friendly: camelCase, string IDs, ISO dates. File uploads are separate.
  */
+import { WikimediaImageSource } from "./wikimedia-source.js";
+
 const STORAGE_KEY = "scalable.boards.v1";
 export const prompts = {
   "Coastal calm":
@@ -283,4 +285,19 @@ export class ApiBoardService {
     });
   }
 }
-export const boardService = new DemoBoardService();
+/** Current static-site adapter; the future research worker can use the same source DTO. */
+export class WikimediaBoardService extends DemoBoardService {
+  constructor(source = new WikimediaImageSource()) {
+    super();
+    this.source = source;
+  }
+  async research(options) {
+    const board = await super.research(options);
+    if (!options.includeWikimedia || options.signal?.aborted) return board;
+    const { image, ...outcome } = await this.source.search(options.prompt, { signal: options.signal });
+    board.sourceResults = { wikimedia: outcome };
+    if (image) board.items.push(image);
+    return board;
+  }
+}
+export const boardService = new WikimediaBoardService();

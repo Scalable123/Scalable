@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { mockWikimedia } = require("./helpers/mock-wikimedia.cjs");
 
 (async () => {
   const root = path.resolve(__dirname, "../frontend");
@@ -47,6 +48,7 @@ const path = require("node:path");
       colorScheme: "light",
     });
     const page = await context.newPage();
+    await mockWikimedia(context);
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     const url = `http://127.0.0.1:${server.address().port}`;
