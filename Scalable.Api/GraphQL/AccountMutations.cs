@@ -59,8 +59,19 @@ public sealed class AccountMutations
             if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.DuplicateEmail)))
                 return AuthPayload.Failure("That email is already in use.");
 
-            if (result.Errors.Any(error => error.Code.StartsWith("Password", StringComparison.Ordinal)))
-                return AuthPayload.Failure("Choose a stronger password with at least 8 characters.");
+            var passwordRequirements = new List<string>();
+            if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.PasswordRequiresDigit)))
+                passwordRequirements.Add("a number");
+            if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.PasswordRequiresLower)))
+                passwordRequirements.Add("a lowercase letter");
+            if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.PasswordRequiresUpper)))
+                passwordRequirements.Add("an uppercase letter");
+            if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.PasswordRequiresNonAlphanumeric)))
+                passwordRequirements.Add("a special character");
+
+            if (passwordRequirements.Count > 0)
+                return AuthPayload.Failure(
+                    $"Password must include at least 8 characters and {string.Join(", ", passwordRequirements)}.");
 
             if (result.Errors.Any(error => error.Code == nameof(IdentityErrorDescriber.InvalidUserName)))
                 return AuthPayload.Failure("Use only letters, numbers, dots, dashes, or underscores in the username.");
