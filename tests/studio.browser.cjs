@@ -409,13 +409,11 @@ const path = require("node:path");
       await page.locator("#leave-provider").click();
     }
     await page.locator("#file-tab").click();
-    await page
-      .locator("#audio-file")
-      .setInputFiles({
-        name: "broken.mp3",
-        mimeType: "audio/mpeg",
-        buffer: Buffer.from("This is not audio"),
-      });
+    await page.locator("#audio-file").setInputFiles({
+      name: "broken.mp3",
+      mimeType: "audio/mpeg",
+      buffer: Buffer.from("This is not audio"),
+    });
     await page.locator("#add-file").click();
     await page
       .getByText("This file could not be decoded as audio.", { exact: false })
@@ -435,13 +433,11 @@ const path = require("node:path");
     wav.writeUInt16LE(16, 34);
     wav.write("data", 36);
     wav.writeUInt32LE(sampleCount * 2, 40);
-    await page
-      .locator("#audio-file")
-      .setInputFiles({
-        name: "studio-tone.wav",
-        mimeType: "audio/wav",
-        buffer: wav,
-      });
+    await page.locator("#audio-file").setInputFiles({
+      name: "studio-tone.wav",
+      mimeType: "audio/wav",
+      buffer: wav,
+    });
     await page.locator("#file-title").fill("My local recording");
     await page.locator("#add-file").click();
     await page.getByText("Local audio added.", { exact: false }).waitFor();
@@ -499,7 +495,11 @@ const path = require("node:path");
     );
     const parsed = await page.evaluate(async () => {
       const { parseMediaLink } = await import("/js/audio-library.js");
-      if (parseMediaLink("https://open.spotify.com/intl-de/track/EXAMPLE?si=abc").url !== "https://open.spotify.com/track/EXAMPLE") throw new Error("Localized Spotify link did not normalize");
+      if (
+        parseMediaLink("https://open.spotify.com/intl-de/track/EXAMPLE?si=abc")
+          .url !== "https://open.spotify.com/track/EXAMPLE"
+      )
+        throw new Error("Localized Spotify link did not normalize");
       const accepted = [
         "https://music.amazon.co.uk/albums/EXAMPLE",
         "https://music.apple.com/us/album/example/123",
@@ -526,6 +526,240 @@ const path = require("node:path");
     });
     assert.deepEqual(externalRequests, []);
 
+    // Pinterest account connection and board imports are explicitly local previews.
+    await page.locator("#import-pinterest").click();
+    await page
+      .getByRole("button", {
+        name: "Preview Pinterest connection",
+        exact: true,
+      })
+      .click();
+    assert(await page.locator("#review-pinterest").isDisabled());
+    await page
+      .getByLabel("Select board The slow coast", { exact: true })
+      .check();
+    await page.locator("#pinterest-search").fill("earth");
+    await page
+      .getByLabel("Select board Earth & atmosphere", { exact: true })
+      .check();
+    await page.locator("#pinterest-search").fill("no such board");
+    assert(await page.locator("#pinterest-no-boards").isVisible());
+    assert.equal(
+      await page.locator("#pinterest-board-count").textContent(),
+      "2 boards selected",
+    );
+    await page.locator("#select-pinterest-boards").click();
+    assert.equal(
+      await page.locator("#pinterest-board-count").textContent(),
+      "3 boards selected",
+    );
+    await page.locator("#clear-pinterest-boards").click();
+    assert(await page.locator("#review-pinterest").isDisabled());
+    await page.locator("#pinterest-search").fill("");
+    await page
+      .getByLabel("Select board The slow coast", { exact: true })
+      .check();
+    await page
+      .getByLabel("Select board Earth & atmosphere", { exact: true })
+      .check();
+    await page.locator("#review-pinterest").click();
+    assert.equal(
+      await page.locator("#pinterest-pin-list input:checked").count(),
+      10,
+    );
+    await page
+      .getByLabel("Import pin Follow the tide", { exact: true })
+      .uncheck();
+    assert(
+      await page
+        .locator("#select-pinterest-pins")
+        .evaluate((e) => e.indeterminate),
+    );
+    // A mixed checkbox first selects all, then a second action clears all.
+    await page.locator("#select-pinterest-pins").check();
+    await page.locator("#select-pinterest-pins").uncheck();
+    assert(await page.locator("#confirm-pinterest-import").isDisabled());
+    await page.locator("#select-pinterest-pins").check();
+    await page.locator("#confirm-pinterest-import").click();
+    assert.match(
+      await page.locator("#pinterest-result").textContent(),
+      /10 sample pins added to your current mood board/,
+    );
+    await page.locator("#view-pinterest-board").click();
+    assert.equal(await page.locator(".imported-pin-badge").count(), 10);
+    assert.equal(await page.locator(".image-card").count(), 13);
+    await page.locator("#import-pinterest").click();
+    await page.locator("#more-pinterest-boards").click();
+    await page.locator("#review-pinterest").click();
+    await page.locator("#confirm-pinterest-import").click();
+    assert.match(
+      await page.locator("#pinterest-result").textContent(),
+      /0 sample pins.*10 already-present pins were skipped/,
+    );
+    await page.locator("#view-pinterest-board").click();
+    await page
+      .getByRole("button", {
+        name: "Remove imported pin Mornings in the mist",
+        exact: true,
+      })
+      .click();
+    assert.equal(await page.locator(".imported-pin-badge").count(), 9);
+    await page.locator("#import-pinterest").click();
+    await page.locator("#more-pinterest-boards").click();
+    await page.locator("#review-pinterest").click();
+    await page.locator("#confirm-pinterest-import").click();
+    assert.match(
+      await page.locator("#pinterest-result").textContent(),
+      /1 sample pin.*9 already-present pins were skipped/,
+    );
+    await page.locator("#view-pinterest-board").click();
+    await filter("image");
+    assert.equal(await page.locator(".image-card:visible").count(), 13);
+    await filter("all");
+    await page
+      .locator("#board-grid .image-card")
+      .last()
+      .getByRole("button", { name: /^Pin / })
+      .click();
+    await page.locator("#prompt").fill("A coastal creative direction");
+    await explore();
+    assert.equal(await page.locator(".imported-pin-badge").count(), 10);
+    assert.equal(await page.locator(".imported-audio-card").count(), 3);
+    await page.evaluate(() => localStorage.removeItem("scalable.boards.v1"));
+    await page.locator("#save-board").click();
+    await page.getByText("Saved locally", { exact: true }).waitFor();
+    const savedPins = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem("scalable.boards.v1"))[0].items.filter(
+        (i) => i.provider === "pinterest",
+      ),
+    );
+    assert.equal(savedPins.length, 10);
+    assert(
+      savedPins.every(
+        (i) =>
+          i.sourceBoard.id &&
+          i.externalPinId &&
+          i.isSample &&
+          i.originalPinUrl === null,
+      ),
+    );
+    assert(savedPins.some((i) => i.pinned));
+    await page.reload();
+    await page.locator("#import-pinterest:not([disabled])").waitFor();
+    await page.locator("#saved-boards").click();
+    await page.getByRole("button", { name: "Open", exact: true }).click();
+    assert.equal(await page.locator(".imported-pin-badge").count(), 10);
+    await page.locator("#import-pinterest").click();
+    assert(await page.locator("#pinterest-connect").isVisible());
+    await page
+      .getByRole("button", {
+        name: "Preview Pinterest connection",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByLabel("Select board The slow coast", { exact: true })
+      .check();
+    await page.locator("#review-pinterest").click();
+    await page.locator("[name=destination][value=new]").check();
+    await page.locator("#pinterest-new-title").fill("   ");
+    await page.locator("#confirm-pinterest-import").click();
+    await page
+      .getByText("Give the new mood board a name.", { exact: true })
+      .waitFor();
+    await page
+      .locator("#pinterest-new-title")
+      .fill("A Pinterest starting point");
+    // Simulate research already in flight when the user starts a fresh imported board.
+    await page.evaluate(() =>
+      document.querySelector("#prompt-form").requestSubmit(),
+    );
+    await page.locator("#confirm-pinterest-import").click();
+    await page.locator("#view-pinterest-board").click();
+    await page.waitForTimeout(750);
+    assert.equal(
+      await page.locator("#board-title").textContent(),
+      "A Pinterest starting point.",
+    );
+    assert.equal(await page.locator(".image-card").count(), 6);
+    assert.equal(await page.locator(".imported-audio-card").count(), 0);
+    for (const layout of ["collage", "grid"]) {
+      await appearance();
+      await page.locator("[name=layout]").selectOption(layout);
+      await closeAppearance();
+      for (const colorScheme of ["light", "dark"]) {
+        await appearance();
+        await page.locator("[name=theme]").selectOption(colorScheme);
+        await closeAppearance();
+        for (const width of [1440, 1024, 768, 390, 320]) {
+          await page.setViewportSize({ width, height: 900 });
+          assert(
+            !(await page.evaluate(
+              () => document.documentElement.scrollWidth > innerWidth,
+            )),
+            `Pinterest board overflows at ${width}/${layout}/${colorScheme}`,
+          );
+          const rects = await page.locator(".image-card").evaluateAll((cards) =>
+            cards.map((card) => {
+              const r = card.getBoundingClientRect();
+              return {
+                x: r.x,
+                y: r.y,
+                right: r.right,
+                bottom: r.bottom,
+                width: r.width,
+                height: r.height,
+              };
+            }),
+          );
+          assert(rects.every((r) => r.width > 0 && r.height > 0));
+          for (let i = 0; i < rects.length; i++)
+            for (let j = i + 1; j < rects.length; j++)
+              assert(
+                !(
+                  rects[i].x < rects[j].right - 1 &&
+                  rects[i].right > rects[j].x + 1 &&
+                  rects[i].y < rects[j].bottom - 1 &&
+                  rects[i].bottom > rects[j].y + 1
+                ),
+                "Imported cards overlap",
+              );
+          await page.locator("#import-pinterest").click();
+          await page.locator("#more-pinterest-boards").click();
+          assert(
+            !(await page
+              .locator("#pinterest-dialog")
+              .evaluate((e) => e.scrollWidth > e.clientWidth)),
+            `Pinterest board picker overflows at ${width}`,
+          );
+          await page.locator("#review-pinterest").click();
+          assert(
+            !(await page
+              .locator("#pinterest-dialog")
+              .evaluate((e) => e.scrollWidth > e.clientWidth)),
+            `Pinterest review overflows at ${width}`,
+          );
+          await page.locator("#close-pinterest").click();
+          // Return to the completion state so the next matrix iteration follows the same path.
+          await page.locator("#import-pinterest").click();
+          await page.locator("#confirm-pinterest-import").click();
+          await page.locator("#view-pinterest-board").click();
+        }
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    await page.locator("#import-pinterest").click();
+    await page.locator("#more-pinterest-boards").click();
+    await page.locator("#end-pinterest-preview").click();
+    assert(await page.locator("#pinterest-connect").isVisible());
+    await page.keyboard.press("Escape");
+    assert.equal(
+      await page.evaluate(() => document.activeElement.id),
+      "import-pinterest",
+    );
+    assert.equal(context.pages().length, 1);
+    assert.deepEqual(externalRequests, []);
+
     const blocked = await browser.newContext();
     await blocked.addInitScript(() => {
       Storage.prototype.setItem = () => {
@@ -547,7 +781,7 @@ const path = require("node:path");
       .waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      "Passed: Studio themes, customization persistence/reset, OS theme changes, 20 responsive combinations, songs/sounds and inclusion options, catalog-search links, pins, saved-board reopening, legacy compatibility, and blocked storage. Plus extended appearance settings, link imports, provider library previews, local audio decoding/playback, reattachment, persistence, safe URLs, duplicate prevention, and removal. No provider requests. Zero browser errors.",
+      "Passed: Studio themes, customization persistence/reset, OS theme changes, 20 responsive combinations, songs/sounds and inclusion options, catalog-search links, pins, saved-board reopening, legacy compatibility, and blocked storage. Plus extended appearance settings, link imports, provider library previews, local audio decoding/playback, reattachment, persistence, safe URLs, duplicate prevention, and removal. Pinterest: full-board and selected-pin imports, duplicate prevention, save/reopen, new-board creation, stale-research protection, and 20 responsive layout/theme combinations. No provider requests. Zero browser errors.",
     );
   } finally {
     await browser?.close();

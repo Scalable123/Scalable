@@ -456,7 +456,7 @@ export function renderAudioReference(
       audio.preload = "metadata";
       audio.setAttribute("aria-label", `Play local audio: ${item.title}`);
       audio.addEventListener("play", () =>
-        document.querySelectorAll("audio").forEach((other) => {
+        document.querySelectorAll("audio,video").forEach((other) => {
           if (other !== audio) other.pause();
         }),
       );
