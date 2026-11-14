@@ -3,6 +3,7 @@ import {
   onAppearanceChange,
   updateAppearance,
   resetAppearance,
+  setupThemeControls,
 } from "./appearance.js";
 import { supabase } from "./config/supabaseClient.js";
 iconify(document.body);
@@ -10,9 +11,6 @@ const $ = (selector) => document.querySelector(selector);
 const sessionKey = "scalable.demoSession";
 const profileKey = "scalable.profile.v1";
 onAppearanceChange((preferences) => {
-  const dark = document.documentElement.dataset.theme === "dark";
-  $("#page-theme-toggle").textContent = dark ? "Light mode" : "Dark mode";
-  $("#page-theme-toggle").setAttribute("aria-pressed", String(dark));
   if ($("#appearance-form")) {
     for (const field of [
       "theme",
@@ -27,12 +25,10 @@ onAppearanceChange((preferences) => {
     $("#appearance-form").elements.accent.value = preferences.accent;
   }
 });
-$("#page-theme-toggle").addEventListener("click", () => {
-  const saved = updateAppearance({
-    theme: document.documentElement.dataset.theme === "dark" ? "light" : "dark",
-  });
+setupThemeControls((saved) => {
   if (!saved) {
-    const status = $("#login-status") || $("#profile-status");
+    const status =
+      $("#login-status") || $("#profile-status") || $("#recovery-status");
     status.textContent =
       "Theme applied for this visit. Browser storage is unavailable.";
   }
@@ -62,7 +58,11 @@ if (document.body.dataset.page === "login") {
     event.target.reset();
     location.assign("account.html");
   });
-  $("#demo-account").addEventListener("click", startDemo);
+  $("#demo-account").addEventListener("click", (event) => {
+    event.preventDefault();
+    startDemo();
+  });
+  $("#show-password").hidden = false;
   $("#show-password").addEventListener("click", () => {
     const show = $("#login-password").type === "password";
     $("#login-password").type = show ? "text" : "password";

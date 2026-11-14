@@ -79,7 +79,7 @@ const path = require("node:path");
     assert.equal(await page.locator(".song-card").count(), 3);
     assert.equal(await page.locator(".music-card").count(), 1);
     const palette = await page.locator(".color").first().getAttribute("style");
-    await page.locator("#theme-toggle").click();
+    await page.locator("#theme-toggle").selectOption("dark");
     assert.equal(await theme(), "dark");
     await appearance();
     await page.locator('[name="accent"][value="plum"]').check();

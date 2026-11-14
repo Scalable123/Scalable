@@ -5,19 +5,42 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#f6f4ee" />
     <title>Your account — Scalable Studio</title>
+    <script src="js/theme-init.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <script type="module" src="js/account.js"></script>
   </head>
   <body data-page="account">
     <a class="skip-link" href="#main">Skip to account settings</a>
     <header class="account-topbar">
-      <a class="brand" href="index.html"
-        ><span class="brand-mark">s</span> scalable<span class="brand-period"
-          >.</span
-        ></a
+      <a class="brand" href="index.html" aria-label="Scalable home"
+        ><span class="brand-mark" aria-hidden="true"
+          >s<svg
+            class="brand-star"
+            viewBox="0 0 100 100"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M50 2v96M2 50h96M16 16l68 68M16 84l68-68"
+              stroke="currentColor"
+              stroke-width="8"
+            /></svg
+        ></span>
+        scalable<span class="brand-period">.</span></a
       >
       <div class="appearance-actions">
-        <button id="page-theme-toggle" class="toolbar-button">Dark mode</button
+        <label class="theme-picker" for="page-theme-toggle"
+          ><span>Theme</span
+          ><select
+            id="page-theme-toggle"
+            data-theme-control
+            aria-label="Color theme"
+            disabled
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select></label
         ><a href="index.html" class="toolbar-button">Back to Studio ↗</a>
       </div>
     </header>
