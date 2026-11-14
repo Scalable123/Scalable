@@ -16,6 +16,8 @@
         <span class="studio-edition">/ YOUR CREATIVE SPACE</span></span
       >
       <div class="appearance-actions">
+        <a class="toolbar-button account-link" href="account.html">Account</a>
+        <a class="toolbar-button login-link" href="login.html">Log in</a>
         <button id="theme-toggle" class="toolbar-button" aria-pressed="false">
           Dark mode
         </button>
@@ -54,10 +56,10 @@
         </div>
         <div class="sidebar-bottom">
           <button id="about">ⓘ <span>About this prototype</span></button>
-          <div class="profile">
+          <a class="profile" href="account.html" aria-label="Open account page">
             <span class="avatar">Y</span>
-            <div>Your creative space<small>Local demo workspace</small></div>
-          </div>
+            <div>Your creative space<small>View account preview ↗</small></div>
+          </a>
         </div>
       </aside>
       <main id="main">
@@ -175,6 +177,25 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 ↗ <span id="save-label">Save board</span>
               </button>
             </div>
+            <div class="pinterest-dock">
+              <span class="pinterest-mark" aria-hidden="true">P</span>
+              <div>
+                <p class="section-label">YOUR INSPIRATION, ALREADY COLLECTED</p>
+                <strong>Start with a board you love.</strong>
+                <p>
+                  Bring a full Pinterest board into your creative direction.
+                </p>
+              </div>
+              <button
+                id="import-pinterest"
+                class="toolbar-button"
+                aria-haspopup="dialog"
+                disabled
+              >
+                Import Pinterest board ↗
+              </button>
+            </div>
+            <p id="pinterest-import-summary" class="field-help" hidden></p>
             <div class="audio-dock">
               <div>
                 <p class="section-label">A SOUNDTRACK THAT’S YOURS</p>
@@ -190,6 +211,21 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 ＋ Import audio
               </button>
             </div>
+            <div class="video-dock">
+              <span class="video-dock-icon" aria-hidden="true">▶</span>
+              <div>
+                <strong>Set the scene in motion.</strong>
+                <p>Collect YouTube moments or your own video clips.</p>
+              </div>
+              <button
+                id="import-video"
+                class="toolbar-button"
+                aria-haspopup="dialog"
+                disabled
+              >
+                ＋ Import video
+              </button>
+            </div>
             <div class="board-toolbar">
               <div
                 class="filters"
@@ -202,8 +238,9 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 ><button data-filter="palette" aria-pressed="false">
                   Palette</button
                 ><button data-filter="song" aria-pressed="false">Songs</button
-                ><button data-filter="sound" aria-pressed="false">
-                  Sounds
+                ><button data-filter="sound" aria-pressed="false">Sounds</button
+                ><button data-filter="video" aria-pressed="false">
+                  Videos
                 </button>
               </div>
               <span class="board-index">SC—001</span>
@@ -248,6 +285,27 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 only in this browser.
               </p>
               <div id="sound-list" class="song-list"></div>
+            </section>
+            <section
+              id="video-library"
+              class="song-section"
+              aria-labelledby="video-library-heading"
+              hidden
+            >
+              <div class="song-heading">
+                <div>
+                  <p class="section-label">MOTION, MOOD & MOMENTS</p>
+                  <h3 id="video-library-heading">
+                    A feeling in motion<span>.</span>
+                  </h3>
+                </div>
+                <span class="sample-label">Your video references</span>
+              </div>
+              <p class="song-caption">
+                YouTube players load only when you choose. Local video stays in
+                this browser; save keeps its file details.
+              </p>
+              <div id="video-list" class="video-list"></div>
             </section>
             <div class="board-footer">
               <span><i></i> Curated demo collection</span
@@ -356,6 +414,302 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         </div>
         <p id="appearance-status" class="settings-status" role="status"></p>
       </form>
+    </dialog>
+    <dialog id="video-dialog" aria-labelledby="video-dialog-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">MAKE ROOM FOR MOVEMENT</p>
+          <h2 id="video-dialog-title">Every frame, a feeling.</h2>
+        </div>
+        <button id="close-video" aria-label="Close video importer">×</button>
+      </div>
+      <p class="dialog-copy">
+        Save a YouTube reference or bring a clip from your own collection.
+      </p>
+      <div class="import-tabs" role="tablist" aria-label="Video import method">
+        <button
+          id="youtube-tab"
+          role="tab"
+          aria-selected="true"
+          aria-controls="youtube-panel"
+          tabindex="0"
+          data-video-tab="youtube"
+        >
+          YouTube link</button
+        ><button
+          id="local-video-tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="local-video-panel"
+          tabindex="-1"
+          data-video-tab="local-video"
+        >
+          Local video
+        </button>
+      </div>
+      <section id="youtube-panel" role="tabpanel" aria-labelledby="youtube-tab">
+        <form id="youtube-form" class="import-form">
+          <label for="youtube-url">YouTube video link</label
+          ><input
+            id="youtube-url"
+            type="url"
+            required
+            maxlength="2048"
+            placeholder="https://www.youtube.com/watch?v=…"
+          />
+          <p class="field-help">
+            Supports watch, Shorts, and youtu.be video links, including a start
+            time. Playlists and account-library imports are not supported here.
+          </p>
+          <label for="youtube-title">Reference title</label
+          ><input
+            id="youtube-title"
+            required
+            maxlength="160"
+            placeholder="The lighting, the pace, the whole feeling"
+          />
+          <p class="field-help">
+            You supply the title; there is no metadata lookup or account
+            connection. Saving a link does not contact YouTube. Loading its
+            player or opening its source will.
+          </p>
+          <button class="done-button" type="submit">
+            Add YouTube reference ↗
+          </button>
+        </form>
+      </section>
+      <section
+        id="local-video-panel"
+        role="tabpanel"
+        aria-labelledby="local-video-tab"
+        hidden
+      >
+        <form id="local-video-form" class="import-form">
+          <label for="video-file">Choose a video file</label
+          ><input
+            id="video-file"
+            type="file"
+            required
+            accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+          />
+          <p class="field-help">
+            MP4, WebM, or MOV · up to 100 MB · must be playable in your browser.
+            The file stays on your device. Saved boards keep its details;
+            reattach the file after reloading.
+          </p>
+          <label for="video-file-title"
+            >Title <span>(optional; defaults to filename)</span></label
+          ><input
+            id="video-file-title"
+            maxlength="160"
+            placeholder="A scene worth keeping"
+          /><button class="done-button" type="submit" id="add-local-video">
+            Add local video ↗
+          </button>
+        </form>
+      </section>
+      <p
+        id="video-import-status"
+        class="settings-status"
+        role="status"
+        aria-live="polite"
+      ></p>
+    </dialog>
+    <dialog id="pinterest-dialog" aria-labelledby="pinterest-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">FROM COLLECTING TO CREATING</p>
+          <h2 id="pinterest-title">A head start on your next idea.</h2>
+        </div>
+        <button id="close-pinterest" aria-label="Close Pinterest importer">
+          ×
+        </button>
+      </div>
+      <p class="connection-notice">
+        PINTEREST CONNECTION PREVIEW · NOT CONNECTED
+      </p>
+      <ol class="pinterest-steps" aria-label="Pinterest import progress">
+        <li data-pinterest-step="connect" aria-current="step">01 / Connect</li>
+        <li data-pinterest-step="boards">02 / Boards</li>
+        <li data-pinterest-step="review">03 / Review</li>
+        <li data-pinterest-step="complete">04 / Done</li>
+      </ol>
+      <section
+        id="pinterest-connect"
+        aria-labelledby="pinterest-connect-heading"
+      >
+        <div class="pinterest-welcome">
+          <span class="pinterest-mark" aria-hidden="true">P</span>
+          <h3 id="pinterest-connect-heading" tabindex="-1">
+            Your saved ideas. A new starting point.
+          </h3>
+          <p>
+            Choose your Pinterest boards, bring over their pins, and build a
+            mood board that feels like you.
+          </p>
+        </div>
+        <ul class="pinterest-benefits">
+          <li>Import complete boards, or choose individual pins.</li>
+          <li>Keep the source board attached to each reference.</li>
+          <li>Add to your current canvas or start a fresh direction.</li>
+        </ul>
+        <div class="preview-explainer">
+          <strong>This is a frontend preview.</strong>
+          <p>
+            No Pinterest account is connected or read. The next screens use
+            locally stored sample boards and photography. Real sign-in and
+            imports will use the future backend.
+          </p>
+        </div>
+        <button id="preview-pinterest" class="done-button">
+          Preview Pinterest connection ↗
+        </button>
+      </section>
+      <section
+        id="pinterest-boards"
+        aria-labelledby="pinterest-boards-heading"
+        hidden
+      >
+        <div class="pinterest-screen-heading">
+          <div>
+            <h3 id="pinterest-boards-heading" tabindex="-1">
+              Which boards are you feeling?
+            </h3>
+            <p class="field-help">
+              Demo library — sample boards, not your Pinterest account.
+            </p>
+          </div>
+          <button id="end-pinterest-preview" class="text-button">
+            End preview
+          </button>
+        </div>
+        <label class="search-label" for="pinterest-search"
+          >Find a sample board</label
+        ><input
+          id="pinterest-search"
+          type="search"
+          maxlength="100"
+          placeholder="Search by board name…"
+        />
+        <div class="selection-toolbar">
+          <span id="pinterest-board-count" role="status"></span>
+          <div>
+            <button id="select-pinterest-boards" class="text-button">
+              Select all boards</button
+            ><button id="clear-pinterest-boards" class="text-button">
+              Clear selection
+            </button>
+          </div>
+        </div>
+        <div id="pinterest-board-list" class="pinterest-board-list"></div>
+        <p id="pinterest-no-boards" class="empty-state" hidden>
+          No sample boards match that search.
+        </p>
+        <div class="pinterest-footer">
+          <span class="field-help"
+            >Full boards are selected for import by default.</span
+          ><button id="review-pinterest" class="done-button" disabled>
+            Review selected boards ↗
+          </button>
+        </div>
+      </section>
+      <section
+        id="pinterest-review"
+        aria-labelledby="pinterest-review-heading"
+        hidden
+      >
+        <div class="pinterest-screen-heading">
+          <div>
+            <h3 id="pinterest-review-heading" tabindex="-1">
+              Make these ideas your own.
+            </h3>
+            <p id="pinterest-review-description" class="field-help"></p>
+          </div>
+          <button id="back-pinterest-boards" class="text-button">
+            Back to boards
+          </button>
+        </div>
+        <form id="pinterest-review-form">
+          <div class="selection-toolbar">
+            <label class="pin-select-all"
+              ><input type="checkbox" id="select-pinterest-pins" checked />
+              Select every pin</label
+            ><span id="pinterest-pin-count" role="status"></span>
+          </div>
+          <div id="pinterest-pin-list" class="pinterest-pin-list"></div>
+          <fieldset class="pinterest-destination">
+            <legend>Where should these pins go?</legend>
+            <label
+              ><input type="radio" name="destination" value="current" checked />
+              Add to my current mood board</label
+            ><label
+              ><input type="radio" name="destination" value="new" /> Start a new
+              mood board</label
+            >
+          </fieldset>
+          <div id="pinterest-new-board" class="import-form" hidden>
+            <label for="pinterest-new-title">New mood board name</label
+            ><input
+              id="pinterest-new-title"
+              maxlength="120"
+              placeholder="A new creative direction"
+            />
+            <p class="field-help">
+              Starting fresh replaces the current unsaved canvas. Save it before
+              importing into a new board if you want to keep it.
+            </p>
+          </div>
+          <div class="preview-explainer">
+            <p>
+              Sample pins use local demo photography, not images fetched from
+              Pinterest. Source metadata stays with the references; this does
+              not transfer ownership or change a Pinterest board.
+            </p>
+          </div>
+          <div class="pinterest-footer">
+            <span class="field-help"
+              >Existing pins will be skipped when adding to a board.</span
+            ><button
+              id="confirm-pinterest-import"
+              class="done-button"
+              type="submit"
+            >
+              Import sample pins ↗
+            </button>
+          </div>
+        </form>
+      </section>
+      <section
+        id="pinterest-complete"
+        aria-labelledby="pinterest-complete-heading"
+        hidden
+      >
+        <div class="pinterest-welcome">
+          <span class="import-complete-mark" aria-hidden="true">✓</span>
+          <h3 id="pinterest-complete-heading" tabindex="-1">
+            A little inspiration goes a long way.
+          </h3>
+          <p id="pinterest-result"></p>
+        </div>
+        <p class="field-help">
+          Your Studio canvas has been updated locally. Save the mood board to
+          keep these sample references. No Pinterest account or boards were
+          changed.
+        </p>
+        <div class="pinterest-footer">
+          <button id="more-pinterest-boards" class="text-button">
+            Import more boards</button
+          ><button id="view-pinterest-board" class="done-button">
+            View mood board ↗
+          </button>
+        </div>
+      </section>
+      <p
+        id="pinterest-status"
+        class="settings-status"
+        role="status"
+        aria-live="polite"
+      ></p>
     </dialog>
     <dialog id="audio-dialog" aria-labelledby="audio-dialog-title">
       <div class="dialog-header">

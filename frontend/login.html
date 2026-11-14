@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f6f4ee" />
+    <title>Log in — Scalable Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="js/account.js"></script>
+  </head>
+  <body data-page="login">
+    <a class="skip-link" href="#main">Skip to login</a>
+    <header class="account-topbar">
+      <a class="brand" href="index.html"
+        ><span class="brand-mark">s</span> scalable<span class="brand-period"
+          >.</span
+        ></a
+      >
+      <div class="appearance-actions">
+        <button id="page-theme-toggle" class="toolbar-button">Dark mode</button
+        ><a href="index.html" class="toolbar-button">Back to Studio ↗</a>
+      </div>
+    </header>
+    <main id="main" class="login-layout">
+      <section class="login-story">
+        <p class="eyebrow">A LITTLE SPACE FOR YOUR NEXT BIG IDEA</p>
+        <h1>Come back<br />to your <em>creative world.</em></h1>
+        <p>
+          A place for everything that moves you.<br />Images, colors, songs, and
+          moments in motion.
+        </p>
+        <div class="login-art">
+          <img
+            src="assets/mountains.jpg"
+            alt="A quiet mountain valley filled with mist"
+          /><span class="login-note">Keep following<br />that feeling.</span>
+        </div>
+        <span class="login-story-caption">SCALABLE / THE STUDIO</span>
+      </section>
+      <section class="login-panel" aria-labelledby="login-title">
+        <p class="eyebrow">MAKE YOURSELF AT HOME</p>
+        <h2 id="login-title">Welcome back<span>.</span></h2>
+        <p class="dialog-copy">Your next creative direction is waiting.</p>
+        <div class="preview-explainer">
+          <strong>Frontend login preview</strong>
+          <p>
+            Use sample details. No credentials are sent or saved, and this does
+            not authenticate an account.
+          </p>
+        </div>
+        <form id="login-form" class="import-form">
+          <label for="login-email">Email address</label
+          ><input
+            id="login-email"
+            type="email"
+            required
+            maxlength="254"
+            placeholder="you@example.com"
+            autocomplete="off"
+          /><label for="login-password"
+            >Password <span>(sample only, 8+ characters)</span></label
+          >
+          <div class="password-field">
+            <input
+              id="login-password"
+              type="password"
+              required
+              minlength="8"
+              maxlength="128"
+              placeholder="Enter a sample password"
+              autocomplete="off"
+            /><button
+              id="show-password"
+              type="button"
+              aria-pressed="false"
+              aria-label="Show sample password"
+            >
+              Show
+            </button>
+          </div>
+          <button id="forgot-password" class="text-button" type="button">
+            Forgot password?</button
+          ><button class="done-button login-submit" type="submit">
+            Preview sign-in ↗
+          </button>
+        </form>
+        <div class="login-divider"><span>OR KEEP EXPLORING</span></div>
+        <button id="demo-account" class="toolbar-button demo-account-button">
+          Explore the demo account
+        </button>
+        <p class="field-help login-help">
+          The account preview is available without signing in. Cloud sync and
+          real authentication will connect through the .NET backend.
+        </p>
+        <p
+          id="login-status"
+          class="settings-status"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </section>
+    </main>
+  </body>
+</html>

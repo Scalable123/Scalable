@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f6f4ee" />
+    <title>Your account — Scalable Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="js/account.js"></script>
+  </head>
+  <body data-page="account">
+    <a class="skip-link" href="#main">Skip to account settings</a>
+    <header class="account-topbar">
+      <a class="brand" href="index.html"
+        ><span class="brand-mark">s</span> scalable<span class="brand-period"
+          >.</span
+        ></a
+      >
+      <div class="appearance-actions">
+        <button id="page-theme-toggle" class="toolbar-button">Dark mode</button
+        ><a href="index.html" class="toolbar-button">Back to Studio ↗</a>
+      </div>
+    </header>
+    <div class="account-layout">
+      <aside class="account-sidebar">
+        <p class="section-label">YOUR CREATIVE SPACE</p>
+        <nav aria-label="Account settings">
+          <a href="#profile" data-account-panel="profile" aria-current="page"
+            >Profile <span>↗</span></a
+          ><a href="#appearance" data-account-panel="appearance"
+            >Appearance <span>↗</span></a
+          ><a href="#connections" data-account-panel="connections"
+            >Connected services <span>↗</span></a
+          ><a href="#security" data-account-panel="security"
+            >Sign-in & security <span>↗</span></a
+          >
+        </nav>
+        <div class="account-sidebar-note">
+          <span class="note-star">✳</span>
+          <p>A space that<br />feels like you.</p>
+          <small>Local demo workspace</small>
+        </div>
+      </aside>
+      <main id="main" class="account-main">
+        <header class="account-heading">
+          <div>
+            <p class="eyebrow">THE STUDIO / YOUR ACCOUNT</p>
+            <h1>A little more <em>you.</em></h1>
+          </div>
+          <span id="account-session" class="sample-label"
+            >Account preview · not authenticated</span
+          >
+        </header>
+        <p class="account-disclaimer">
+          This is a frontend account preview. Profile details and preferences
+          stay in this browser. No real account, cloud sync, or provider
+          connection is active.
+        </p>
+        <section data-account-section="profile" aria-labelledby="profile-title">
+          <div class="account-panel-heading">
+            <h2 id="profile-title" tabindex="-1">Your profile</h2>
+            <p>A few details for your creative space.</p>
+          </div>
+          <div class="account-profile-card">
+            <span id="profile-avatar" class="large-avatar" aria-hidden="true"
+              >Y</span
+            >
+            <div>
+              <h3 id="profile-display-name">Your creative space</h3>
+              <p>Local demo profile · no cloud account</p>
+            </div>
+          </div>
+          <form id="profile-form" class="import-form account-form">
+            <label for="profile-name">Display name</label
+            ><input
+              id="profile-name"
+              required
+              maxlength="80"
+              placeholder="Your creative name"
+              autocomplete="off"
+            /><label for="profile-email"
+              >Email <span>(demo profile only)</span></label
+            ><input
+              id="profile-email"
+              type="email"
+              required
+              maxlength="254"
+              placeholder="you@example.com"
+              autocomplete="off"
+            />
+            <p class="field-help">
+              This updates local profile metadata, not a login identity or
+              verified email.
+            </p>
+            <button class="done-button" type="submit">
+              Save local profile ↗
+            </button>
+            <p id="profile-status" class="settings-status" role="status"></p>
+          </form>
+          <div class="account-stat">
+            <span id="account-board-count">—</span>
+            <div>
+              Saved mood boards<small
+                >In this browser, across the demo workspace</small
+              >
+            </div>
+            <a href="index.html">Open Studio ↗</a>
+          </div>
+        </section>
+        <section
+          data-account-section="appearance"
+          aria-labelledby="account-appearance-title"
+          hidden
+        >
+          <div class="account-panel-heading">
+            <h2 id="account-appearance-title" tabindex="-1">
+              Make the Studio yours.
+            </h2>
+            <p>Shared with your Studio canvas. Changes apply immediately.</p>
+          </div>
+          <form id="appearance-form" class="appearance-form">
+            <div class="appearance-field">
+              <label for="theme-preference">Appearance</label>
+              <select id="theme-preference" name="theme">
+                <option value="system">Follow device</option>
+                <option value="light">Light — warm paper</option>
+                <option value="dark">Dark — evening studio</option>
+              </select>
+            </div>
+            <fieldset class="accent-options">
+              <legend>Accent color</legend>
+              <label
+                ><input type="radio" name="accent" value="terracotta" /><span
+                  class="accent-dot"
+                  style="--preview: #a64b35"
+                ></span
+                >Terracotta</label
+              >
+              <label
+                ><input type="radio" name="accent" value="olive" /><span
+                  class="accent-dot"
+                  style="--preview: #576a36"
+                ></span
+                >Olive</label
+              >
+              <label
+                ><input type="radio" name="accent" value="plum" /><span
+                  class="accent-dot"
+                  style="--preview: #775077"
+                ></span
+                >Plum</label
+              >
+            </fieldset>
+            <div class="appearance-field">
+              <label for="density-preference">Canvas spacing</label
+              ><select id="density-preference" name="density">
+                <option value="comfortable">Comfortable</option>
+                <option value="compact">Compact</option>
+              </select>
+            </div>
+            <div class="appearance-field">
+              <label for="corners-preference">Card edges</label
+              ><select id="corners-preference" name="corners">
+                <option value="soft">Soft corners</option>
+                <option value="square">Square corners</option>
+              </select>
+            </div>
+            <div class="appearance-field">
+              <label for="typography-preference">Typography</label
+              ><select id="typography-preference" name="typography">
+                <option value="editorial">Editorial — expressive serif</option>
+                <option value="modern">Modern — clean sans serif</option>
+              </select>
+            </div>
+            <div class="appearance-field">
+              <label for="layout-preference">Board arrangement</label
+              ><select id="layout-preference" name="layout">
+                <option value="collage">Editorial collage</option>
+                <option value="grid">Even grid</option>
+              </select>
+            </div>
+            <div class="appearance-field">
+              <label for="canvas-preference">Canvas background</label
+              ><select id="canvas-preference" name="canvas">
+                <option value="plain">Plain paper</option>
+                <option value="dotted">Subtle dot grid</option>
+              </select>
+            </div>
+            <div class="appearance-field">
+              <label for="text-size-preference">Reading size</label
+              ><select id="text-size-preference" name="textSize">
+                <option value="standard">Standard</option>
+                <option value="large">Larger text</option>
+              </select>
+            </div>
+            <div class="appearance-footer">
+              <button
+                id="reset-appearance"
+                type="button"
+                class="toolbar-button"
+              >
+                Reset to defaults</button
+              ><button
+                type="button"
+                id="account-appearance-done"
+                class="done-button"
+              >
+                Back to profile ↗
+              </button>
+            </div>
+            <p id="appearance-status" class="settings-status" role="status"></p>
+          </form>
+        </section>
+        <section
+          data-account-section="connections"
+          aria-labelledby="connections-title"
+          hidden
+        >
+          <div class="account-panel-heading">
+            <h2 id="connections-title" tabindex="-1">
+              Your creative connections.
+            </h2>
+            <p>
+              Bring references from the places you already find inspiration.
+            </p>
+          </div>
+          <p class="preview-explainer">
+            All services are <strong>not connected</strong>. Open their Studio
+            import previews below. No sign-in, tokens, or library access are
+            available yet.
+          </p>
+          <div id="account-connections" class="account-connections"></div>
+        </section>
+        <section
+          data-account-section="security"
+          aria-labelledby="security-title"
+          hidden
+        >
+          <div class="account-panel-heading">
+            <h2 id="security-title" tabindex="-1">Sign-in & security</h2>
+            <p>A preview of your future account controls.</p>
+          </div>
+          <div class="account-security-card">
+            <strong>No authenticated session</strong>
+            <p>
+              Real login, password recovery, verified email, and session
+              management will use the .NET identity service.
+            </p>
+            <a href="login.html" class="toolbar-button">Open login preview ↗</a
+            ><button id="password-preview" class="text-button">
+              Preview password settings
+            </button>
+          </div>
+          <div class="account-security-card">
+            <strong>Demo session</strong>
+            <p>
+              Ending the demo clears its tab-scoped preview flag. Your local
+              boards, files in other pages, profile, and appearance preferences
+              are not deleted.
+            </p>
+            <button id="demo-signout" class="toolbar-button">
+              End demo session
+            </button>
+          </div>
+          <p id="security-status" class="settings-status" role="status"></p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

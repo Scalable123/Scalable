@@ -44,17 +44,23 @@ No external catalog lookup, live AI recommendation, or streaming-service playbac
 - Save boards locally, reopen them, or start a new exploration. Starting fresh discards the unsaved canvas but keeps saved boards.
 - Previously saved `type: "music"` concepts are read as `type: "sound"`. Existing boards are not overwritten automatically; older boards gain songs when the user explores again with songs enabled.
 
-There is no account, cloud sync, SQL connection, sharing, export, or live AI yet. Browser storage is origin/device-specific and may be cleared. Image-only research and drag-and-drop uploads remain unimplemented.
+There is no real authenticated account, cloud sync, SQL connection, sharing, export, or live AI yet. Login and account pages are local frontend previews. Browser storage is origin/device-specific and may be cleared. Image-only research and drag-and-drop uploads remain unimplemented.
 
 ## File map
 
 ```text
 frontend/
-  index.html             Semantic application shell and appearance dialog
+  index.html             Studio application shell and import/appearance dialogs
+  login.html             Frontend login preview
+  account.html           Local profile, preferences, and connection previews
   styles.css             Responsive Studio layout and appearance tokens
   js/appearance.js       Validated local preferences and device theme handling
-  js/app.js              DOM rendering, filters, interactions
+  js/app.js              Studio rendering, filters, and interactions
+  js/account.js          Login/account preview interactions
+  js/icons.js            Shared vector symbols
+  js/video-library.js    YouTube references and local video playback/imports
   js/audio-library.js    Link imports, provider previews, local audio registry
+  js/pinterest-import.js Pinterest connection preview, board/pin selection, import DTOs
   js/board-service.js    Demo service, saved-board compatibility, future HTTP adapter
   assets/                Local sample photography and source notes
 ```
@@ -136,3 +142,17 @@ Additional imported item fields:
 The importer never stores account credentials or marks a provider connected. See [music integration handoff](MUSIC-INTEGRATION.md) for the future backend boundary.
 
 The browser suite also exercises new preference persistence/reset, import dialogs across five widths, validated/duplicate links, all four provider previews, real local WAV decoding/playback, save/reopen/reattach, imported-reference preservation/removal, and absence of external provider requests during these flows.
+
+## Start from Pinterest boards
+
+Use **Import Pinterest board** for the local connection preview. Select complete sample boards, review/deselect pins, and add them to the current canvas or create a new named mood board. Imported sample pins retain board provenance, can be pinned/removed, survive refinement, and persist with saved boards. Duplicate pins are skipped. New board creation also guards against older research results overwriting the imported canvas.
+
+No Pinterest account is connected and no Pinterest content is fetched. The three demo boards use existing local sample photographs. [Pinterest integration notes](PINTEREST-INTEGRATION.md) describe the flow, limitations, data shape, and proposed .NET endpoints for real authorization and paginated whole-board imports.
+
+## Videos, login, and account
+
+**Import video** accepts YouTube references and browser-playable local files. Videos can be filtered, removed, saved as references, and retained through refinement. YouTube embeds load only on request. Local video files need reattachment after reload; file bytes are not saved.
+
+Use the Studio's **Log in** and **Account** links for the new pages. Login is a credential-free simulation after form validation; entered credentials are not transmitted or persisted. The account page has a local profile, shared appearance settings, service preview links, and sign-in/security placeholders. No browser flag is treated as authentication.
+
+See [video/account implementation and .NET handoff](VIDEO-ACCOUNT.md) for behavior, data contracts, test commands, and backend requirements.

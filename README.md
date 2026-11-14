@@ -16,6 +16,10 @@ Boards include **song recommendations and ambient sound directions** as separate
 
 Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/design-previews/studio-dark.png) · [Customization](docs/design-previews/studio-customize.png).
 
+**Start from Pinterest:** Use **Import Pinterest board** to preview connecting an account, select full sample boards or individual pins, and import them into the current canvas or a new mood board. Pin sources and saved choices are preserved locally. This is a demo library; Pinterest sign-in and real board retrieval need the backend. See the [Pinterest integration handoff](docs/PINTEREST-INTEGRATION.md).
+
+**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The new [login page](frontend/login.html) and [account page](frontend/account.html) preview local profiles, shared preferences, and service connections. No real authentication is connected and login credentials are not sent or stored. See the [video/account handoff](docs/VIDEO-ACCOUNT.md).
+
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
 ## Product vision
