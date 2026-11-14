@@ -33,11 +33,11 @@ The selected frontend is **The Studio**. The other two initial design exploratio
 
 The application consists of static HTML, one shared CSS file, and native JavaScript ES modules. There is no frontend framework, bundler, transpilation step, application server, or client-side route framework. Each account/authentication screen is a separate HTML page. Account sections use URL hashes. Studio import shortcuts use a query parameter.
 
-The repository now contains a C# / ASP.NET Core GraphQL identity backend in `Scalable.Api/`, backed by ASP.NET Identity and SQLite for development. A separate Node server hosts the frontend and an OpenAI creative-direction endpoint. Board persistence, research/search jobs, cloud media storage, and media-provider OAuth remain unimplemented. The frontend itself remains plain static HTML/CSS/native modules without a bundler or framework.
+The repository now contains a C# / ASP.NET Core GraphQL identity and Pinterest API host in `Scalable.Api/`, backed by ASP.NET Identity and SQLite for development. A separate Node server hosts the frontend and an OpenAI creative-direction endpoint. Board persistence, research/search jobs, cloud media storage, and other media-provider OAuth remain unimplemented. The frontend itself remains plain static HTML/CSS/native modules without a bundler or framework.
 
 Initial Studio boards and provider previews work locally. Submitting Explore attempts a same-origin AI request after generating its local fallback. Identity operations call the configurable GraphQL API using a session cookie. YouTube is contacted only when an embedded player is explicitly loaded or an external source link is followed.
 
-The root `package.json` now sets `type: "module"` and defines `npm start` as `node server.js`; it has no declared runtime package dependencies. The Node server uses built-in modules and global fetch. The previous Supabase SDK/client/configuration were removed by the upstream authentication migration. Playwright remains separately installed development tooling. There is no npm build or test script.
+The root `package.json` now sets `type: "module"` and defines `npm start` as `node server.js`; it has no declared runtime package dependencies. The Node server uses built-in modules and global fetch. Playwright remains separately installed development tooling. There is no npm build or test script.
 
 ## 2. Page routes and navigation
 
@@ -370,7 +370,7 @@ Nonlocal references render a validated outbound link with provider name and a ne
 
 Source: [`frontend/js/pinterest-import.js`](../frontend/js/pinterest-import.js). Entry point: Import Pinterest board in section 01, or the account Pinterest deep link.
 
-The dialog is a four-step connection preview: Connect, Boards, Review, Done. The library is local, no account is connected, and every imported pin is labeled as demo content. `DemoPinterestService.listBoards()` synchronously returns a structured clone of the complete fixture library.
+The dialog is a four-step workflow: Connect, Boards, Review, Done. **Preview Pinterest connection** uses local fixtures and never claims an account is connected. When the GraphQL identity session and approved backend integration are available, the same importer can link Pinterest and retrieve the authenticated user's boards and pins. See [Pinterest integration notes](PINTEREST-INTEGRATION.md) for the API, cookie session, OAuth, and provider constraints.
 
 ### 8.1 Local board library
 
@@ -729,7 +729,7 @@ The `element` helper creates DOM nodes, applies class names, assigns user-visibl
 
 ### 14.1 .NET GraphQL identity — implemented
 
-The active identity endpoint is `/graphql`, default frontend URL `http://localhost:5078/graphql`. All operations travel as POST JSON with a query document and variables, using an ASP.NET Identity cookie. This is the current identity service; the previous Supabase connection has been removed.
+The active identity endpoint is `/graphql`, default frontend URL `http://localhost:5078/graphql`. All operations travel as POST JSON with a query document and variables, using an ASP.NET Identity cookie.
 
 | Operation                       | Input / output                                                                          | Frontend caller                              |
 | ------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -769,15 +769,15 @@ The video renderer creates a `https://www.youtube-nocookie.com/embed/` iframe on
 
 ### 14.4 Outbound links and absent services
 
-Curated/AI songs open Spotify searches; imported links open their provider source/search; image sources link to sample-photo repositories. These links do not fetch catalog metadata or grant application library access. Live image research, licensed sound search, music OAuth/library APIs, Pinterest OAuth/boards/pins, YouTube libraries, SQL-backed board storage, and cloud media uploads remain unconnected. The REST `ApiBoardService` remains inactive.
+Curated/AI songs open Spotify searches; imported links open their provider source/search; image sources link to sample-photo repositories. These links do not fetch catalog metadata or grant application library access. Live image research, licensed sound search, music OAuth/library APIs, YouTube libraries, SQL-backed board storage, and cloud media uploads remain unconnected. Pinterest account linking and selected board/pin reads are implemented by the ASP.NET API; Pinterest content remains excluded from research. The REST `ApiBoardService` remains inactive.
 
 ## 15. Required backend and API connections
 
-Existing GraphQL identity and Node AI operations are documented in section 14. All REST `/api/…` routes in sections 15.2–15.8 are **proposed contracts**, not implemented endpoints. They are a handoff retained from the frontend adapter design; the backend may implement equivalent authenticated GraphQL fields rather than introducing a second data interface. The existing `/api/ai/creative-direction` route is the explicit exception and already exists in `server.js`.
+Existing GraphQL identity and Node AI operations are documented in section 14. The Pinterest `/api/integrations/pinterest` routes in section 15.5 are implemented in the GraphQL/Identity ASP.NET host and require its authenticated cookie session. Other REST `/api/…` routes in sections 15.2–15.4 and 15.6–15.8 are proposed contracts; the backend may implement equivalent authenticated GraphQL fields rather than introducing a second data interface. The existing `/api/ai/creative-direction` route is implemented in `server.js`.
 
 ### 15.1 Complete deployment of the existing identity service
 
-Use the existing ASP.NET Identity cookie authority instead of adding a parallel Supabase or unrelated REST login system. Set `window.GRAPHQL_ENDPOINT` to the deployed API before modules initialize, configure exact credentialed frontend origins, and choose same-origin proxying or an explicit cross-origin secure-cookie strategy. The current default points at the visitor's localhost and will not reach a deployed API from GitHub Pages.
+Use the existing ASP.NET Identity cookie authority. Set `window.GRAPHQL_ENDPOINT` to the deployed API before modules initialize and configure the exact credentialed frontend origin. The current default points at the visitor's localhost and will not reach a deployed API from GitHub Pages.
 
 Replace the no-delivery password-reset adapter with a production mail service. Configure `App:PublicBaseUrl` to the directory actually serving update-password.html, including any project path. Deploy protected persistent Data Protection keys and production schema migrations; add email verification, request limits, the chosen CSRF defense, and identity-expiry/error behavior. Registration already creates users and login accepts username/email; these are not future preview-only features.
 
@@ -832,21 +832,24 @@ The current profile Save handler writes localStorage only. It needs pending/succ
 
 ### 15.5 Pinterest authorization and whole-board import
 
+The endpoints described in [Pinterest integration notes](PINTEREST-INTEGRATION.md) are implemented. They reuse ASP.NET Identity's GraphQL-issued cookie session rather than a separate bearer-token identity system. The following table records the API responsibilities and implemented routes; `/api/pinterest-import-runs` remains a proposed durable job contract because board persistence is local.
+
 | Method | Proposed route                                 | Required responsibility                                                                                            |
 | ------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/integrations/pinterest/availability`      | Public deployment availability, `researchAllowed: false`                                                            |
 | GET    | `/api/integrations/pinterest`                  | Authenticated user's actual connection/capability state                                                            |
 | POST   | `/api/integrations/pinterest/authorize`        | Begin supported authorization and return an authorization URL                                                      |
 | GET    | `/api/integrations/pinterest/callback`         | Validate authorization response/state and exchange credentials server-side                                         |
 | DELETE | `/api/integrations/pinterest`                  | Disconnect/revoke as supported while preserving imported board references                                          |
 | GET    | `/api/integrations/pinterest/boards`           | Paginated authorized board summaries                                                                               |
 | GET    | `/api/integrations/pinterest/boards/{id}/pins` | Paginated authorized pin previews for review                                                                       |
-| POST   | `/api/pinterest-import-runs`                   | Start authorized import with source board IDs, all-pins/selected-pin choice, and destination board ID or new title |
-| GET    | `/api/pinterest-import-runs/{id}`              | Return progress, added/skipped/failed counts, destination board ID, and terminal status                            |
-| DELETE | `/api/pinterest-import-runs/{id}`              | Cancel an active import                                                                                            |
+| POST   | `/api/pinterest-import-runs`                   | Proposed durable import job contract, not implemented                                                              |
+| GET    | `/api/pinterest-import-runs/{id}`              | Proposed durable import job contract, not implemented                                                              |
+| DELETE | `/api/pinterest-import-runs/{id}`              | Proposed durable import job contract, not implemented                                                              |
 
 Before connecting, confirm Pinterest developer approval, supported board/pin APIs and read permissions, authorized board visibility, pagination, request limits, and permitted media usage. The preview proves none of these provider entitlements.
 
-Replace synchronous fixture loading with async authorized board and pin retrieval. Implement loading/empty/error/expired/denied states, cancellation when leaving a request, and stable selection across fetched pages. Select all/full-board import must mean all authorized pins across every page, not only loaded thumbnails or the first API page.
+The importer keeps fixture mode separate from authorized live mode. Live board and pin retrieval is asynchronous, includes pagination, cancellation, loading/error/expired/denied states, and full-board traversal before review. Select all covers the full fetched library, not just the first page.
 
 The backend must validate source/destination access and pin IDs, deduplicate idempotently by provider pin identity, preserve complete source relationships/provenance, and report partial imports, unsupported/inaccessible pins, retryable failures, and cancellation. A production schema should retain multiple source-board associations when needed. Fetching/caching/downloading images needs a supported provider implementation; imported references do not transfer ownership or reuse rights.
 
@@ -892,7 +895,7 @@ Keep frontend DTOs camelCase with string IDs and ISO timestamps. Validate reques
 
 Application auth and media-provider auth are separate. Backend services should hold provider secrets/refresh credentials, manage token refresh/revocation, state/PKCE where applicable, and return only safe statuses and permitted resource metadata. No SQL credentials, AI secrets, service-role keys, or provider client secrets should be added to served files.
 
-Same-origin ASP.NET hosting through `wwwroot` or a reverse proxy fits the inactive REST adapter's credential mode and can also consolidate the active GraphQL/AI origins. Hosting the static site on GitHub Pages with a separate API requires a configured API origin, CORS policy, HTTPS, and an explicit cross-origin auth strategy. Cookie-authenticated mutations require the chosen CSRF protection; bearer-token requests require token attachment/renewal and server validation. None of this is inferred from the existence of `/api` strings in source.
+The current deployment keeps the static frontend and Node AI server separate from the ASP.NET GraphQL/Pinterest API. The frontend resolves the GraphQL/API origin from `window.GRAPHQL_ENDPOINT`; cross-origin deployments require the configured frontend origin, credentialed CORS, and HTTPS. Pinterest mutations use the ASP.NET Identity cookie session and validate request origins; do not add bearer-token auth as a second identity system.
 
 Define service error bodies and frontend handling for validation failure, signed-out/expired sessions, forbidden resources, missing/deleted resources, stale updates, rate limits, provider outages, and server failure. Preserve the current draft on failed saves/research/deletes. Add pending/retry/cancel behavior at each async boundary and base success announcements on confirmed service outcomes.
 
@@ -961,6 +964,8 @@ The repository contains four standalone CommonJS Playwright browser scripts. Eac
 Run the individual suites from the repository root:
 
 ```sh
+dotnet test Scalable.sln
+node tests/pinterest-api.browser.cjs
 node tests/studio.browser.cjs
 node tests/video-account.browser.cjs
 node tests/navigation-theme.browser.cjs
@@ -1016,7 +1021,7 @@ For this documentation update, validate relative links/section anchors, source f
 | Layout              | Generated photos retain fixed placement hints; arbitrary research results need layout/schema integration                             |
 | Music providers     | Manual links and library previews only; no OAuth, authorized libraries, verified catalog metadata, streaming, or playlist expansion  |
 | Ambient recordings  | Local files play; generated/AI ambient concepts have no recording or licensed sound catalog                                          |
-| Pinterest           | Fixture boards only; no live account, paginated board/pin retrieval, or external import jobs                                         |
+| Pinterest           | Live account linking and paginated selected-board reads are implemented; import results and saved boards remain local                 |
 | YouTube             | Manual single-video references and optional embeds; no metadata/search/playlist/account-library API                                  |
 | Media durability    | Local file metadata only; no cloud upload/store/authorized playback service                                                          |
 | Profile/preferences | Local edits/settings only; me supplies live identity display but no profile-update or cross-device preference API                    |
@@ -1024,7 +1029,7 @@ For this documentation update, validate relative links/section anchors, source f
 | Tests               | Some auth assertions still target the earlier preview; new AI flow lacks success mocking/integration coverage                        |
 | Hosting             | Pages is static; GraphQL and AI processes must be deployed/configured separately                                                     |
 
-Existing focused documents and screenshots can predate current code. Static Studio About/account disclaimers still describe no live account/AI despite the newer service wiring. This reference describes the audited `0600d23` baseline and does not change that UI copy or fix application/test gaps.
+Existing focused documents and screenshots can predate current code. This reference reflects the merged GraphQL Identity and Pinterest cookie-session integration; production provider access, email delivery, and deployment are not established by mocked tests.
 
 ## 20. Source and asset reference
 
@@ -1048,7 +1053,6 @@ Existing focused documents and screenshots can predate current code. Static Stud
 | [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)                | Manual static Pages deployment                                                                        |
 | [`README.md`](../README.md)                                                    | Project vision, roadmap, and development entry point                                                  |
 | [`tests/`](../tests/)                                                          | Four browser suites and shared helpers                                                                |
-| [`documentation/FRONTEND.md`](FRONTEND.md)                                     | This complete audited frontend reference                                                              |
 
 Additional service sources:
 
@@ -1057,6 +1061,8 @@ Additional service sources:
 | [`server.js`](../server.js)                                                                                   | Frontend static server and OpenAI creative-direction route                 |
 | [`Scalable.Api/Program.cs`](../Scalable.Api/Program.cs)                                                       | GraphQL/Identity/SQLite/CORS/key-store registration and endpoint startup   |
 | [`Scalable.Api/GraphQL/AccountMutations.cs`](../Scalable.Api/GraphQL/AccountMutations.cs)                     | Account operations, authorized me, inputs and payload types                |
+| [`Scalable.Api/Integrations/PinterestIntegration.cs`](../Scalable.Api/Integrations/PinterestIntegration.cs) | Pinterest OAuth, provider API, and encrypted owner-scoped credential flow |
+| [`Scalable.Api/Integrations/PinterestStore.cs`](../Scalable.Api/Integrations/PinterestStore.cs)               | SQLite storage for encrypted provider credentials and OAuth state          |
 | [`Scalable.Api/GraphQL/Query.cs`](../Scalable.Api/GraphQL/Query.cs)                                           | Service status and currently empty boards scaffold                         |
 | [`Scalable.Api/Data/AppDbContext.cs`](../Scalable.Api/Data/AppDbContext.cs)                                   | Identity EF Core database context                                          |
 | [`Scalable.Api/Identity/AppUser.cs`](../Scalable.Api/Identity/AppUser.cs)                                     | Identity user with display name                                            |
@@ -1074,6 +1080,8 @@ Additional service sources:
 | [`mountains.jpg`](../frontend/assets/mountains.jpg) | `bg-masthead.jpg` from [Start Bootstrap Grayscale](https://github.com/StartBootstrap/startbootstrap-grayscale/tree/master/dist/assets/img)       | Hero “Into the quiet”, login art, Pinterest fixture pins                         |
 | [`coast.jpg`](../frontend/assets/coast.jpg)         | `demo-image-01.jpg` from the same Grayscale repository                                                                                           | Detail “The in-between”, Pinterest fixture pins; filename is a sample identifier |
 | [`water.jpg`](../frontend/assets/water.jpg)         | `bg-masthead.jpg` from [Start Bootstrap Landing Page](https://github.com/StartBootstrap/startbootstrap-landing-page/tree/master/dist/assets/img) | Water “A moment of blue”, signup art, Pinterest fixture pins                     |
+
+Use **Import Pinterest board** in **01 / The Starting Point** to link your account through the GraphQL host's ASP.NET API, select owned boards, read every pin page, and review supported image pins before adding references to the current canvas or a new named mood board. Failed/cancelled retrieval commits nothing. Imports retain Pin/creator links and all source-board associations, can be pinned/removed, survive refinement, and persist locally when saved. New-board creation guards against stale research results. Provider tokens stay encrypted on the server.
 
 The photographs are local so initial boards/import previews do not need third-party image requests. They are fixed design content, not research results. The source projects license their templates under MIT and credit Unsplash for photography; this repository has not independently established complete photographer/license provenance for each photo. Production asset selection should carry verified source, creator, and usage information per result.
 

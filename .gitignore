@@ -1,7 +1,10 @@
 .env
 node_modules/
+work/
 **/bin/
 **/obj/
+backend/**/data/
+Scalable.Api/data/
 *.db
 *.db-shm
 *.db-wal

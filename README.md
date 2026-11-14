@@ -2,7 +2,7 @@
 
 Turn a prompt, a reference picture, or both into a researched creative direction: images, color palettes, textures, typography ideas, and music that belong together.
 
-**Status:** The Studio is the selected frontend, built in HTML/CSS/JavaScript with dark mode and appearance customization. The planned backend is C# / ASP.NET Core with a SQL database and server-side AI/media APIs; it is not implemented yet.
+**Status:** The Studio frontend uses HTML/CSS/JavaScript with dark mode and customization. An ASP.NET Core backend implements Pinterest account linking and authorized board reads, with encrypted SQLite credential storage. Live Pinterest use requires approved app configuration. Cloud board storage and server-side AI/media research remain planned.
 
 ## Try the frontend
 
@@ -18,17 +18,19 @@ Boards include **song recommendations and ambient sound directions** as separate
 
 Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/design-previews/studio-dark.png) · [Customization](docs/design-previews/studio-customize.png).
 
-**Start from Pinterest:** Use **Import Pinterest board** to preview connecting an account, select full sample boards or individual pins, and import them into the current canvas or a new mood board. Pin sources and saved choices are preserved locally. This is a demo library; Pinterest sign-in and real board retrieval need the backend. See the [Pinterest integration handoff](docs/PINTEREST-INTEGRATION.md).
+**Start from Pinterest:** Use **Import Pinterest board** to link your account through the configured backend, review your owned boards, and copy selected references into the current canvas or a new local mood board. All pages are read before review; cancellation or failures preserve the canvas. A separate sample preview works on static hosting. Pinterest is excluded from AI research, scanning, and analysis. Live access stays disabled until developer approval, permitted use, and credentials are configured. See [Pinterest setup, API, and limitations](docs/PINTEREST-INTEGRATION.md) and the [T001 decision record](docs/T001.md).
 
-**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) use the .NET GraphQL identity service for permanent accounts, sessions, and password recovery. See the [authentication worklog](docs/AUTH-INTEGRATION.md) and [video/account handoff](docs/VIDEO-ACCOUNT.md).
+Run the GraphQL/Identity and Pinterest API with .NET 10 using `dotnet run --project Scalable.Api`; run the frontend and AI endpoint separately with `npm start`, then open `http://localhost:3000`. The frontend sends GraphQL and Pinterest API requests to `http://localhost:5078` by default. Live Pinterest use is disabled by default. Run `dotnet test Scalable.sln` and `node tests/pinterest-api.browser.cjs` for the mocked integration checks.
+
+**Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) use the ASP.NET GraphQL Identity service for permanent accounts, sessions, and password recovery. See the [authentication worklog](docs/AUTH-INTEGRATION.md) and [video/account handoff](docs/VIDEO-ACCOUNT.md).
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
-The [complete frontend documentation](documentation/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests.
+The [complete frontend documentation](docs/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests.
 
 ## GitHub Pages
 
-The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend; the .NET GraphQL backend must be deployed separately.
+The repository root now redirects visitors directly to `frontend/login.html`. Publish `front-end-design` from **Settings → Pages → Deploy from a branch → / (root)**, or use the included manual GitHub Actions workflow. See [GitHub Pages deployment instructions](docs/GITHUB-PAGES.md) for both options and project-path testing. Pages hosts the static frontend only; deploy the .NET GraphQL/Identity and Pinterest API separately.
 
 ## Product vision
 
@@ -60,6 +62,8 @@ Research should do more than return the first page of image search results:
 - Use bounded rounds, time limits, and per-board budgets. Show progress, allow cancellation, and retain useful partial results when a provider fails.
 
 Research depth will grow after the first end-to-end workflow works. Missing evidence or unknown licensing must remain visible; the system must not invent sources or permissions.
+
+Pinterest is an account-link/import source only. Never send its imported pins, media, board metadata, URLs, or derived content to AI research, discovery, analysis, or training. Future server research workers must enforce this boundary, including redirects and tool results. The current research adapters reject Pinterest domain inputs and never include imported items in requests.
 
 ## First release scope
 
