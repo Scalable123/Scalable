@@ -10,10 +10,7 @@ public sealed class LoggingAccountEmailSender(ILogger<LoggingAccountEmailSender>
         string resetUrl,
         CancellationToken cancellationToken = default)
     {
-        logger.LogInformation(
-            "Password reset link generated for {Email}: {ResetUrl}",
-            user.Email,
-            resetUrl);
+        logger.LogInformation("Password reset instructions generated.");
         return Task.CompletedTask;
     }
 }
