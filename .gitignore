@@ -1,5 +1,7 @@
 .env
 node_modules/
+.env.*
+!.env.example
 work/
 **/bin/
 **/obj/

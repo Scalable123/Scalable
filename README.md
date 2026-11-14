@@ -2,7 +2,7 @@
 
 Turn a prompt, a reference picture, or both into a researched creative direction: images, color palettes, textures, typography ideas, and music that belong together.
 
-**Status:** The Studio uses HTML/CSS/JavaScript. The ASP.NET Core **GraphQL API and ASP.NET Identity replace Supabase authentication/browser data access**. GraphQL is the API layer: Identity uses SQLite locally or configured PostgreSQL, and Pinterest credentials use separate encrypted SQLite storage. A Node endpoint can generate AI creative metadata. Boards remain in localStorage; cloud board storage and deep image/media research are unimplemented. See the [backend guide](docs/BACKEND.md) and [T003 audit](docs/T003.md).
+**Status:** The Studio uses HTML/CSS/JavaScript. The ASP.NET Core **GraphQL API and ASP.NET Identity replace Supabase authentication/browser data access**. GraphQL is the API layer: Identity uses SQLite locally or configured PostgreSQL, and Pinterest credentials use separate encrypted SQLite storage. A Node endpoint can generate AI creative metadata. An optional standalone ASP.NET Core host supports budgeted Unsplash photo search. Boards remain in localStorage; cloud board storage and deep image/media research are unimplemented. See the [backend guide](docs/BACKEND.md), [Unsplash integration](docs/UNSPLASH-INTEGRATION.md), and [T003 audit](docs/T003.md).
 
 ## Try the frontend
 
@@ -26,7 +26,11 @@ Run the GraphQL/Identity and Pinterest API with .NET 10 using `App__PublicBaseUr
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
 
-The [complete frontend documentation](docs/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests.
+## Unsplash photo source
+
+**Explore this feeling** can add one real Unsplash photo when the server is configured. A persistent shared ceiling of 50 API requests per rolling hour includes search and required download tracking, allowing at most 25 successful photo selections/hour. Startup and local board actions spend no API calls; exhausted/unavailable sources fall back to the existing samples. Photos retain creator credit, source links, and pin/save behavior. AI research is still a preview.
+
+The [complete frontend documentation](docs/FRONTEND.md) covers every page and implemented workflow, data fields, browser storage, module interfaces, authentication, required API connections, deployment, and browser tests. The standalone Unsplash host and its same-origin routing requirements are documented in the [backend guide](docs/BACKEND.md). It can be run with the .NET 10 SDK using `bash backend/run.sh`; keep its Access Key on the server. GitHub Pages alone cannot run this endpoint.
 
 ## GitHub Pages
 

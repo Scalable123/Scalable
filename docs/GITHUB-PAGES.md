@@ -50,3 +50,7 @@ Pages cannot execute `server.js`. The AI client uses absolute-root `/api/ai/crea
 
 
 No Pages settings, repository publishing source, or live deployment are changed by adding these files. Actual publication is a separate step through GitHub.
+
+## Optional Unsplash backend
+
+T001 adds a separate ASP.NET Core image-source host. Pages still publishes static files only and does not run the Unsplash endpoint. The live source requires the .NET host serving the frontend, or a shared-origin reverse proxy to `/api/image-sources/unsplash`. Static-only Pages continues showing samples and reports the source unavailable after Explore. Never embed the provider key into a Pages artifact. [Backend deployment and secret configuration](BACKEND.md) describes the required runtime and persistent quota volume. No publishing configuration was changed for this task.

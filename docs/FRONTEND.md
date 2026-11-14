@@ -4,6 +4,8 @@ Source baseline: `main` commit `68e573c` (PostgreSQL Identity migration). Audite
 
 This document records the implemented pages, controls, state transitions, data structures, validation, persistence, styling, modules, deployment configuration, tests, and remaining service connections. Behavior described as **implemented** exists in this checkout. Routes described as **proposed** are backend contracts to implement; they are not running endpoints. GraphQL identity operations, the Node AI endpoint, and explicitly loaded YouTube embeds are identified separately from local provider previews.
 
+The frontend uses plain HTML, CSS, and native JavaScript modules; no frontend framework or build step is required. The optional Unsplash source uses server-only configuration and is separate from the Node AI and GraphQL services.
+
 ## Contents
 
 1. [Application structure and runtime](#1-application-structure-and-runtime)
@@ -1122,3 +1124,9 @@ These committed PNG files record earlier reviewed frontend states. They are visu
 | Account connections | [studio-account-connections.png](../docs/design-previews/studio-account-connections.png) |
 | Saved boards        | [studio-saved-boards.png](../docs/design-previews/studio-saved-boards.png)               |
 | Delete confirmation | [studio-delete-board.png](../docs/design-previews/studio-delete-board.png)               |
+
+## Unsplash photo source
+
+Explicit Explore submissions can request one photo from the optional same-origin ASP.NET endpoint through `SourcedBoardService`. Initial load and New mood board use local samples only. A successful result replaces the sample hero with one credited Unsplash photograph; pinning, deduplication, refinement, and local save/reopen preserve its provenance. AI creative metadata, other sample content, and imports remain separate.
+
+`js/unsplash-source.js` validates the source response, applies a timeout, and maps source statuses to canvas notices. Image DTOs include the provider ID and creator/source attribution; photographer and Unsplash links display on each card. The endpoint reserves two API calls per prompt (search and required download tracking) within a shared persistent 50-request rolling-hour budget. Browser JavaScript never holds provider credentials. See [backend setup](BACKEND.md) and [Unsplash integration](UNSPLASH-INTEGRATION.md) for routing, deployment, and test details.

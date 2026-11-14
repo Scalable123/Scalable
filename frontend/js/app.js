@@ -1,3 +1,4 @@
+import { sourceMessages } from "./unsplash-source.js";
 import { iconify } from "./icons.js";
 import {
   setupVideoImporter,
@@ -69,16 +70,29 @@ function renderImage(item) {
   source.target = "_blank";
   source.rel = "noopener noreferrer";
   source.title = item.sourceLabel;
-  caption.append(element("strong", "", item.title), source);
-  if (item.provider === "pinterest" && !item.isSample && item.creatorSourceUrl) {
-    try {
-      const url = new URL(item.creatorSourceUrl);
-      if (url.protocol === "https:" && !url.username && !url.password && !url.port) {
-        const creator = element("a", "", "Original source ↗");
-        creator.href = url.href; creator.target = "_blank"; creator.rel = "noopener noreferrer";
-        caption.append(creator);
-      }
-    } catch { /* Invalid restored attribution remains plain metadata. */ }
+  caption.append(element("strong", "", item.title));
+  if (item.provider === "unsplash") {
+    card.classList.add("unsplash-card");
+    const credit = element("span", "photo-credit", "Photo by ");
+    const creator = element("a", "", item.creatorName);
+    creator.href = item.creatorUrl;
+    creator.target = "_blank";
+    creator.rel = "noopener noreferrer";
+    source.textContent = "Unsplash ↗";
+    credit.append(creator, document.createTextNode(" on "), source);
+    caption.append(credit);
+  } else {
+    caption.append(source);
+    if (item.provider === "pinterest" && !item.isSample && item.creatorSourceUrl) {
+      try {
+        const url = new URL(item.creatorSourceUrl);
+        if (url.protocol === "https:" && !url.username && !url.password && !url.port) {
+          const creator = element("a", "", "Original source ↗");
+          creator.href = url.href; creator.target = "_blank"; creator.rel = "noopener noreferrer";
+          caption.append(creator);
+        }
+      } catch { /* Invalid restored attribution remains plain metadata. */ }
+    }
   }
   const pin = element("button", "pin", item.pinned ? "✓" : "+");
   pin.type = "button";
@@ -244,12 +258,18 @@ function renderBoard() {
     element("span", "", "."),
   );
   $("#board-description").textContent = board.description;
+  const sourceStatus = $("#image-source-status");
+  sourceStatus.textContent = sourceMessages[board.imageSourceStatus] || "";
+  sourceStatus.hidden = !sourceStatus.textContent;
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
   const pinterestPins = board.items.filter(
     (item) => item.provider === "pinterest",
   );
-  grid.classList.toggle("has-pinterest", pinterestPins.length > 0);
+  grid.classList.toggle(
+    "has-pinterest",
+    pinterestPins.length > 0 || board.items.filter((item) => item.type === "image").length > 3,
+  );
   $("#pinterest-import-summary").hidden = pinterestPins.length === 0;
   const sourceBoardCount = new Set(
     pinterestPins.flatMap((item) => (item.sourceBoards || [item.sourceBoard]).map(source => source?.id)).filter(Boolean),
@@ -580,13 +600,14 @@ $("#prompt-form").addEventListener("submit", async (event) => {
   const runVersion = ++boardVersion;
   const button = $("#generate");
   button.disabled = true;
-  button.firstElementChild.textContent = "Composing a sample…";
+  button.firstElementChild.textContent = "Finding your direction…";
   grid.setAttribute("aria-busy", "true");
   $("#input-error").textContent = "";
   try {
     const next = await boardService.research({
       prompt,
       referenceFile,
+      fetchImages: true,
       ...researchOptions(),
     });
     try {
@@ -635,14 +656,38 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     const pinned = (board?.items || []).filter(
       (item) => item.type === "image" && item.pinned,
     );
-    next.items = next.items.map(
-      (item) => pinned.find((pin) => pin.id === item.id) || item,
-    );
-    next.items.push(...(board?.items || []).filter((item) => item.imported));
+    next.items = next.items.map((item) => {
+      const pin = pinned.find((candidate) => candidate.id === item.id);
+      return pin ? { ...pin, position: item.position } : item;
+    });
+    const preserved = [
+      ...pinned.filter((item) => item.provider === "unsplash"),
+      ...(board?.items || []).filter((item) => item.imported),
+    ];
+    for (const item of preserved) {
+      if (!next.items.some((candidate) => candidate.id === item.id))
+        next.items.push(
+          item.provider === "unsplash" ? { ...item, position: "pinterest" } : item,
+        );
+    }
+    // A repeated result retains its pin without adding a duplicate.
+    if (next.mode !== "ai")
+      next.mode = next.items.some((item) => item.provider === "unsplash")
+        ? "sample-with-unsplash"
+        : "demo";
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
-    notify(next.mode === "ai" ? "AI direction composed." : "Sample direction composed.");
+    const sourceMessage = sourceMessages[board.imageSourceStatus];
+    notify(
+      sourceMessage
+        ? next.mode === "ai"
+          ? `${sourceMessage} AI direction composed.`
+          : sourceMessage
+        : next.mode === "ai"
+          ? "AI direction composed."
+          : "Sample direction composed.",
+    );
   } catch (error) {
     if (runVersion === boardVersion)
       $("#input-error").textContent =
@@ -852,7 +897,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore selects curated local collections; uploaded reference images are previewed only. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. Cloud board saving, live AI research, and music-service connections remain planned.",
+      "Customize appearance, collect image references, and import music links or local audio/video. Pinterest account linking and owned-board imports are available when an approved integration is configured; a separate sample preview is always available. Pinterest content is excluded from AI research and analysis. Explore selects curated local collections; uploaded reference images are previewed only. Song links open catalog searches, and YouTube players load only on request. GraphQL handles sign-in; local profiles and boards remain in browser storage. When configured, the separate Unsplash host can add a credited photo within its shared hourly request budget. Cloud board saving and music-service connections remain planned.",
     ),
   ),
 );
