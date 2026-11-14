@@ -160,6 +160,16 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 </button>
               </div>
               <p id="pinterest-import-summary" class="field-help" hidden></p>
+              <div class="quote-dock">
+                <span class="quote-mark" aria-hidden="true">“</span>
+                <div>
+                  <strong>Find a sourced quote.</strong>
+                  <p>Search Wikiquote and keep the source attached.</p>
+                </div>
+                <button type="button" id="import-quote" class="toolbar-button" aria-haspopup="dialog">
+                  Import quote ↗
+                </button>
+              </div>
               <p class="input-error" id="input-error" role="alert"></p>
               <span class="field-caption">OR BORROW A LITTLE INSPIRATION</span>
               <div class="prompt-chips">
@@ -735,6 +745,25 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         aria-live="polite"
       ></p>
       <button id="cancel-pinterest-request" class="text-button" hidden>Cancel request</button>
+    </dialog>
+    <dialog id="quote-dialog" aria-labelledby="quote-dialog-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">WORDS WITH A SOURCE</p>
+          <h2 id="quote-dialog-title">Find a sourced quote.</h2>
+        </div>
+        <button id="close-quote" aria-label="Close quote search">×</button>
+      </div>
+      <form id="quote-search-form" class="import-form">
+        <label for="quote-search">Search Wikiquote</label>
+        <div class="form-pair">
+          <input id="quote-search" maxlength="100" placeholder="Wisdom, courage, wonder" required />
+          <button class="done-button" type="submit">Search quotes ↗</button>
+        </div>
+      </form>
+      <p id="quote-search-status" class="settings-status" role="status" aria-live="polite"></p>
+      <div id="quote-search-results" class="provider-tracks"></div>
+      <p class="field-help">Results are short Wikiquote page excerpts. The source page and CC BY-SA attribution stay attached to every reference.</p>
     </dialog>
     <dialog id="audio-dialog" aria-labelledby="audio-dialog-title">
       <div class="dialog-header">

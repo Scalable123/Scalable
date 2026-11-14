@@ -103,6 +103,38 @@ async function soundcloudSearch(query) {
   }));
 }
 
+async function wikiquoteSearch(query) {
+  const searchUrl = new URL("https://en.wikiquote.org/w/api.php");
+  searchUrl.searchParams.set("action", "query");
+  searchUrl.searchParams.set("list", "search");
+  searchUrl.searchParams.set("srsearch", query);
+  searchUrl.searchParams.set("srlimit", "6");
+  searchUrl.searchParams.set("format", "json");
+  searchUrl.searchParams.set("formatversion", "2");
+  const searchResponse = await fetch(searchUrl, { headers: { "User-Agent": "Scalable/1.0 (quote references)" } });
+  const searchPayload = await searchResponse.json();
+  if (!searchResponse.ok || !Array.isArray(searchPayload.query?.search)) throw new Error("Wikiquote search failed.");
+  const pages = searchPayload.query.search;
+  if (!pages.length) return [];
+  const pageUrl = new URL("https://en.wikiquote.org/w/api.php");
+  pageUrl.searchParams.set("action", "query");
+  pageUrl.searchParams.set("pageids", pages.map((page) => page.pageid).join("|"));
+  pageUrl.searchParams.set("prop", "extracts|info");
+  pageUrl.searchParams.set("explaintext", "1");
+  pageUrl.searchParams.set("exchars", "600");
+  pageUrl.searchParams.set("inprop", "url");
+  pageUrl.searchParams.set("format", "json");
+  pageUrl.searchParams.set("formatversion", "2");
+  const pageResponse = await fetch(pageUrl, { headers: { "User-Agent": "Scalable/1.0 (quote references)" } });
+  const pagePayload = await pageResponse.json();
+  if (!pageResponse.ok || !Array.isArray(pagePayload.query?.pages)) throw new Error("Wikiquote pages could not be read.");
+  return pagePayload.query.pages.map((page) => ({
+    id: String(page.pageid), title: page.title, text: String(page.extract || "").trim().slice(0, 600),
+    sourceUrl: page.fullurl || `https://en.wikiquote.org/wiki/${encodeURIComponent(page.title.replaceAll(" ", "_"))}`,
+    provider: "wikiquote", sourceKind: "wikiquote-page", license: "CC BY-SA",
+  })).filter((page) => page.text);
+}
+
 async function loadEnv() {
   try {
     const text = await readFile(join(root, ".env"), "utf8");
@@ -203,6 +235,14 @@ async function serve(request, response) {
       const items = url.pathname.includes("jamendo") ? await jamendoSearch(query) : await soundcloudSearch(query);
       return json(response, 200, { items });
     } catch (error) { return json(response, 503, { error: error.message || "Music provider is unavailable." }, request); }
+  }
+  if (url.pathname === "/api/quotes/wikiquote/search") {
+    if (request.method === "OPTIONS") return json(response, 204, {}, request);
+    if (request.method !== "GET") return json(response, 405, { error: "Method not allowed." }, request);
+    const query = url.searchParams.get("q")?.trim();
+    if (!query || query.length > 100) return json(response, 400, { error: "Quote search text must be between 1 and 100 characters." }, request);
+    try { return json(response, 200, { items: await wikiquoteSearch(query) }, request); }
+    catch (error) { return json(response, 503, { error: error.message || "Wikiquote is unavailable." }, request); }
   }
   if (url.pathname === "/api/ai/creative-direction") {
     const configuredOrigin = process.env.FRONTEND_ORIGIN?.trim();

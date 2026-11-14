@@ -25,7 +25,7 @@ Quote/text integration should begin with short, attributed excerpts or links. Ve
 - [SoundCloud Developers](https://developers.soundcloud.com/docs) — public-resource search and provider-supported playback/linking
 - [Spotify Web API](https://developer.spotify.com/documentation/web-api) — catalog metadata and search subject to Spotify developer terms
 
-The current branch has server-side catalog search adapters for Jamendo, SoundCloud, and Spotify. iTunes and MusicBrainz remain documented candidates; adding them requires a response DTO, attribution behavior, rate-limit handling, tests, and a confirmed terms/licensing review.
+The current branch has server-side catalog search adapters for Jamendo, SoundCloud, and Spotify, plus a bounded Wikiquote page-excerpt adapter for sourced quote references. iTunes and MusicBrainz remain documented candidates; adding them requires a response DTO, attribution behavior, rate-limit handling, tests, and a confirmed terms/licensing review.
 
 ## Adapter rules
 
