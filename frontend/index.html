@@ -8,24 +8,21 @@
     <link rel="stylesheet" href="styles.css" />
     <script type="module" src="js/app.js"></script>
   </head>
-  <body data-design="studio">
+  <body>
     <a class="skip-link" href="#main">Skip to workspace</a>
     <div class="concept-bar">
       <span class="concept-label"
-        ><i></i> DESIGN EXPLORATIONS <span class="version">/ 01</span></span
+        ><i></i> THE STUDIO
+        <span class="studio-edition">/ YOUR CREATIVE SPACE</span></span
       >
-      <div class="designs" role="group" aria-label="Choose a design direction">
-        <button data-design-choice="studio" aria-pressed="true">
-          <span>01</span> The Studio
+      <div class="appearance-actions">
+        <button id="theme-toggle" class="toolbar-button" aria-pressed="false">
+          Dark mode
         </button>
-        <button data-design-choice="nocturne" aria-pressed="false">
-          <span>02</span> Nocturne
-        </button>
-        <button data-design-choice="gallery" aria-pressed="false">
-          <span>03</span> The Gallery
+        <button id="customize" class="toolbar-button" aria-haspopup="dialog">
+          Customize <span aria-hidden="true">↗</span>
         </button>
       </div>
-      <span class="prototype-label">Interactive prototype ↗</span>
     </div>
     <div class="app-shell">
       <aside class="sidebar">
@@ -73,7 +70,7 @@
             <p class="eyebrow">A PLACE FOR YOUR NEXT IDEA</p>
             <h1>Start with a feeling.<br /><em>See where it takes you.</em></h1>
             <p class="intro-copy">
-              Connect the images, colors, and sounds in your head.<br
+              Connect the images, colors, songs, and sounds in your head.<br
                 class="desktop-break"
               />
               Give your next creative direction a world of its own.
@@ -141,6 +138,17 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                   Earth & form ↗
                 </button>
               </div>
+              <fieldset class="audio-options">
+                <legend>BRING YOUR BOARD TO LIFE</legend>
+                <label
+                  ><input type="checkbox" id="include-songs" checked /> Song
+                  recommendations</label
+                >
+                <label
+                  ><input type="checkbox" id="include-sounds" checked /> Ambient
+                  sounds</label
+                >
+              </fieldset>
               <button class="generate" type="submit" id="generate">
                 <span>Explore this feeling</span><span>↗</span>
               </button>
@@ -159,8 +167,12 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                   Coastal stillness. Organic textures. Room to breathe.
                 </p>
               </div>
-              <button id="save-board" class="save-button">
-                ↗ <span>Save board</span>
+              <button
+                id="save-board"
+                class="save-button"
+                aria-label="Save board locally"
+              >
+                ↗ <span id="save-label">Save board</span>
               </button>
             </div>
             <div class="board-toolbar">
@@ -170,17 +182,39 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 aria-label="Filter board content"
               >
                 <button data-filter="all" aria-pressed="true">
-                  Everything <span>7</span></button
+                  Everything <span>9</span></button
                 ><button data-filter="image" aria-pressed="false">Images</button
                 ><button data-filter="palette" aria-pressed="false">
                   Palette</button
-                ><button data-filter="music" aria-pressed="false">
+                ><button data-filter="song" aria-pressed="false">Songs</button
+                ><button data-filter="sound" aria-pressed="false">
                   Sounds
                 </button>
               </div>
               <span class="board-index">SC—001</span>
             </div>
             <div id="board-grid" class="board-grid" aria-busy="false"></div>
+            <section
+              id="song-section"
+              class="song-section"
+              aria-labelledby="song-heading"
+              hidden
+            >
+              <div class="song-heading">
+                <div>
+                  <p class="section-label">03 / FIND YOUR SOUNDTRACK</p>
+                  <h3 id="song-heading">
+                    Songs for this feeling<span>.</span>
+                  </h3>
+                </div>
+                <span class="sample-label">Curated sample picks</span>
+              </div>
+              <p class="song-caption">
+                Real songs to explore. Sample suggestions, not live AI research.
+                Links open a catalog search; no playback here.
+              </p>
+              <div id="song-list" class="song-list"></div>
+            </section>
             <div class="board-footer">
               <span><i></i> Curated demo collection</span
               ><span>Follow the feeling, not the formula. ↗</span>
@@ -189,11 +223,73 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         </div>
         <footer class="page-footer">
           <span>SCALABLE / AN OPEN CANVAS FOR YOUR IMAGINATION</span
-          ><span id="design-description">01 — Warm, tactile, editorial.</span>
+          ><span>The Studio — Make room for your next idea.</span>
         </footer>
       </main>
     </div>
-    <dialog id="dialog">
+    <dialog id="appearance-dialog" aria-labelledby="appearance-title">
+      <div class="dialog-header">
+        <h2 id="appearance-title">Make yourself at home.</h2>
+        <button id="close-appearance" aria-label="Close customization">
+          ×
+        </button>
+      </div>
+      <p class="dialog-copy">
+        A few little touches to make The Studio yours. Changes apply instantly
+        and stay in this browser.
+      </p>
+      <form id="appearance-form" class="appearance-form">
+        <label for="theme-preference">Appearance</label>
+        <select id="theme-preference" name="theme">
+          <option value="system">Follow device</option>
+          <option value="light">Light — warm paper</option>
+          <option value="dark">Dark — evening studio</option>
+        </select>
+        <fieldset class="accent-options">
+          <legend>Accent color</legend>
+          <label
+            ><input type="radio" name="accent" value="terracotta" /><span
+              class="accent-dot"
+              style="--preview: #a64b35"
+            ></span
+            >Terracotta</label
+          >
+          <label
+            ><input type="radio" name="accent" value="olive" /><span
+              class="accent-dot"
+              style="--preview: #576a36"
+            ></span
+            >Olive</label
+          >
+          <label
+            ><input type="radio" name="accent" value="plum" /><span
+              class="accent-dot"
+              style="--preview: #775077"
+            ></span
+            >Plum</label
+          >
+        </fieldset>
+        <label for="density-preference">Canvas spacing</label
+        ><select id="density-preference" name="density">
+          <option value="comfortable">Comfortable</option>
+          <option value="compact">Compact</option>
+        </select>
+        <label for="corners-preference">Card edges</label
+        ><select id="corners-preference" name="corners">
+          <option value="soft">Soft corners</option>
+          <option value="square">Square corners</option>
+        </select>
+        <div class="appearance-footer">
+          <button id="reset-appearance" type="button" class="toolbar-button">
+            Reset to defaults</button
+          ><button type="button" id="done-appearance" class="done-button">
+            Done ↗
+          </button>
+        </div>
+        <p id="appearance-status" class="settings-status" role="status"></p>
+      </form>
+    </dialog>
+    <dialog id="dialog" aria-labelledby="dialog-title">
       <div class="dialog-header">
         <h2 id="dialog-title"></h2>
         <button id="close-dialog" aria-label="Close dialog">×</button>
