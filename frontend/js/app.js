@@ -1,3 +1,4 @@
+import { sourceMessages } from "./unsplash-source.js";
 import { iconify } from "./icons.js";
 import {
   setupVideoImporter,
@@ -67,7 +68,18 @@ function renderImage(item) {
   source.target = "_blank";
   source.rel = "noopener noreferrer";
   source.title = item.sourceLabel;
-  caption.append(element("strong", "", item.title), source);
+  caption.append(element("strong", "", item.title));
+  if (item.provider === "unsplash") {
+    card.classList.add("unsplash-card");
+    const credit = element("span", "photo-credit", "Photo by ");
+    const creator = element("a", "", item.creatorName);
+    creator.href = item.creatorUrl;
+    creator.target = "_blank";
+    creator.rel = "noopener noreferrer";
+    source.textContent = "Unsplash ↗";
+    credit.append(creator, document.createTextNode(" on "), source);
+    caption.append(credit);
+  } else caption.append(source);
   const pin = element("button", "pin", item.pinned ? "✓" : "+");
   pin.type = "button";
   pin.setAttribute(
@@ -232,12 +244,18 @@ function renderBoard() {
     element("span", "", "."),
   );
   $("#board-description").textContent = board.description;
+  const sourceStatus = $("#image-source-status");
+  sourceStatus.textContent = sourceMessages[board.imageSourceStatus] || "";
+  sourceStatus.hidden = !sourceStatus.textContent;
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
   const pinterestPins = board.items.filter(
     (item) => item.provider === "pinterest",
   );
-  grid.classList.toggle("has-pinterest", pinterestPins.length > 0);
+  grid.classList.toggle(
+    "has-pinterest",
+    pinterestPins.length > 0 || board.items.filter((item) => item.type === "image").length > 3,
+  );
   $("#pinterest-import-summary").hidden = pinterestPins.length === 0;
   const sourceBoardCount = new Set(
     pinterestPins.map((item) => item.sourceBoard?.id),
@@ -558,13 +576,14 @@ $("#prompt-form").addEventListener("submit", async (event) => {
   const runVersion = ++boardVersion;
   const button = $("#generate");
   button.disabled = true;
-  button.firstElementChild.textContent = "Composing a sample…";
+  button.firstElementChild.textContent = "Finding your direction…";
   grid.setAttribute("aria-busy", "true");
   $("#input-error").textContent = "";
   try {
     const next = await boardService.research({
       prompt,
       referenceFile,
+      fetchImages: true,
       ...researchOptions(),
     });
     if (runVersion !== boardVersion) return;
@@ -572,15 +591,29 @@ $("#prompt-form").addEventListener("submit", async (event) => {
     const pinned = (board?.items || []).filter(
       (item) => item.type === "image" && item.pinned,
     );
-    next.items = next.items.map(
-      (item) => pinned.find((pin) => pin.id === item.id) || item,
-    );
-    next.items.push(...(board?.items || []).filter((item) => item.imported));
+    next.items = next.items.map((item) => {
+      const pin = pinned.find((candidate) => candidate.id === item.id);
+      return pin ? { ...pin, position: item.position } : item;
+    });
+    const preserved = [
+      ...pinned.filter((item) => item.provider === "unsplash"),
+      ...(board?.items || []).filter((item) => item.imported),
+    ];
+    for (const item of preserved) {
+      if (!next.items.some((candidate) => candidate.id === item.id))
+        next.items.push(
+          item.provider === "unsplash" ? { ...item, position: "pinterest" } : item,
+        );
+    }
+    // A repeated result retains its pin without adding a duplicate.
+    next.mode = next.items.some((item) => item.provider === "unsplash")
+      ? "sample-with-unsplash"
+      : "demo";
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
     notify(
-      "Sample direction composed. Live research will connect through .NET.",
+      sourceMessages[board.imageSourceStatus] || "Sample direction composed.",
     );
   } catch {
     if (runVersion === boardVersion)
@@ -791,7 +824,7 @@ $("#about").addEventListener("click", () =>
     element(
       "p",
       "dialog-copy",
-      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Import Pinterest board previews selecting full boards or individual pins; no Pinterest account is connected. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio and video can play in this browser. YouTube players load only when requested. Login and account pages are frontend previews, not authenticated accounts. Provider connections are demo previews; no live AI research, streaming service, account, SQL database, or backend is connected. Boards and appearance preferences stay in browser storage.",
+      "Make The Studio yours with light or dark mode, accents, spacing, edges, typography, layout, and reading size. Use Import audio for music links, local recordings, or a demo provider library. Import Pinterest board previews selecting full boards or individual pins; no Pinterest account is connected. Explore images, palettes, real curated song examples, and separate ambient sound directions. Briefs select sample collections; uploads are previewed only. Song links open Spotify searches. Local audio and video can play in this browser. YouTube players load only when requested. Login and account pages are frontend previews, not authenticated accounts. When the Unsplash backend is configured, each submitted brief can add one sourced photo with photographer credit, subject to the shared hourly request budget. Other provider connections remain previews; live AI and SQL board storage are not connected. Boards and appearance preferences stay in browser storage.",
     ),
   ),
 );

@@ -2,7 +2,7 @@
 
 Turn a prompt, a reference picture, or both into a researched creative direction: images, color palettes, textures, typography ideas, and music that belong together.
 
-**Status:** The Studio is the selected frontend, built in HTML/CSS/JavaScript with dark mode and appearance customization. The planned backend is C# / ASP.NET Core with a SQL database and server-side AI/media APIs; it is not implemented yet.
+**Status:** The Studio is the selected frontend, built in HTML/CSS/JavaScript with dark mode and appearance customization. A small C# / ASP.NET Core image-source backend now supports Unsplash; SQL board storage and the full AI/media research backend remain planned.
 
 ## Try the frontend
 
@@ -23,6 +23,12 @@ Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/
 **Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) preview local profiles, shared preferences, and service connections. Supabase sign-in, session lookup, sign-out, and password recovery are integrated on this branch. Signup remains a frontend validation preview and does not register users or send/store its form details. See the [video/account handoff](docs/VIDEO-ACCOUNT.md).
 
 See [frontend and .NET integration notes](docs/FRONTEND.md) for behavior, limitations, data contracts, and validation.
+
+## Unsplash photo source
+
+**Explore this feeling** can add one real Unsplash photo when the server is configured. A persistent shared ceiling of 50 API requests per rolling hour includes search and required download tracking, allowing at most 25 successful photo selections/hour. Startup and local board actions spend no API calls; exhausted/unavailable sources fall back to the existing samples. Photos retain creator credit, source links, and pin/save behavior. AI research is still a preview.
+
+With the .NET 10 SDK installed, copy `.env.example` to private `.env`, supply the Access Key, then run `bash backend/run.sh` and open `http://localhost:5080/`. Credentials stay on the server; public search does not use the Secret Key. [Backend setup](docs/BACKEND.md) and [Unsplash behavior and limits](docs/UNSPLASH-INTEGRATION.md) include deployment and test commands. GitHub Pages alone cannot run this endpoint.
 
 ## GitHub Pages
 

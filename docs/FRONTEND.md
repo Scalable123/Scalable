@@ -2,7 +2,7 @@
 
 The Studio is the selected design: warm paper, forest green, terracotta accents, serif headings, and an editorial collage. The other design explorations have been removed. Light and dark modes use this same Studio layout.
 
-Plain HTML, CSS, and native JavaScript modules power the frontend. No framework, build step, runtime package dependency, or API key is required. The planned backend remains C# / ASP.NET Core with a SQL database and server-side AI/media integrations.
+Plain HTML, CSS, and native JavaScript modules power the frontend. No frontend framework or build step is required. The local sample preview needs no provider key; the optional Unsplash integration uses server-only configuration. The planned backend remains C# / ASP.NET Core with a SQL database and server-side AI/media integrations.
 
 ## Run
 
@@ -183,3 +183,13 @@ The branch also contains Supabase sign-in, recovery, session lookup, and sign-ou
 The Studio has one account entry: the sidebar profile link, shown as an accessible avatar on mobile. The header keeps Log in and Customize. The focus-only Explore shortcut was removed; the brief and New mood board remain available. The soundtrack section uses one introduction plus an import action, and the repeated demo footer was removed. Account customization uses its existing tab navigation rather than an extra Back to profile button.
 
 `js/customize.js` shares appearance binding across pages and builds the auth-page Customize dialog from one field definition. System/Light/Dark, accent, layout, spacing, edges, typography, canvas, and reading size all use the existing stored preferences; no setting or saved board was reset.
+
+## Unsplash photo source (T001)
+
+Explicit Explore submissions now call the optional same-origin .NET image-source endpoint through `SourcedBoardService`, which extends the local demo service. Initial load and New mood board still use local samples only. A successful result replaces the sample hero with one credited Unsplash photograph; pinning, deduplication, refinement, save/reopen, and arbitrary retained-photo layouts are supported. Other sample content and imports retain their behavior. No live AI was added.
+
+`js/unsplash-source.js` validates the source response, applies a timeout, and maps source statuses to persistent canvas notices. `imageSourceStatus` records the last prompt outcome; boards with live photos use `mode: "sample-with-unsplash"`. Image DTOs include `provider`, `externalPhotoId`, `creatorName`, and `creatorUrl` alongside the existing source/image fields. Photographer and Unsplash links display on each card. HTTP/provider errors, missing configuration, no results, and exhausted quota compose samples with an explanatory notice.
+
+The ASP.NET backend now implements only `POST /api/image-sources/unsplash`; the other .NET/SQL/job endpoints described above remain proposed. It reserves two API calls per prompt (search plus required tracking) within a persistent application-wide 50-request rolling hour. Browser JavaScript never holds the Access Key or Secret Key. See [backend setup](BACKEND.md) and [Unsplash integration](UNSPLASH-INTEGRATION.md) for exact contracts and deployment limits.
+
+Run `dotnet run --project tests/backend/Scalable.Api.Checks.csproj` and `node tests/unsplash.browser.cjs` in addition to the existing browser suites. The new suites use provider fixtures and the real local .NET host; they do not consume provider quota.

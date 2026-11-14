@@ -41,3 +41,7 @@ Open `http://localhost:8080/`; it should lead straight to `/frontend/login.html`
 GitHub Pages hosts the static frontend only. Login, provider connections, and research remain previews; C#/.NET APIs and SQL must run on a separate backend when implemented. Published local-file imports still stay in the visitor's browser and need reattachment after reload.
 
 No Pages settings, repository publishing source, or live deployment are changed by adding these files. Actual publication is a separate step through GitHub.
+
+## Optional Unsplash backend
+
+T001 adds a separate ASP.NET Core image-source host. Pages still publishes static files only and does not run the Unsplash endpoint. The live source requires the .NET host serving the frontend, or a shared-origin reverse proxy to `/api/image-sources/unsplash`. Static-only Pages continues showing samples and reports the source unavailable after Explore. Never embed the provider key into a Pages artifact. [Backend deployment and secret configuration](BACKEND.md) describes the required runtime and persistent quota volume. No publishing configuration was changed for this task.

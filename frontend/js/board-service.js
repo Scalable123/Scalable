@@ -1,3 +1,5 @@
+import { searchUnsplash } from "./unsplash-source.js";
+
 /** UI boundary. Replace this instance with ApiBoardService when .NET is available.
  * DTOs are JSON-friendly: camelCase, string IDs, ISO dates. File uploads are separate.
  */
@@ -283,4 +285,18 @@ export class ApiBoardService {
     });
   }
 }
-export const boardService = new DemoBoardService();
+// Only explicit prompt submissions enable provider access; startup remains local.
+export class SourcedBoardService extends DemoBoardService {
+  async research({ fetchImages = false, ...options }) {
+    const board = await super.research(options);
+    if (!fetchImages) return board;
+    const result = await searchUnsplash(options.prompt);
+    board.imageSourceStatus = result.status;
+    if (result.image) {
+      board.items[0] = result.image;
+      board.mode = "sample-with-unsplash";
+    }
+    return board;
+  }
+}
+export const boardService = new SourcedBoardService();
