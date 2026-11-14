@@ -1,4 +1,5 @@
 import { searchUnsplash } from "./unsplash-source.js";
+import { searchWikimedia } from "./wikimedia-source.js";
 import { assertResearchInputAllowed } from "./research-policy.js";
 /** UI boundary. Replace this instance with ApiBoardService when .NET is available.
  * DTOs are JSON-friendly: camelCase, string IDs, ISO dates. File uploads are separate.
@@ -292,11 +293,18 @@ export class SourcedBoardService extends DemoBoardService {
   async research({ fetchImages = false, ...options }) {
     const board = await super.research(options);
     if (!fetchImages) return board;
-    const result = await searchUnsplash(options.prompt);
-    board.imageSourceStatus = result.status;
-    if (result.image) {
-      board.items[0] = result.image;
+    // Keep provider reads serialized to follow Wikimedia API etiquette.
+    const unsplash = await searchUnsplash(options.prompt);
+    const wikimedia = await searchWikimedia(options.prompt);
+    board.imageSourceStatus = unsplash.status;
+    board.wikimediaSourceStatus = wikimedia.status;
+    if (unsplash.image) {
+      board.items[0] = unsplash.image;
       board.mode = "sample-with-unsplash";
+    }
+    if (wikimedia.image) {
+      board.items[2] = wikimedia.image;
+      board.mode = board.mode === "sample-with-unsplash" ? "sample-with-sources" : "sample-with-wikimedia";
     }
     return board;
   }

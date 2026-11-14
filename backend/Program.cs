@@ -7,10 +7,16 @@ var frontend = Path.GetFullPath(builder.Configuration["FrontendPath"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "../frontend"));
 var budgetPath = builder.Configuration["Unsplash:BudgetPath"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "data/unsplash-budget.json");
+var wikimediaBudgetPath = builder.Configuration["Wikimedia:BudgetPath"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "data/wikimedia-budget.json");
 builder.Services.AddSingleton(new RequestBudget(budgetPath, TimeProvider.System));
 builder.Services.AddSingleton(services => new UnsplashSource(
     new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(5) },
     services.GetRequiredService<RequestBudget>(), builder.Configuration["Unsplash:AccessKey"]));
+builder.Services.AddSingleton(services => new WikimediaSource(
+    new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(5) },
+    new RequestBudget(wikimediaBudgetPath, TimeProvider.System),
+    builder.Configuration["Wikimedia:UserAgent"] ?? "Scalable/1.0 (https://github.com/Scalable123/Scalable)"));
 var app = builder.Build();
 app.Use(async (context, next) =>
 {
@@ -28,6 +34,13 @@ app.Use(async (context, next) =>
     await next();
 });
 app.MapPost("/api/image-sources/unsplash", async (SearchInput input, UnsplashSource source, CancellationToken token) =>
+{
+    var prompt = input.Prompt?.Trim();
+    if (string.IsNullOrWhiteSpace(prompt) || prompt.Length > 2000)
+        return Results.BadRequest(new { error = "A prompt of 1–2000 characters is required." });
+    return Results.Ok(await source.Search(prompt, token));
+});
+app.MapPost("/api/image-sources/wikimedia", async (SearchInput input, WikimediaSource source, CancellationToken token) =>
 {
     var prompt = input.Prompt?.Trim();
     if (string.IsNullOrWhiteSpace(prompt) || prompt.Length > 2000)

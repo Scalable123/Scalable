@@ -218,6 +218,8 @@ Opening a saved board invalidates in-flight research, restores its prompt/option
 
 Creating a new board through Pinterest similarly invalidates older research and discards the previous unsaved canvas and media registry entries. Its initial items are only the imported pins; further exploration supplies generated palette/song/sound content.
 
+Wikimedia Commons references are validated by `frontend/js/wikimedia-source.js`. A prompt can add at most one server-selected image from that source; the card keeps the Commons file URL, creator, and license text visible and never receives provider credentials.
+
 ## 5. Saved boards and deletion
 
 Sources: `DemoBoardService`, `renderSavedBoards()`, `updateSavedCount()`, and `#delete-board-dialog`.

@@ -21,7 +21,7 @@ The existing `python3 -m http.server ... --directory frontend` preview remains a
 
 The server validates the prompt, calls the OpenAI Responses API, and returns a strict JSON direction containing a title, description, note, five palette colors, optional song recommendations, and optional ambient sounds. The frontend replaces the title, description, palette, and note, sets `mode: "ai"`, and appends enabled AI songs/sounds while retaining enabled curated songs/sounds and the same local photos. No live image search, catalog verification, or image analysis occurs.
 
-If the API key is missing, the provider fails, or the app is opened through a static-only server, the local fallback board remains usable. The attempted availability toast can be replaced by the final sample-composed toast. Version checks stop stale board replacement but do not abort an AI request.
+If the API key is missing, the provider fails, or the app is opened through a static-only server, the local fallback board remains usable. The attempted availability toast can be replaced by the final sample-composed toast. Version checks stop stale board replacement but do not abort an AI request. Explicit prompt submissions also query the ASP.NET image-source boundary; Wikimedia Commons is read-only, needs no API key, and contributes at most one image with its Commons file, creator, and license metadata.
 
 ## Security and boundaries
 
@@ -30,3 +30,4 @@ If the API key is missing, the provider fails, or the app is opened through a st
 - AI songs are creative recommendations with catalog-search links, not verified provider results.
 - Reference images remain local and are not uploaded to the AI provider. Pinterest imports are never included in the frontend request; browser research-policy guards reject Pinterest inputs. The Node endpoint itself has no equivalent Pinterest-specific server guard, which remains required before expanding research/tools.
 - The endpoint limits prompt requests to 2,000 characters and the accumulated request-body string to 20,000 characters (not a byte-counted 20 KB limit). Invalid prompts return 400; JSON/size/provider failures return 502.
+- Wikimedia requests are server-side only. Configure `Wikimedia:UserAgent` and, when needed, `Wikimedia:BudgetPath`; the source uses a conservative 180 requests/minute budget below the documented 200 requests/minute identified-client guidance.

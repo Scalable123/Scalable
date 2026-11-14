@@ -9,7 +9,7 @@ public sealed record PhotoItem(
     string Id, string Type, string Provider, string ExternalPhotoId, string Url,
     string Title, string Description, string SourceUrl, string SourceLabel,
     string CreatorName, string CreatorUrl, string Position = "hero", bool Pinned = false,
-    bool IsSample = false);
+    bool IsSample = false, string? LicenseName = null);
 public sealed record SourceResult(string Status, PhotoItem? Image = null);
 
 public sealed class UnsplashSource(HttpClient http, RequestBudget budget, string? accessKey)

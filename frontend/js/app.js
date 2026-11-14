@@ -1,4 +1,5 @@
-import { sourceMessages } from "./unsplash-source.js";
+import { sourceMessages as unsplashSourceMessages } from "./unsplash-source.js";
+import { wikimediaSourceMessages } from "./wikimedia-source.js";
 import { iconify } from "./icons.js";
 import {
   setupVideoImporter,
@@ -71,15 +72,15 @@ function renderImage(item) {
   source.rel = "noopener noreferrer";
   source.title = item.sourceLabel;
   caption.append(element("strong", "", item.title));
-  if (item.provider === "unsplash") {
-    card.classList.add("unsplash-card");
-    const credit = element("span", "photo-credit", "Photo by ");
+  if (item.provider === "unsplash" || item.provider === "wikimedia") {
+    card.classList.add(`${item.provider}-card`);
+    const credit = element("span", "photo-credit", item.provider === "wikimedia" ? "By " : "Photo by ");
     const creator = element("a", "", item.creatorName);
     creator.href = item.creatorUrl;
     creator.target = "_blank";
     creator.rel = "noopener noreferrer";
-    source.textContent = "Unsplash ↗";
-    credit.append(creator, document.createTextNode(" on "), source);
+    source.textContent = item.provider === "wikimedia" ? "Wikimedia Commons ↗" : "Unsplash ↗";
+    credit.append(creator, document.createTextNode(item.provider === "wikimedia" ? ` · ${item.licenseName} · ` : " on "), source);
     caption.append(credit);
   } else {
     caption.append(source);
@@ -259,7 +260,10 @@ function renderBoard() {
   );
   $("#board-description").textContent = board.description;
   const sourceStatus = $("#image-source-status");
-  sourceStatus.textContent = sourceMessages[board.imageSourceStatus] || "";
+  sourceStatus.textContent = [
+    unsplashSourceMessages[board.imageSourceStatus],
+    wikimediaSourceMessages[board.wikimediaSourceStatus],
+  ].filter(Boolean).join(" ");
   sourceStatus.hidden = !sourceStatus.textContent;
   $('[data-filter="all"] span').textContent = board.items.length;
   grid.classList.toggle("filtered", filter !== "all");
@@ -661,24 +665,27 @@ $("#prompt-form").addEventListener("submit", async (event) => {
       return pin ? { ...pin, position: item.position } : item;
     });
     const preserved = [
-      ...pinned.filter((item) => item.provider === "unsplash"),
+      ...pinned.filter((item) => ["unsplash", "wikimedia"].includes(item.provider)),
       ...(board?.items || []).filter((item) => item.imported),
     ];
     for (const item of preserved) {
       if (!next.items.some((candidate) => candidate.id === item.id))
         next.items.push(
-          item.provider === "unsplash" ? { ...item, position: "pinterest" } : item,
+          ["unsplash", "wikimedia"].includes(item.provider) ? { ...item, position: "pinterest" } : item,
         );
     }
     // A repeated result retains its pin without adding a duplicate.
     if (next.mode !== "ai")
-      next.mode = next.items.some((item) => item.provider === "unsplash")
-        ? "sample-with-unsplash"
+      next.mode = next.items.some((item) => ["unsplash", "wikimedia"].includes(item.provider))
+        ? "sample-with-sources"
         : "demo";
     board = next;
     selectFilter("all");
     $("#save-label").textContent = "Save board";
-    const sourceMessage = sourceMessages[board.imageSourceStatus];
+    const sourceMessage = [
+      unsplashSourceMessages[board.imageSourceStatus],
+      wikimediaSourceMessages[board.wikimediaSourceStatus],
+    ].filter(Boolean).join(" ");
     notify(
       sourceMessage
         ? next.mode === "ai"

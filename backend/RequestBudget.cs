@@ -37,15 +37,21 @@ public sealed class RequestBudget(string path, TimeProvider clock)
         }
     }
 
-    public bool TryReservePair() => Update(state =>
+    public bool TryReservePair() => TryReserve(2, TimeSpan.FromHours(1), 50);
+
+    public bool TryReserveSingle(TimeSpan window, int maximum) => TryReserve(1, window, maximum);
+
+    private bool TryReserve(int calls, TimeSpan window, int maximum) => Update(state =>
     {
         var now = clock.GetUtcNow();
-        var recent = state.Requests.Where(time => time > now.AddHours(-1)).ToList();
-        var allowed = !(state.BlockedUntil > now) && recent.Count <= 48;
-        if (allowed) { recent.Add(now); recent.Add(now); }
+        var recent = state.Requests.Where(time => time > now - window).ToList();
+        var allowed = !(state.BlockedUntil > now) && recent.Count + calls <= maximum;
+        if (allowed) recent.AddRange(Enumerable.Repeat(now, calls));
         return (new State(recent, state.BlockedUntil), allowed);
     });
 
-    public void BlockForHour() => Update(state =>
-        (state with { BlockedUntil = clock.GetUtcNow().AddHours(1) }, true));
+    public void BlockForHour() => BlockFor(TimeSpan.FromHours(1));
+
+    public void BlockFor(TimeSpan duration) => Update(state =>
+        (state with { BlockedUntil = clock.GetUtcNow().Add(duration) }, true));
 }

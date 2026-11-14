@@ -47,7 +47,7 @@ const net = require("node:net");
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
-    let calls = 0, photoId = "photo1", status = "available", malformed = false, delay = 0;
+    let calls = 0, wikimediaCalls = 0, photoId = "photo1", status = "available", malformed = false, delay = 0;
     const photo = id => ({
       id: `unsplash-${id}`, type: "image", provider: "unsplash", externalPhotoId: id,
       url: `https://images.unsplash.com/${id}?ixid=preserved`,
@@ -66,6 +66,10 @@ const net = require("node:net");
       if (malformed) image.url = "https://evil.test/image.jpg";
       await route.fulfill({ json: { status, image: status === "available" ? image : null } });
     });
+    await page.route("**/api/image-sources/wikimedia", async route => {
+      wikimediaCalls++;
+      await route.fulfill({ json: { status: "no_results", image: null } });
+    });
     const ready = async () => { await page.goto(url); await page.locator(".image-card").first().waitFor(); };
     const explore = async prompt => {
       await page.locator("#prompt").fill(prompt);
@@ -76,6 +80,7 @@ const net = require("node:net");
     assert.equal(calls, 0, "initial sample must cost no provider calls");
     await explore("quiet coast");
     assert.equal(calls, 1);
+    assert.equal(wikimediaCalls, 1, "one Wikimedia request per prompt");
     assert.equal(await page.locator(".unsplash-card").count(), 1);
     assert.equal(await page.locator(".image-card").count(), 3);
     assert.match(await page.locator(".photo-credit").innerText(), /Photo by Artist <b> on Unsplash/);
@@ -87,11 +92,13 @@ const net = require("node:net");
     await page.waitForFunction(() => document.querySelector("#save-label").textContent === "Saved locally");
     for (const filter of ["image", "all"]) await page.locator(`[data-filter="${filter}"]`).click();
     assert.equal(calls, 1, "pin/save/filter must not fetch");
+    assert.equal(wikimediaCalls, 1, "pin/save/filter must not fetch Wikimedia");
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("scalable.boards.v1"))[0]);
     assert.equal(saved.items[0].externalPhotoId, "photo1");
     assert.equal(saved.items[0].creatorName, "Artist <b>");
     await ready();
     assert.equal(calls, 1, "reload must not fetch");
+    assert.equal(wikimediaCalls, 1, "reload must not fetch Wikimedia");
     await page.locator("#saved-boards").click();
     await page.getByRole("button", { name: "Open", exact: true }).first().click();
     assert.equal(await page.locator(".unsplash-card .pin").getAttribute("aria-pressed"), "true");

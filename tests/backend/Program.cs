@@ -128,6 +128,44 @@ Check(trackingLimited.Result.Status == "rate_limited" && !new RequestBudget(trac
 var timeoutHandler = new FakeHandler([]) { ThrowTimeout = true };
 var timeoutSource = new UnsplashSource(new HttpClient(timeoutHandler), new RequestBudget(FreshPath(), clock), "test");
 Check((await timeoutSource.Search("coast", default)).Status == "unavailable" && timeoutHandler.Urls.Count == 1, "timeouts fail gracefully without retries");
+var wikimediaPayload = new
+{
+    query = new
+    {
+        pages = new[]
+        {
+            new
+            {
+                pageid = 12345,
+                title = "File:Quiet coast.jpg",
+                imageinfo = new[]
+                {
+                    new
+                    {
+                        thumburl = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Quiet.jpg/1200px-Quiet.jpg",
+                        descriptionurl = "https://commons.wikimedia.org/wiki/File:Quiet_coast.jpg",
+                        extmetadata = new
+                        {
+                            Artist = new { value = "Artist <b>" },
+                            LicenseShortName = new { value = "CC BY-SA 4.0" },
+                            ImageDescription = new { value = "A quiet coast" },
+                        },
+                    },
+                },
+            },
+        },
+    },
+};
+var wikimediaHandler = new WikimediaHandler([Reply(wikimediaPayload)]);
+var wikimediaSource = new WikimediaSource(new HttpClient(wikimediaHandler), new RequestBudget(FreshPath(), clock), "Scalable/1.0 (https://github.com/Scalable123/Scalable)");
+var wikimedia = await wikimediaSource.Search("quiet coast", default);
+Check(wikimedia.Status == "available" && wikimedia.Image?.Provider == "wikimedia" && wikimedia.Image.LicenseName == "CC BY-SA 4.0", "Wikimedia result preserves creator and license metadata");
+Check(wikimedia.Image?.Url.Contains("upload.wikimedia.org") == true && wikimediaHandler.UserAgents.Single().Contains("Scalable/1.0"), "Wikimedia result and identifying User-Agent are safe");
+Check(wikimediaHandler.Urls.Single().Query.Contains("gsrlimit=1"), "Wikimedia search requests one result");
+var wiki429 = new WikimediaHandler([Reply(new { }, HttpStatusCode.TooManyRequests)]);
+var wikiLimitedPath = FreshPath();
+var wikiLimited = await new WikimediaSource(new HttpClient(wiki429), new RequestBudget(wikiLimitedPath, clock), "Scalable/1.0 (https://github.com/Scalable123/Scalable)").Search("coast", default);
+Check(wikiLimited.Status == "rate_limited" && !new RequestBudget(wikiLimitedPath, clock).TryReserveSingle(TimeSpan.FromMinutes(1), 180), "Wikimedia 429 blocks the source budget");
 Directory.Delete(root, true);
 Console.WriteLine($"Backend checks passed ({assertions} assertions).");
 
@@ -147,6 +185,18 @@ sealed class FakeHandler(HttpResponseMessage[] responses) : HttpMessageHandler
         Auth.Add(request.Headers.Authorization!.ToString());
         if (ThrowTimeout) throw new TaskCanceledException();
         if (Urls.Count > responses.Length) throw new Exception("Unexpected extra provider request");
+        return Task.FromResult(responses[Urls.Count - 1]);
+    }
+}
+sealed class WikimediaHandler(HttpResponseMessage[] responses) : HttpMessageHandler
+{
+    public List<Uri> Urls { get; } = [];
+    public List<string> UserAgents { get; } = [];
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        Urls.Add(request.RequestUri!);
+        UserAgents.Add(request.Headers.UserAgent.ToString());
+        if (Urls.Count > responses.Length) throw new Exception("Unexpected extra Wikimedia request");
         return Task.FromResult(responses[Urls.Count - 1]);
     }
 }
