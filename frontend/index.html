@@ -122,6 +122,12 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 <span>Make it as specific as you like.</span
                 ><span id="character-count">0/2000</span>
               </div>
+              <!-- Reference uploads are intentionally not supported. Wikimedia supplies visual references. -->
+              <div class="wikimedia-note">
+                <strong>Build from the brief.</strong>
+                <span>Explore finds credited visual references from Wikimedia Commons.</span>
+              </div>
+              <!--
               <label class="upload" id="upload-label" for="reference"
                 ><span class="upload-icon">↥</span
                 ><strong>Add a reference image</strong
@@ -170,6 +176,17 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                   Import quote ↗
                 </button>
               </div>
+              </div> -->
+              <div class="quote-dock">
+                <span class="quote-mark" aria-hidden="true">“</span>
+                <div>
+                  <strong>Find a sourced quote.</strong>
+                  <p>Search Wikiquote and keep the source attached.</p>
+                </div>
+                <button type="button" id="import-quote" class="toolbar-button" aria-haspopup="dialog">
+                  Import quote ↗
+                </button>
+              </div>
               <p class="input-error" id="input-error" role="alert"></p>
               <span class="field-caption">OR BORROW A LITTLE INSPIRATION</span>
               <div class="prompt-chips">
@@ -181,23 +198,12 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                   Earth & form ↗
                 </button>
               </div>
-              <fieldset class="audio-options">
-                <legend>BRING YOUR BOARD TO LIFE</legend>
-                <label
-                  ><input type="checkbox" id="include-songs" checked /> Song
-                  recommendations</label
-                >
-                <label
-                  ><input type="checkbox" id="include-sounds" checked /> Ambient
-                  sounds</label
-                >
-              </fieldset>
               <button class="generate" type="submit" id="generate">
                 <span>Explore this feeling</span><span>↗</span>
               </button>
               <p class="privacy-note">
-                Your reference stays in this browser.<br />Demo boards use a
-                curated sample collection. Explore can also find Wikimedia references when available.
+                Your brief stays in this browser.<br />Explore can also find
+                credited Wikimedia references when available.
               </p>
             </form>
           </section>
@@ -218,7 +224,8 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 ↗ <span id="save-label">Save board</span>
               </button>
             </div>
-            <div class="video-dock">
+            <!-- Video and YouTube importing has been retired. -->
+            <!-- <div class="video-dock">
               <span class="video-dock-icon" aria-hidden="true">▶</span>
               <div>
                 <strong>Set the scene in motion.</strong>
@@ -232,7 +239,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
               >
                 ＋ Import video
               </button>
-            </div>
+            </div> -->
             <div class="board-toolbar">
               <div
                 class="filters"
@@ -245,16 +252,13 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 ><button data-filter="palette" aria-pressed="false">
                   Palette</button
                 ><button data-filter="song" aria-pressed="false">Songs</button
-                ><button data-filter="sound" aria-pressed="false">Sounds</button
-                ><button data-filter="video" aria-pressed="false">
-                  Videos
-                </button>
+                ><button data-filter="sound" aria-pressed="false">Sounds</button>
               </div>
               <span class="board-index">SC—001</span>
             </div>
             <p id="image-source-status" class="privacy-note" role="status" hidden></p>
             <div id="board-grid" class="board-grid" aria-busy="false"></div>
-            <section
+            <!-- <section
               id="video-library"
               class="song-section"
               aria-labelledby="video-library-heading"
@@ -274,7 +278,7 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
                 this browser; save keeps its file details.
               </p>
               <div id="video-list" class="video-list"></div>
-            </section>
+            </section> -->
             <section
               id="soundtrack-section"
               class="soundtrack-section"
@@ -446,7 +450,8 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
         <p id="appearance-status" class="settings-status" role="status"></p>
       </form>
     </dialog>
-    <dialog id="video-dialog" aria-labelledby="video-dialog-title">
+    <!-- Video/YouTube importer retired. -->
+    <!-- <dialog id="video-dialog" aria-labelledby="video-dialog-title">
       <div class="dialog-header">
         <div>
           <p class="eyebrow">MAKE ROOM FOR MOVEMENT</p>
@@ -746,6 +751,26 @@ A quiet coastal escape. Misty mornings, weathered stone, soft greens. A little n
       ></p>
       <button id="cancel-pinterest-request" class="text-button" hidden>Cancel request</button>
     </dialog>
+    <dialog id="quote-dialog" aria-labelledby="quote-dialog-title">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">WORDS WITH A SOURCE</p>
+          <h2 id="quote-dialog-title">Find a sourced quote.</h2>
+        </div>
+        <button id="close-quote" aria-label="Close quote search">×</button>
+      </div>
+      <form id="quote-search-form" class="import-form">
+        <label for="quote-search">Search Wikiquote</label>
+        <div class="form-pair">
+          <input id="quote-search" maxlength="100" placeholder="Wisdom, courage, wonder" required />
+          <button class="done-button" type="submit">Search quotes ↗</button>
+        </div>
+      </form>
+      <p id="quote-search-status" class="settings-status" role="status" aria-live="polite"></p>
+      <div id="quote-search-results" class="provider-tracks"></div>
+      <p class="field-help">Results are short Wikiquote page excerpts. The source page and CC BY-SA attribution stay attached to every reference.</p>
+    </dialog>
+    </dialog> -->
     <dialog id="quote-dialog" aria-labelledby="quote-dialog-title">
       <div class="dialog-header">
         <div>

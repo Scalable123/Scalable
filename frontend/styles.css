@@ -35,6 +35,21 @@ a,
 label.upload {
   -webkit-tap-highlight-color: transparent;
 }
+
+.wikimedia-note {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1.25rem 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line, #d7d2c8);
+  background: var(--paper, #f5f3ed);
+  color: var(--ink, #20231f);
+}
+
+.wikimedia-note span {
+  color: var(--muted, #6b6d65);
+  font-size: 0.85rem;
+}
 button {
   cursor: pointer;
   color: inherit;
@@ -2059,98 +2074,7 @@ html[data-layout="grid"] .board-grid:not(.filtered) .palette-colors {
   }
 }
 
-/* Pinterest: an import experience that belongs in the Studio. */
-.pinterest-dock {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-top: 22px;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--card-radius);
-}
-.pinterest-mark {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 43px;
-  height: 43px;
-  border-radius: 50%;
-  background: #a63645;
-  color: #fff;
-  font:
-    italic bold 28px Georgia,
-    serif;
-}
-.pinterest-dock > div {
-  flex: 1;
-  min-width: 0;
-}
-.pinterest-dock .section-label {
-  font-size: 8px;
-  margin-bottom: 8px;
-}
-.pinterest-dock strong {
-  font: normal 22px var(--serif);
-  letter-spacing: -0.5px;
-}
-.pinterest-dock p:last-child {
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--muted);
-  margin: 7px 0 0;
-}
-.pinterest-dock button {
-  max-width: 180px;
-  text-align: left;
-  line-height: 1.6;
-}
-#pinterest-dialog {
-  width: min(850px, calc(100% - 32px));
-  max-height: 88vh;
-}
-.pinterest-steps {
-  list-style: none;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  border-bottom: 1px solid var(--line);
-  padding: 18px 0;
-  margin: 5px 0 23px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.pinterest-steps [aria-current="step"] {
-  color: var(--accent);
-  font-weight: 600;
-}
-.pinterest-welcome {
-  text-align: center;
-  padding: 20px 20px 12px;
-}
-.pinterest-welcome .pinterest-mark {
-  margin: 0 auto 22px;
-  width: 58px;
-  height: 58px;
-  font-size: 37px;
-}
-.pinterest-welcome h3 {
-  font: normal 34px/1.15 var(--serif);
-  margin: 0 0 14px;
-  letter-spacing: -0.8px;
-}
-.pinterest-welcome p {
-  max-width: 480px;
-  margin: 0 auto 10px;
-  font-size: 13px;
-  line-height: 1.9;
-  color: var(--muted);
-}
-.pinterest-benefits {
-  font-size: 12px;
-  line-height: 2.3;
-  padding-left: 20px;
-}
+/* Shared account notices and saved image references. */
 .preview-explainer {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -2168,197 +2092,6 @@ html[data-layout="grid"] .board-grid:not(.filtered) .palette-colors {
   margin: 5px 0 0;
   color: var(--muted);
 }
-.pinterest-screen-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  align-items: flex-start;
-  margin: 12px 0 20px;
-}
-.pinterest-screen-heading h3 {
-  font: normal 28px/1.2 var(--serif);
-  margin: 0;
-  letter-spacing: -0.5px;
-}
-.pinterest-screen-heading .field-help {
-  margin-top: 9px;
-  margin-bottom: 0;
-}
-.search-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  margin-bottom: 9px;
-}
-#pinterest-search,
-#pinterest-new-title {
-  width: 100%;
-  min-height: 44px;
-  background: var(--panel);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 12px;
-  font: inherit;
-  font-size: 13px;
-}
-.selection-toolbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  font-size: 11px;
-  margin: 17px 0;
-  flex-wrap: wrap;
-  color: var(--muted);
-}
-.selection-toolbar > div {
-  display: flex;
-  gap: 14px;
-}
-.pinterest-board-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-.pinterest-board-card {
-  min-width: 0;
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: var(--card-radius);
-  overflow: hidden;
-  cursor: pointer;
-  background: var(--panel);
-}
-.pinterest-board-card:has(input:checked) {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.pinterest-board-card input {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  width: 20px;
-  height: 20px;
-  z-index: 1;
-}
-.pinterest-board-mosaic {
-  display: grid;
-  height: 145px;
-  grid-template-columns: 1.3fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 3px;
-}
-.pinterest-board-mosaic img {
-  object-fit: cover;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-}
-.pinterest-board-mosaic img:first-child {
-  grid-row: 1/3;
-}
-.pinterest-board-copy {
-  display: flex;
-  flex-direction: column;
-  padding: 16px 14px;
-  gap: 8px;
-}
-.pinterest-board-copy strong {
-  font: normal 23px var(--serif);
-  letter-spacing: -0.5px;
-}
-.pinterest-board-copy > span {
-  font-size: 10px;
-  color: var(--accent);
-}
-.pinterest-board-copy small {
-  font-size: 11px;
-  line-height: 1.8;
-  color: var(--muted);
-}
-.pinterest-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-top: 25px;
-  padding-top: 17px;
-  border-top: 1px solid var(--line);
-}
-.pinterest-footer .field-help {
-  margin: 0;
-  max-width: 310px;
-}
-.pinterest-footer button {
-  line-height: 1.7;
-}
-.pinterest-pin-group {
-  border: 0;
-  padding: 10px 0;
-  margin: 15px 0;
-}
-.pinterest-pin-group legend {
-  font: normal 22px var(--serif);
-  padding: 0;
-}
-.pinterest-pin-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.pinterest-pin-choice {
-  min-width: 0;
-  cursor: pointer;
-  position: relative;
-  background: var(--panel);
-  border-radius: var(--card-radius);
-  border: 1px solid var(--line);
-  overflow: hidden;
-}
-.pinterest-pin-choice:has(input:checked) {
-  border-color: var(--accent);
-}
-.pinterest-pin-choice input {
-  position: absolute;
-  top: 9px;
-  left: 9px;
-  width: 20px;
-  height: 20px;
-}
-.pinterest-pin-choice img {
-  width: 100%;
-  height: 125px;
-  object-fit: cover;
-  display: block;
-}
-.pinterest-pin-choice > span {
-  display: block;
-  padding: 10px;
-  font-size: 11px;
-  line-height: 1.5;
-}
-.pin-select-all,
-.pinterest-destination label {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  cursor: pointer;
-}
-.pinterest-destination {
-  padding: 18px 0;
-  border: 0;
-  border-top: 1px solid var(--line);
-  margin-top: 20px;
-}
-.pinterest-destination legend {
-  font: normal 22px var(--serif);
-  padding-right: 10px;
-}
-.pinterest-destination label {
-  min-height: 40px;
-  font-size: 12px;
-}
 .import-complete-mark {
   display: grid;
   place-items: center;
@@ -2370,24 +2103,7 @@ html[data-layout="grid"] .board-grid:not(.filtered) .palette-colors {
   border-radius: 50%;
   font-size: 25px;
 }
-.imported-pin-badge {
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  padding: 5px 8px;
-  max-width: calc(100% - 85px);
-  font-size: 8px;
-  line-height: 1.6;
-  letter-spacing: 0.5px;
-  color: #30382f;
-  background: #f6f4eee8;
-  z-index: 2;
-  border-radius: 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.remove-imported-pin {
+.remove-imported-image {
   position: absolute;
   right: 42px;
   top: 9px;
@@ -2399,13 +2115,13 @@ html[data-layout="grid"] .board-grid:not(.filtered) .palette-colors {
   height: 27px;
   font-size: 20px;
 }
-html[data-layout="collage"] .board-grid.has-pinterest:not(.filtered) {
+html[data-layout="collage"] .board-grid.has-imported-images:not(.filtered) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: none;
   grid-auto-rows: 160px;
 }
 html[data-layout="collage"]
-  .board-grid.has-pinterest:not(.filtered)
+  .board-grid.has-imported-images:not(.filtered)
   > .board-card {
   grid-column: auto;
   grid-row: auto;
@@ -2413,101 +2129,29 @@ html[data-layout="collage"]
   min-height: 0;
 }
 html[data-layout="collage"]
-  .board-grid.has-pinterest:not(.filtered)
+  .board-grid.has-imported-images:not(.filtered)
   > .image-card {
   display: block;
 }
 html[data-layout="collage"]
-  .board-grid.has-pinterest:not(.filtered)
+  .board-grid.has-imported-images:not(.filtered)
   > .image-card:first-child {
   grid-column: span 2;
   grid-row: span 2;
 }
 @media (max-width: 1150px) {
-  .pinterest-dock {
-    flex-wrap: wrap;
-    padding: 17px;
-  }
-  .pinterest-dock button {
-    margin-left: 58px;
-    max-width: 100%;
-  }
-  html[data-layout="collage"] .board-grid.has-pinterest:not(.filtered) {
+  html[data-layout="collage"] .board-grid.has-imported-images:not(.filtered) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 600px) {
-  .pinterest-steps {
-    gap: 6px;
-    font-size: 9px;
-  }
-  .pinterest-welcome {
-    padding: 15px 0;
-  }
-  .pinterest-welcome h3 {
-    font-size: 29px;
-  }
-  .pinterest-board-list {
-    grid-template-columns: 1fr;
-  }
-  .pinterest-board-card {
-    display: grid;
-    grid-template-columns: 100px minmax(0, 1fr);
-  }
-  .pinterest-board-mosaic {
-    height: 100%;
-    min-height: 125px;
-  }
-  .pinterest-board-copy {
-    padding: 16px 12px;
-  }
-  .pinterest-board-copy strong {
-    font-size: 22px;
-  }
-  .pinterest-pin-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .pinterest-pin-choice img {
-    height: 100px;
-  }
-  .pinterest-pin-choice > span {
-    font-size: 10px;
-  }
-  .pinterest-footer {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .pinterest-footer button {
-    min-height: 44px;
-  }
-  .pinterest-screen-heading {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .pinterest-dock .section-label {
-    font-size: 8px;
-    line-height: 1.7;
-  }
-  .pinterest-dock strong {
-    font-size: 23px;
-  }
-  .pinterest-dock button {
-    margin-left: 0;
-    width: 100%;
-    min-height: 44px;
-  }
-  .remove-imported-pin {
+  .remove-imported-image {
     width: 32px;
     height: 32px;
     right: 48px;
   }
-  .imported-pin-badge {
-    max-width: calc(100% - 90px);
-    font-size: 7px;
-  }
   html[data-layout="collage"]
-    .board-grid.has-pinterest:not(.filtered)
+    .board-grid.has-imported-images:not(.filtered)
     > .image-card:first-child {
     grid-row: span 1;
   }
@@ -3143,40 +2787,6 @@ html[data-layout="collage"]
 }
 
 /* Import entry points follow the Studio's three-step creative flow. */
-.prompt-panel .pinterest-dock {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  align-items: start;
-  gap: 12px;
-  padding: 15px;
-  margin: 18px 0 10px;
-  background: var(--panel);
-}
-.prompt-panel .pinterest-mark {
-  width: 30px;
-  height: 30px;
-  font-size: 21px;
-}
-.prompt-panel .pinterest-dock strong {
-  font-size: 20px;
-  line-height: 1.2;
-}
-.prompt-panel .pinterest-dock p {
-  margin: 7px 0 0;
-}
-.prompt-panel .pinterest-dock button {
-  grid-column: 1 / -1;
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  min-height: 44px;
-  text-align: center;
-  font-size: 11px;
-}
-.prompt-panel #pinterest-import-summary {
-  font-size: 10px;
-  margin: 10px 0 18px;
-}
 .soundtrack-section {
   border-top: 1px solid var(--line);
   padding-top: 26px;
@@ -3208,19 +2818,6 @@ html[data-layout="collage"]
   font-size: 24px;
 }
 @media (max-width: 800px) {
-  .prompt-panel .pinterest-dock {
-    grid-template-columns: 35px minmax(0, 1fr);
-    gap: 12px 15px;
-    padding: 18px;
-  }
-  .prompt-panel .pinterest-mark {
-    width: 35px;
-    height: 35px;
-    font-size: 23px;
-  }
-  .prompt-panel .pinterest-dock strong {
-    font-size: 23px;
-  }
   .soundtrack-heading h2 {
     font-size: 28px;
   }

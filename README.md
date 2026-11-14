@@ -2,7 +2,7 @@
 
 Turn a prompt, a reference picture, or both into a researched creative direction: images, color palettes, textures, typography ideas, and music that belong together.
 
-**Status:** The Studio uses HTML/CSS/JavaScript. The ASP.NET Core **GraphQL API and ASP.NET Identity replace Supabase authentication/browser data access**. GraphQL is the API layer: Identity uses SQLite locally or configured PostgreSQL, and Pinterest credentials use separate encrypted SQLite storage. A Node endpoint can generate AI creative metadata and analyze submitted reference images. Wikimedia Commons supplies bounded, attributed visual references through the ASP.NET API. Boards remain in localStorage; cloud board storage and generated imagery are unimplemented. See the [backend guide](docs/BACKEND.md) and [T003 audit](docs/T003.md).
+**Status:** The Studio uses HTML/CSS/JavaScript. The ASP.NET Core **GraphQL API and ASP.NET Identity replace Supabase authentication/browser data access**. GraphQL is the API layer: Identity uses SQLite locally or configured PostgreSQL. A Node endpoint can generate AI creative metadata and analyze submitted reference images. Wikimedia Commons supplies bounded, attributed visual references through the ASP.NET API. Boards remain in localStorage; cloud board storage and generated imagery are unimplemented. See the [backend guide](docs/BACKEND.md) and [T003 audit](docs/T003.md).
 
 ## Try the frontend
 
@@ -18,9 +18,7 @@ Boards include **song recommendations and ambient sound directions** as separate
 
 Previews: [Studio light](docs/design-previews/studio.png) · [Studio dark](docs/design-previews/studio-dark.png) · [Customization](docs/design-previews/studio-customize.png).
 
-**Start from Pinterest:** Use **Import Pinterest board** to link your account through the configured backend, review your owned boards, and copy selected references into the current canvas or a new local mood board. All pages are read before review; cancellation or failures preserve the canvas. A separate sample preview works on static hosting. Pinterest is excluded from AI research, scanning, and analysis. Live access stays disabled until developer approval, permitted use, and credentials are configured. See [Pinterest setup, API, and limitations](docs/PINTEREST-INTEGRATION.md) and the [T001 decision record](docs/T001.md).
-
-Run the GraphQL/Identity and Pinterest API with .NET 10 using `App__PublicBaseUrl=http://localhost:3000 dotnet run --project Scalable.Api` (POSIX shell); run the frontend/AI process separately with `npm start`, then open `http://localhost:3000`. Node serves `frontend/` at its URL root. The public-base override aligns password-reset links with that layout. Local GraphQL/Pinterest requests use `http://localhost:5078`. Node reads `OPENAI_API_KEY` from its environment or ignored root `.env`; without it AI attempts fall back to samples. Live Pinterest use is disabled by default. See [setup/configuration](docs/BACKEND.md) and [AI behavior](docs/AI-INTEGRATION.md).
+Run the GraphQL/Identity API with .NET 10 using `App__PublicBaseUrl=http://localhost:3000 dotnet run --project Scalable.Api` (POSIX shell); run the frontend/AI process separately with `npm start`, then open `http://localhost:3000`. Node serves `frontend/` at its URL root. The public-base override aligns password-reset links with that layout. Local GraphQL requests use `http://localhost:5078`. Node reads `OPENAI_API_KEY` from its environment or ignored root `.env`; without it AI attempts fall back to samples. See [setup/configuration](docs/BACKEND.md) and [AI behavior](docs/AI-INTEGRATION.md).
 
 **Videos and account screens:** Import YouTube references or local video clips. Load YouTube players on request, play local videos in the browser, and save their metadata for later reattachment. The [login page](frontend/login.html), [create-account page](frontend/signup.html), and [account page](frontend/account.html) use the ASP.NET GraphQL Identity service for permanent accounts, sessions, and password recovery. See the [authentication worklog](docs/AUTH-INTEGRATION.md) and [video/account handoff](docs/VIDEO-ACCOUNT.md).
 
@@ -30,7 +28,7 @@ The [complete frontend documentation](docs/FRONTEND.md) covers every page and im
 
 ## GitHub Pages
 
-The repository root redirects visitors to `frontend/login.html`. After human review/merge, publish the intended branch from **Settings → Pages → Deploy from a branch → / (root)** or use the manual workflow. See [deployment instructions](docs/GITHUB-PAGES.md) for the configured Render GraphQL default, explicit endpoint override needed to align Pinterest, cross-site cookies, and project-path callback limitations. Pages runs neither the .NET API nor Node AI. This audit changes no hosting settings.
+The repository root redirects visitors to `frontend/login.html`. After human review/merge, publish the intended branch from **Settings → Pages → Deploy from a branch → / (root)** or use the manual workflow. See [deployment instructions](docs/GITHUB-PAGES.md) for the configured Render GraphQL default, endpoint overrides and cross-site cookies. Pages runs neither the .NET API nor Node AI. This audit changes no hosting settings.
 
 ## Product vision
 
@@ -63,8 +61,6 @@ Research should do more than return the first page of image search results:
 
 Research depth will grow after the first end-to-end workflow works. Missing evidence or unknown licensing must remain visible; the system must not invent sources or permissions.
 
-Pinterest is an account-link/import source only. Never send its imported pins, media, board metadata, URLs, or derived content to AI research, discovery, analysis, or training. Future server research workers must enforce this boundary, including redirects and tool results. The current research adapters reject Pinterest domain inputs and never include imported items in requests.
-
 ## First release scope
 
 ### MVP essentials
@@ -95,7 +91,7 @@ Music discovery initially means recommendations and outbound links. In-app playb
 
 ## Technical approach and remaining architecture
 
-The implemented account service is C# / ASP.NET Core with Hot Chocolate GraphQL and ASP.NET Identity. GraphQL does not replace the underlying SQL database. The Supabase SDK/configuration/dependency is absent. Node hosts a separate OpenAI creative-direction REST endpoint; Pinterest REST routes share the .NET cookie authority. Full research, cloud boards, and most media integrations remain future work.
+The implemented account service is C# / ASP.NET Core with Hot Chocolate GraphQL and ASP.NET Identity. GraphQL does not replace the underlying SQL database. The Supabase SDK/configuration/dependency is absent. Node hosts a separate OpenAI creative-direction REST endpoint. Full research, cloud boards, and most media integrations remain future work.
 
 | Area               | Proposed starting point                                                        | Purpose                                                                      |
 | ------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
@@ -105,7 +101,7 @@ The implemented account service is C# / ASP.NET Core with Hot Chocolate GraphQL 
 | Research           | Search and image-provider adapters                                             | Retrieve references with traceable metadata                                  |
 | Palette extraction | Image processing and color clustering                                          | Derive actual colors before AI naming and curation                           |
 | Music discovery    | Music catalog/search adapter                                                   | Verify tracks and links; add audio-feature matching where supported          |
-| Data and accounts | Identity: EF Core SQLite or configured Npgsql/PostgreSQL; Pinterest: separate SQLite | Real accounts/encrypted provider credentials; boards/profile/preferences still localStorage |
+| Data and accounts | Identity: EF Core SQLite or configured Npgsql/PostgreSQL | Real accounts; boards/profile/preferences still localStorage |
 | Background work    | Durable job runner, selected during the spike                                  | Run bounded research jobs with progress, retries, and cancellation           |
 | Validation         | Browser automation for the frontend; .NET tests for the backend                | Exercise research logic, integrations, and the main user journey             |
 
@@ -191,7 +187,7 @@ Prioritize exports, sharing, playlists, typography, collaboration, and generated
 
 ## Current validation
 
-Run `dotnet test Scalable.sln` and the five browser scripts in [frontend validation](docs/FRONTEND.md#18-validation-and-test-coverage). Browser checks need separately installed Playwright/Chromium; video checks require FFmpeg. There is no npm test script. This main audit found four browser-suite failures and one pass; backend tests could not run because SDK downloads returned HTTP 403. See [T003](docs/T003.md) for exact results and limits.
+Run `dotnet build Scalable.sln`, `dotnet run --project tests/backend/Scalable.Api.Checks.csproj`, the Node checks, and the five browser scripts in [frontend validation](docs/FRONTEND.md#17-validation-and-test-coverage). Browser checks need separately installed Playwright/Chromium; video checks require FFmpeg. There is no npm test script. Backend compilation, image-source checks, the focused demo integration suite, and saved-board checks pass. The older Studio suite has a song-fixture expectation that also fails on unchanged main; the authentication-suite issues recorded in [T003](docs/T003.md) remain outside this cleanup.
 
 ## Planned validation for remaining features
 
