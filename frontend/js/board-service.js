@@ -34,6 +34,91 @@ const collections = {
     names: ["Umber", "Terracotta", "Sand", "Linen", "Olive"],
   },
 };
+// Hand-picked examples, never presented as live research or verified track IDs.
+const songPicks = {
+  coast: [
+    [
+      "Holocene",
+      "Bon Iver",
+      "Wide-open space and a reflective vocal for a slower pace.",
+      "Indie folk · vocals",
+    ],
+    [
+      "Pink Moon",
+      "Nick Drake",
+      "Intimate acoustic guitar with a quietly nostalgic mood.",
+      "Folk · vocals",
+    ],
+    [
+      "Sunset Lover",
+      "Petit Biscuit",
+      "Soft electronic textures with a little coastal warmth.",
+      "Electronic · instrumental",
+    ],
+  ],
+  night: [
+    [
+      "Nightcall",
+      "Kavinsky",
+      "Neon synths and late-night momentum.",
+      "Synthwave · vocals",
+    ],
+    [
+      "Intro",
+      "The xx",
+      "Minimal guitar and a spacious, cinematic pulse.",
+      "Indie electronic · instrumental",
+    ],
+    [
+      "Open Eye Signal",
+      "Jon Hopkins",
+      "A patient electronic build for an after-hours atmosphere.",
+      "Electronic · instrumental",
+    ],
+  ],
+  earth: [
+    [
+      "Bloom",
+      "The Paper Kites",
+      "Gentle acoustic detail and an intimate, handmade feel.",
+      "Indie folk · vocals",
+    ],
+    [
+      "A Walk",
+      "Tycho",
+      "Warm layers and an easy rhythm to shape ideas around.",
+      "Electronic · instrumental",
+    ],
+    [
+      "Says",
+      "Nils Frahm",
+      "Gradual, tactile layers with room to think.",
+      "Ambient · instrumental",
+    ],
+  ],
+};
+function songsFor(key) {
+  return songPicks[key].map(([title, artist, explanation, tags], index) => ({
+    id: `song-${key}-${index}`,
+    type: "song",
+    title,
+    artist,
+    explanation,
+    tags,
+    discoveryUrl: `https://open.spotify.com/search/${encodeURIComponent(`${title} ${artist}`)}`,
+    linkKind: "catalog-search",
+    isSample: true,
+  }));
+}
+// Keep existing browser-saved boards usable after the former music concept became sound.
+function normalizeBoard(board) {
+  return {
+    ...board,
+    items: board.items.map((item) =>
+      item.type === "music" ? { ...item, type: "sound", isSample: true } : item,
+    ),
+  };
+}
 const assetRoot = new URL("../assets/", import.meta.url);
 const image = (id, filename, title, description, sourceUrl, position) => ({
   id,
@@ -47,7 +132,7 @@ const image = (id, filename, title, description, sourceUrl, position) => ({
   pinned: false,
 });
 export class DemoBoardService {
-  async research({ prompt }) {
+  async research({ prompt, includeSongs = true, includeSounds = true }) {
     // Deliberate preview delay; this is local sample selection, not AI research.
     await new Promise((resolve) => setTimeout(resolve, 650));
     const key = /night|midnight|city|indigo/i.test(prompt)
@@ -63,6 +148,7 @@ export class DemoBoardService {
       prompt,
       createdAt: new Date().toISOString(),
       mode: "demo",
+      researchOptions: { includeSongs, includeSounds },
       items: [
         image(
           "mountains",
@@ -97,19 +183,29 @@ export class DemoBoardService {
           "https://github.com/StartBootstrap/startbootstrap-landing-page",
           "water",
         ),
-        {
-          id: "music",
-          type: "music",
-          title:
-            key === "night"
-              ? "Night / Motion"
-              : key === "earth"
-                ? "Form / Stillness"
-                : "Slow / Tides",
-          artist: "An imagined soundtrack",
-          description: "Ambient · instrumental · unhurried",
-          isSample: true,
-        },
+        ...(includeSounds
+          ? [
+              {
+                id: "sound",
+                type: "sound",
+                title:
+                  key === "night"
+                    ? "Rain / City"
+                    : key === "earth"
+                      ? "Wind / Leaves"
+                      : "Ocean / Tides",
+                artist: "Ambient sound direction",
+                description:
+                  key === "night"
+                    ? "Distant rain, soft city hum, an occasional passing car"
+                    : key === "earth"
+                      ? "A breeze through leaves, birds in the distance, a quiet outdoor space"
+                      : "Slow waves, a little wind, a distant shoreline",
+                isSample: true,
+              },
+            ]
+          : []),
+        ...(includeSongs ? songsFor(key) : []),
       ],
     };
   }
@@ -117,7 +213,7 @@ export class DemoBoardService {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     if (!Array.isArray(parsed))
       throw new Error("Saved board storage is not readable.");
-    return parsed;
+    return parsed.map(normalizeBoard);
   }
   async saveBoard(board) {
     const boards = await this.listBoards();
@@ -143,9 +239,15 @@ export class ApiBoardService {
     return response.status === 204 ? null : response.json();
   }
   // Proposed job API: the UI will also need polling/cancellation when this is enabled.
-  startResearch(prompt, referenceFile) {
+  startResearch(
+    prompt,
+    referenceFile,
+    { includeSongs = true, includeSounds = true } = {},
+  ) {
     const form = new FormData();
     form.append("prompt", prompt);
+    form.append("includeSongs", String(includeSongs));
+    form.append("includeSounds", String(includeSounds));
     if (referenceFile) form.append("reference", referenceFile);
     return this.request("/research-runs", { method: "POST", body: form });
   }
